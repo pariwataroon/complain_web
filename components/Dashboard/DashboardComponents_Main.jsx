@@ -71,24 +71,26 @@ const DashboardComponents_Main = () => {
     );
 
     if (response?.filters && response?.departments) {
-      // แยกข้อมูลเป็น top departments
-      const sortedDepartments = [...response.departments].sort(
-        (a, b) => b.complaintCount - a.complaintCount
-      );
+      // แยกข้อมูลเป็น top departments และกรอง "ไม่ระบุ" และ "ทดสอบ" ออก
+      const sortedDepartments = [...response.departments]
+        .filter((dept) => dept.departmentName !== "ไม่ระบุ" && dept.departmentName !== "ทดสอบ")
+        .sort((a, b) => b.complaintCount - a.complaintCount);
 
       const topDepts = sortedDepartments.slice(0, 5).map((dept) => ({
         name: dept.departmentName,
         count: dept.complaintCount,
       }));
 
-      const topProvinces = (response.provinces || []).map((prov) => ({
-        name: prov.provinceName,
-        count: prov.complaintCount,
-      }));
+      const topProvinces = (response.provinces || [])
+        .filter((prov) => prov.provinceName !== "ไม่ระบุ" && prov.provinceName !== "ทดสอบ")
+        .map((prov) => ({
+          name: prov.provinceName,
+          count: prov.complaintCount,
+        }));
 
       setDepartmentRanking({
         topDepartments: topDepts,
-        topProvinces: topProvinces, 
+        topProvinces: topProvinces,
       });
     }
   } catch (error) {

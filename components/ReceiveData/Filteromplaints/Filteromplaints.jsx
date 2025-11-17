@@ -40,6 +40,7 @@ const Filteromplaints = () => {
 
   // Master data for complaint types (for lookup)
   const [complaintTypesMap, setComplaintTypesMap] = useState(new Map());
+  const [typesLoaded, setTypesLoaded] = useState(false);
 
   // Dynamic options from API
   const [issueTypeOptions, setIssueTypeOptions] = useState([
@@ -175,6 +176,8 @@ const Filteromplaints = () => {
 
   // Fetch complaint types master data for lookup
   useEffect(() => {
+    if (typesLoaded) return; // ป้องกัน fetch ซ้ำ
+
     const fetchComplaintTypes = async () => {
       try {
         const response = await GetAllSelectComplaintTypes();
@@ -185,18 +188,22 @@ const Filteromplaints = () => {
             typesMap.set(type.id, type.name);
           });
           setComplaintTypesMap(typesMap);
+          setTypesLoaded(true);
           console.log('✅ Loaded complaint types map:', typesMap.size, 'types');
         }
       } catch (error) {
         console.error('Failed to load complaint types:', error);
+        setTypesLoaded(true); // ตั้งเป็น true แม้ error เพื่อไม่ให้ retry ไม่รู้จบ
       }
     };
 
     fetchComplaintTypes();
-  }, []);
+  }, [typesLoaded]);
 
   // Fetch data from API
   useEffect(() => {
+    if (!typesLoaded) return; // รอให้โหลด types เสร็จก่อน
+
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -211,51 +218,20 @@ const Filteromplaints = () => {
           const data = response.res_data;
           setApiData(data);
 
-          // ดึงชื่อผู้ร้องสำหรับรายการที่ complainant_name เป็น empty string
-          const enrichedGroups = await Promise.all(
-            data.groups.map(async (group) => {
-              const enrichedItems = await Promise.all(
-                group.items.map(async (item) => {
-                  // ถ้า complainant_name ไม่ว่าง ให้ return ตัวเดิม
-                  if (item?.complainant_name && item.complainant_name.trim() !== "") {
-                    return item;
-                  }
-
-                  // ถ้าว่าง ให้ดึงข้อมูลเต็มจาก GetComplaintByID
-                  try {
-                    const fullDataResponse = await GetComplaintByID(item.id);
-                    const fullData = fullDataResponse?.res_data || fullDataResponse;
-
-                    // ดึงชื่อผู้ร้องจาก step1.general.general.government (หนังสือร้องเรียนถึง กค.)
-                    const governmentName = fullData?.step1?.general?.general?.government?.fullName ||
-                                          fullData?.step1?.general?.general?.government?.name;
-
-                    // ดึงชื่อผู้ร้องจาก step1.general.corporate (นิติบุคคล)
-                    const corporateName = fullData?.step1?.general?.corporate?.name;
-
-                    // ดึงชื่อผู้ร้องจาก step1.general.general (บุคคลทั่วไป)
-                    const generalName = fullData?.step1?.general?.general?.name;
-
-                    // ใช้ชื่อที่พบ
-                    const extractedName = governmentName || corporateName || generalName || "";
-
-                    return {
-                      ...item,
-                      complainant_name: extractedName
-                    };
-                  } catch (error) {
-                    console.error(`Error fetching full data for ${item.id}:`, error);
-                    return item; // return ตัวเดิมถ้า error
-                  }
-                })
-              );
-
-              return {
-                ...group,
-                items: enrichedItems
-              };
-            })
-          );
+          // ⚠️ ลบการเรียก GetComplaintByID เพื่อป้องกัน API loop
+          // ถ้าต้องการชื่อผู้ร้อง ควรให้ API หลักส่งมาตั้งแต่แรก หรือ batch request
+          const enrichedGroups = data.groups.map((group) => {
+            return {
+              ...group,
+              items: group.items.map((item) => {
+                // ใช้ชื่อที่ API ส่งมาตรงๆ ไม่ fetch เพิ่ม
+                return {
+                  ...item,
+                  complainant_name: item.complainant_name || "-"
+                };
+              })
+            };
+          });
 
           // สร้าง Map ของข้อมูลที่มี
           const dataMap = new Map();
@@ -349,7 +325,7 @@ const Filteromplaints = () => {
     };
 
     fetchData();
-  }, [complaintTypesMap]);
+  }, [typesLoaded]);
 
   // ---------- ค้นหา ----------
   const safeIncludes = (text, query) => {

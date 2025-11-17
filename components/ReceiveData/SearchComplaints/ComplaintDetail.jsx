@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
 import ComplaintSummaryService from "@services/ComplaintSummaryService/ComplaintSummaryService";
 import { GetComplaintByID } from "@pages/api/complaint/complaint";
+import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 import { wasComplaintRecentlyEdited, clearComplaintEditFlag } from "@utils/complaintEditState";
 
 // mockupData ตามโครงสร้างที่ให้มา
@@ -94,7 +95,7 @@ export const mockupData = {
 };
 
 // ฟังก์ชัน mapping ที่ควรใช้ค่าจาก API มาฝังใส่ mockupData
-function mapComplaintData(raw) {
+function mapComplaintData(raw, complaintTypesMap = new Map()) {
   if (!raw) {
     console.log("No raw data provided, returning mockup");
     return { ...mockupData };
@@ -196,9 +197,32 @@ function mapComplaintData(raw) {
     },
     complaint: {
       id: raw.id || raw.assignment_form?.id || "",
-      complaintType: raw.step3?.general?.complaintType || raw.assignment_form?.complaint_type_name || raw.assignment_form?.complaint_type || "",
+      complaintType: (() => {
+        // ลำดับความสำคัญ: ชื่อที่มีอยู่แล้ว -> lookup จาก UUID
+        const existingName = raw.step3?.general?.complaintTypeName || raw.assignment_form?.complaint_type_name || raw.step3?.general?.complaintType;
+        if (existingName && existingName !== "") return existingName;
+
+        // ถ้าไม่มีชื่อ ให้ lookup จาก UUID
+        const uuid = raw.step3?.general?.complaintTypeId || raw.assignment_form?.complaint_type_id || raw.assignment_form?.complaint_type;
+        if (uuid && complaintTypesMap.has(uuid)) {
+          return complaintTypesMap.get(uuid);
+        }
+
+        return uuid || "";
+      })(),
       complaintTypeId: raw.step3?.general?.complaintTypeId || raw.assignment_form?.complaint_type_id || raw.assignment_form?.complaint_type || "",
-      complaintTypeName: raw.step3?.general?.complaintTypeName || raw.assignment_form?.complaint_type_name || "",
+      complaintTypeName: (() => {
+        const existingName = raw.step3?.general?.complaintTypeName || raw.assignment_form?.complaint_type_name;
+        if (existingName && existingName !== "") return existingName;
+
+        // lookup จาก UUID
+        const uuid = raw.step3?.general?.complaintTypeId || raw.assignment_form?.complaint_type_id || raw.assignment_form?.complaint_type;
+        if (uuid && complaintTypesMap.has(uuid)) {
+          return complaintTypesMap.get(uuid);
+        }
+
+        return "";
+      })(),
       complaintSubtype: raw.step3?.general?.complaintSubtype || raw.step3?.general?.complaint_subtype || raw.step3?.general?.complaint_subtype_name || raw.step3?.general?.complaint_subtype_data?.name || raw.assignment_form?.complaint_subtype_name || raw.assignment_form?.complaint_subtype || "",
       complaintSubtypeId: raw.step3?.general?.complaintSubtypeId || raw.assignment_form?.complaint_subtype_id || raw.assignment_form?.complaint_subtype || "",
       complaintSubtypeName: raw.step3?.general?.complaint_subtype_name || raw.step3?.general?.complaint_subtype_data?.name || raw.assignment_form?.complaint_subtype_name || "",
@@ -232,11 +256,38 @@ const ComplaintDetail = () => {
   const [data, setData] = useState(mockupData);  // ค่าเริ่มต้น
   const [rawData, setRawData] = useState(null);  // เก็บ raw data จาก API
   const [loading, setLoading] = useState(false);
+  const [complaintTypesMap, setComplaintTypesMap] = useState(new Map()); // Map: UUID -> ชื่อประเภท
+  const [typesLoaded, setTypesLoaded] = useState(false);
   const lastFetchRef = useRef(0);
   const initialRouteRef = useRef(true);
   const lastFocusRef = useRef(0);
   const MIN_FETCH_INTERVAL = 5000; // 5s throttle
   const FOCUS_REFETCH_INTERVAL = 30000; // 30s between focus refetch
+
+  // Fetch complaint types master data
+  useEffect(() => {
+    if (typesLoaded) return;
+
+    const fetchComplaintTypes = async () => {
+      try {
+        const response = await GetAllSelectComplaintTypes();
+        if (response?.res_code === "0000" && response?.res_data) {
+          const typesMap = new Map();
+          response.res_data.forEach((type) => {
+            typesMap.set(type.id, type.name);
+          });
+          setComplaintTypesMap(typesMap);
+          setTypesLoaded(true);
+          console.log('✅ Loaded complaint types for detail page:', typesMap.size, 'types');
+        }
+      } catch (error) {
+        console.error('Failed to load complaint types:', error);
+        setTypesLoaded(true);
+      }
+    };
+
+    fetchComplaintTypes();
+  }, [typesLoaded]);
 
   // Debug state changes
   useEffect(() => {
@@ -269,7 +320,7 @@ const ComplaintDetail = () => {
         return;
       }
       setRawData(res.res_data); // เก็บ raw data ไว้
-      const mappedData = mapComplaintData(res.res_data);
+      const mappedData = mapComplaintData(res.res_data, complaintTypesMap);
       setData(mappedData);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -280,8 +331,9 @@ const ComplaintDetail = () => {
 
   // initial/id change
   useEffect(() => {
+    if (!typesLoaded) return; // รอให้โหลด complaint types เสร็จก่อน
     fetchData({ force: true, reason: 'id-change-initial' });
-  }, [id]);
+  }, [id, typesLoaded]);
 
   // route/focus/edit flag listeners
   useEffect(() => {
