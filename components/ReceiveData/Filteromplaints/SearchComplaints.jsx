@@ -362,6 +362,20 @@ const SearchComplaints = () => {
 
   const [searchText, setSearchText] = useState("");
   const inputRef = useRef();
+  const searchTimeoutRef = useRef(null);
+
+  // ✅ Debounced search - รอ 500ms หลังหยุดพิมพ์แล้วค่อยค้นหา
+  const debouncedSearch = useCallback((value) => {
+    // ยกเลิก timeout เก่า
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // ตั้ง timeout ใหม่
+    searchTimeoutRef.current = setTimeout(() => {
+      handleSearch(value);
+    }, 500); // รอ 500ms
+  }, []);
 
   useEffect(() => {
     if (openSearchDialog) {
@@ -371,6 +385,13 @@ const SearchComplaints = () => {
         inputRef.current.focus();
       }
     }
+
+    // Cleanup timeout เมื่อ unmount
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, [openSearchDialog]);
 
   const onClear = () => {
@@ -469,14 +490,20 @@ const SearchComplaints = () => {
   ]);
 
   // Prefill complaintChannel select value
+  const channelPrefilled = useRef(false);
+
   useEffect(() => {
     if (!defaultData) return;
+    if (channelPrefilled.current) return; // ป้องกัน infinite loop
+
     const currentVal = step3Methods.getValues("complaintChannel");
     if (currentVal) return; // already set by user or earlier effect
+
     const prefillId =
       defaultData?.assignment_form?.complaint_channel_id ||
       defaultData?.step3?.general?.complaint_channel_id;
     if (!prefillId) return;
+
     if (!complaintChannels.some((c) => c.id === prefillId)) {
       const channelName =
         defaultData?.assignment_form?.complaint_channel_name ||
@@ -488,11 +515,14 @@ const SearchComplaints = () => {
         { id: prefillId, name: channelName },
       ]);
     }
+
     step3Methods.setValue("complaintChannel", prefillId, {
       shouldDirty: false,
       shouldValidate: true,
     });
-  }, [defaultData, complaintChannels, step3Methods]);
+
+    channelPrefilled.current = true; // mark เป็นทำแล้ว
+  }, [defaultData, step3Methods]); // ← เอา complaintChannels ออก!
 
   // Fetch staff users
   useEffect(() => {
@@ -569,11 +599,19 @@ const SearchComplaints = () => {
   }, [defaultData?.assignment_form?.assigned_officer_id, staffUsers]);
 
   // Fetch complaint data when ID changes
+  const hasComplaintTypes = useRef(false);
+
   useEffect(() => {
-    if (id && complaintTypes.length > 0) {
+    if (complaintTypes.length > 0) {
+      hasComplaintTypes.current = true;
+    }
+  }, [complaintTypes]);
+
+  useEffect(() => {
+    if (id && hasComplaintTypes.current) {
       fetchComplaints(id);
     }
-  }, [id, complaintTypes]);
+  }, [id]); // ← เอา complaintTypes ออก เพราะทำให้ loop!
 
   const [departments, setDepartments] = useState([]);
 
@@ -2073,7 +2111,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                                       value={searchText}
                                       onChange={(e) => {
                                         setSearchText(e.target.value);
-                                        handleSearch(e.target.value);
+                                        debouncedSearch(e.target.value);
                                       }}
                                       InputProps={{
                                         startAdornment: (
