@@ -98,7 +98,32 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
                 logger.info(f"Found duplicate 'นร' case with subject: {subject}, skipping creation")
                 # คืนค่า complaint ที่มีอยู่แล้วแทนการสร้างใหม่
                 return existing_complaint
-        
+
+        # ✅ ดักจับข้อมูลว่างหรือ "-" ก่อนสร้างเรื่องร้องเรียน
+        def is_empty_or_dash(value):
+            """เช็คว่าเป็นค่าว่าง, -, หรือ whitespace"""
+            if not value or value is None:
+                return True
+            if isinstance(value, str):
+                stripped = value.strip()
+                return stripped == "" or stripped == "-"
+            return False
+
+        # หา subject และ description จาก step3
+        subject_check = ""
+        description_check = ""
+
+        if "step3" in complaint_data and "general" in complaint_data["step3"]:
+            step3_general = complaint_data["step3"]["general"]
+            subject_check = step3_general.get("subject", "")
+            description_check = step3_general.get("description", "")
+
+        # ดักเฉพาะเคสที่ subject และ description เป็น "-" หรือว่าง ทั้งคู่
+        if is_empty_or_dash(subject_check) and is_empty_or_dash(description_check):
+            error_msg = "ไม่สามารถสร้างเรื่องร้องเรียนได้: หัวเรื่อง (subject) และรายละเอียด (description) ต้องไม่เป็นค่าว่างหรือ '-' ทั้งคู่"
+            logger.warning(f"Blocked complaint creation: both subject and description are empty or '-'")
+            raise ValueError(error_msg)
+
         complaint_channel_id = None
         if "complaint_channel_id" in complaint_data:
             channel_id_str = complaint_data["complaint_channel_id"]
