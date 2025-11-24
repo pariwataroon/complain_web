@@ -124,6 +124,67 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
             logger.warning(f"Blocked complaint creation: both subject and description are empty or '-'")
             raise ValueError(error_msg)
 
+        # ✅ เช็คว่ามีฟิลด์ที่เป็น "-" เกิน 6 ตัว และ (subject ว่าง หรือ description ว่าง)
+        def count_dash_fields(data: Dict[str, Any]) -> int:
+            """นับจำนวนฟิลด์ที่เป็น '-' หรือว่าง"""
+            count = 0
+            fields_to_check = []
+
+            # ดึงข้อมูลจาก step1 (complainant)
+            if "step1" in data and "general" in data["step1"]:
+                step1 = data["step1"]["general"]
+                if isinstance(step1, dict):
+                    if "general" in step1:
+                        step1_general = step1["general"]
+                        fields_to_check.extend([
+                            step1_general.get("name", ""),
+                            step1_general.get("phone", ""),
+                            step1_general.get("email", ""),
+                            step1_general.get("address", ""),
+                        ])
+                    if "corporate" in step1:
+                        step1_corporate = step1["corporate"]
+                        fields_to_check.extend([
+                            step1_corporate.get("name", ""),
+                            step1_corporate.get("phone", ""),
+                            step1_corporate.get("email", ""),
+                        ])
+
+            # ดึงข้อมูลจาก step2 (respondent)
+            if "step2" in data and "general" in data["step2"]:
+                step2 = data["step2"]["general"]
+                if isinstance(step2, dict):
+                    fields_to_check.extend([
+                        step2.get("name", ""),
+                        step2.get("agency", ""),
+                    ])
+
+            # ดึงข้อมูลจาก step3 (general info)
+            if "step3" in data and "general" in data["step3"]:
+                step3 = data["step3"]["general"]
+                if isinstance(step3, dict):
+                    fields_to_check.extend([
+                        step3.get("subject", ""),
+                        step3.get("description", ""),
+                        step3.get("incidentLocation", ""),
+                        step3.get("incidentProvince", ""),
+                        step3.get("incidentDistrict", ""),
+                    ])
+
+            # นับจำนวนฟิลด์ที่เป็น "-" หรือว่าง
+            for field in fields_to_check:
+                if is_empty_or_dash(field):
+                    count += 1
+
+            return count
+
+        # เช็คว่ามี "-" เกิน 6 ตัว และ (subject ว่าง หรือ description ว่าง)
+        dash_count = count_dash_fields(complaint_data)
+        if dash_count > 6 and (is_empty_or_dash(subject_check) or is_empty_or_dash(description_check)):
+            error_msg = f"ไม่สามารถสร้างเรื่องร้องเรียนได้: มีข้อมูลว่างหรือ '-' มากเกินไป ({dash_count} ฟิลด์) และหัวเรื่องหรือรายละเอียดเป็นค่าว่าง"
+            logger.warning(f"Blocked complaint creation: {dash_count} empty/dash fields and subject or description is empty")
+            raise ValueError(error_msg)
+
         complaint_channel_id = None
         if "complaint_channel_id" in complaint_data:
             channel_id_str = complaint_data["complaint_channel_id"]

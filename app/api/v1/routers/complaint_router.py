@@ -120,10 +120,96 @@ async def create_new_complaint(
                 })
             
             request_data["complaint_channel_id"] = str(complaint_channel_id)
-        
+
+        # ✅ ดักข้อมูลก่อนเข้า queue - เช็คว่ามีข้อมูลว่าง/"-" มากเกินไป
+        def is_empty_or_dash(value):
+            """เช็คว่าเป็นค่าว่าง, -, หรือ whitespace"""
+            if not value or value is None:
+                return True
+            if isinstance(value, str):
+                stripped = value.strip()
+                return stripped == "" or stripped == "-"
+            return False
+
+        def count_dash_fields(data: Dict[str, Any]) -> int:
+            """นับจำนวนฟิลด์ที่เป็น '-' หรือว่าง"""
+            count = 0
+            fields_to_check = []
+
+            # ดึงข้อมูลจาก step1 (complainant)
+            if "step1" in data and "general" in data["step1"]:
+                step1 = data["step1"]["general"]
+                if isinstance(step1, dict):
+                    if "general" in step1:
+                        step1_general = step1["general"]
+                        fields_to_check.extend([
+                            step1_general.get("name", ""),
+                            step1_general.get("phone", ""),
+                            step1_general.get("email", ""),
+                            step1_general.get("address", ""),
+                        ])
+                    if "corporate" in step1:
+                        step1_corporate = step1["corporate"]
+                        fields_to_check.extend([
+                            step1_corporate.get("name", ""),
+                            step1_corporate.get("phone", ""),
+                            step1_corporate.get("email", ""),
+                        ])
+
+            # ดึงข้อมูลจาก step2 (respondent)
+            if "step2" in data and "general" in data["step2"]:
+                step2 = data["step2"]["general"]
+                if isinstance(step2, dict):
+                    fields_to_check.extend([
+                        step2.get("name", ""),
+                        step2.get("agency", ""),
+                    ])
+
+            # ดึงข้อมูลจาก step3 (general info)
+            if "step3" in data and "general" in data["step3"]:
+                step3 = data["step3"]["general"]
+                if isinstance(step3, dict):
+                    fields_to_check.extend([
+                        step3.get("subject", ""),
+                        step3.get("description", ""),
+                        step3.get("incidentLocation", ""),
+                        step3.get("incidentProvince", ""),
+                        step3.get("incidentDistrict", ""),
+                    ])
+
+            # นับจำนวนฟิลด์ที่เป็น "-" หรือว่าง
+            for field in fields_to_check:
+                if is_empty_or_dash(field):
+                    count += 1
+
+            return count
+
+        # หา subject และ description
+        subject_check = ""
+        description_check = ""
+        if "step3" in request_data and "general" in request_data["step3"]:
+            step3_general = request_data["step3"]["general"]
+            subject_check = step3_general.get("subject", "")
+            description_check = step3_general.get("description", "")
+
+        # เช็ค 1: subject และ description ว่างทั้งคู่
+        if is_empty_or_dash(subject_check) and is_empty_or_dash(description_check):
+            return format_response("4001", {
+                "error": "Invalid data",
+                "message": "ไม่สามารถสร้างเรื่องร้องเรียนได้: หัวเรื่อง (subject) และรายละเอียด (description) ต้องไม่เป็นค่าว่างหรือ '-' ทั้งคู่"
+            })
+
+        # เช็ค 2: มี "-" เกิน 6 ตัว และ (subject ว่าง หรือ description ว่าง)
+        dash_count = count_dash_fields(request_data)
+        if dash_count > 6 and (is_empty_or_dash(subject_check) or is_empty_or_dash(description_check)):
+            return format_response("4001", {
+                "error": "Invalid data",
+                "message": f"ไม่สามารถสร้างเรื่องร้องเรียนได้: มีข้อมูลว่างหรือ '-' มากเกินไป ({dash_count} ฟิลด์) และหัวเรื่องหรือรายละเอียดเป็นค่าว่าง"
+            })
+
         from config.dotenv import RABBITMQ_URL
         from app.services.complaint_queue_service import ComplaintQueueService
-        
+
         with ComplaintQueueService(RABBITMQ_URL) as queue_service:
             task_id = queue_service.queue_complaint_creation(request_data, current_user)
             
