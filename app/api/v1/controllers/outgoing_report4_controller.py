@@ -98,28 +98,10 @@ def create_outgoing_report4(
 ) -> Dict[str, Any]:
     """สร้างรายงานแจ้งผลการให้ผู้เกี่ยวข้องทราบใหม่ (OR4)
        - reference_number: ซ้ำได้
-       - document_number: ห้ามซ้ำ (ถ้าซ้ำให้ใช้ PUT แก้ของเดิม)
+       - document_number: ซ้ำได้ (อนุญาตให้หลายรายงานอ้างอิงเรื่องเดียวกัน)
     """
     try:
         logger.info(f"Creating OutgoingReport4: {report_data.reference_number}")
-
-        # ❗ บังคับเอกลักษณ์ document_number (ทั่วระบบที่ยัง active)
-        dup_doc = (
-            db.query(OutgoingReport4)
-            .filter(
-                OutgoingReport4.is_active == True,
-                OutgoingReport4.document_number == report_data.document_number,
-            )
-            .first()
-        )
-        if dup_doc:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"document_number '{report_data.document_number}' ถูกใช้แล้ว "
-                    f"กรุณาใช้วิธี PUT เพื่อแก้ไขรายงานเดิม (id={dup_doc.id})"
-                ),
-            )
 
         # complaint_id ไม่บังคับ แต่ถ้าส่งมาก็ตรวจว่ามีจริง
         complaint = None
@@ -657,7 +639,7 @@ def update_outgoing_report4(
     current_user_id: UUID,
 ) -> Dict[str, Any]:
     """อัปเดตรายงาน (รุ่น 4) ตาม ID
-       - เปลี่ยน document_number ได้ แต่ต้องไม่ชนกับเรคอร์ด active อื่น
+       - เปลี่ยน document_number ได้ และอนุญาตให้ซ้ำกับเรคอร์ดอื่น
     """
     try:
         rec = db.query(OutgoingReport4).filter(
@@ -667,22 +649,8 @@ def update_outgoing_report4(
         if not rec:
             raise HTTPException(status_code=404, detail="ไม่พบรายงานที่ระบุ")
 
-        # กันเลขเอกสารซ้ำ ถ้ามีการเปลี่ยน
+        # อนุญาตให้ document_number ซ้ำได้ (ลบการตรวจสอบ duplicate)
         incoming = report_data.model_dump(exclude_unset=True)
-        if "document_number" in incoming and incoming["document_number"] != rec.document_number:
-            dup = db.query(OutgoingReport4).filter(
-                OutgoingReport4.is_active == True,
-                OutgoingReport4.document_number == incoming["document_number"],
-                OutgoingReport4.id != report_id,
-            ).first()
-            if dup:
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        f"document_number '{incoming['document_number']}' ถูกใช้แล้ว "
-                        f"ไม่สามารถแก้ไขให้ซ้ำกับเอกสารอื่นได้ (ชน id={dup.id})"
-                    ),
-                )
 
         # ถ้าส่ง complaint_id มา ตรวจว่ามีจริง
         if report_data.complaint_id is not None:
