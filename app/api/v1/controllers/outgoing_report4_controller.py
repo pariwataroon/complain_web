@@ -124,19 +124,25 @@ def create_outgoing_report4(
                 raise HTTPException(status_code=400, detail="กรุณาระบุตำแหน่ง (อื่นๆ) เพิ่มเติม")
 
         # Validate outside vs legacy ids (ต้องเลือกอย่างใดอย่างหนึ่ง)
+        # ✅ ถ้าส่งทั้งสองค่ามาและไม่เท่ากัน ให้ error
         if report_data.department_id and report_data.outside_department_id:
-            raise HTTPException(status_code=400, detail="กรุณาส่ง department_id หรือ outside_department_id อย่างใดอย่างหนึ่ง ไม่ใช่ทั้งคู่")
+            if report_data.department_id != report_data.outside_department_id:
+                raise HTTPException(status_code=400, detail="กรุณาส่ง department_id หรือ outside_department_id อย่างใดอย่างหนึ่ง ไม่ใช่ทั้งคู่")
 
-        if report_data.outside_department_id:
+        # ✅ รองรับทั้ง outside_department_id และ department_id (กรณี frontend ส่งมาอย่างใดอย่างหนึ่ง)
+        dept_id_to_check = report_data.outside_department_id or report_data.department_id
+
+        if dept_id_to_check:
             od = db.query(OutsideDepartment).filter(
-                OutsideDepartment.id == report_data.outside_department_id,
+                OutsideDepartment.id == dept_id_to_check,
                 OutsideDepartment.is_active == True
             ).first()
             if not od:
                 raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานภายนอกที่ระบุ")
 
-        effective_outside_id = report_data.outside_department_id
-        legacy_department_id = report_data.department_id
+        # ใช้ค่าที่ส่งมา (รองรับทั้งสองแบบ)
+        effective_outside_id = report_data.outside_department_id or report_data.department_id
+        legacy_department_id = report_data.department_id or report_data.outside_department_id
 
         db_report = OutgoingReport4(
             reference_number=report_data.reference_number,
@@ -666,14 +672,22 @@ def update_outgoing_report4(
         ):
             raise HTTPException(status_code=400, detail="กรุณาอัปเดต department_id หรือ outside_department_id อย่างใดอย่างหนึ่ง ไม่ใช่ทั้งคู่")
 
-        # validate outside_department_id ถ้ามี
-        if incoming.get("outside_department_id"):
+        # ✅ รองรับทั้ง outside_department_id และ department_id
+        dept_id_to_check = incoming.get("outside_department_id") or incoming.get("department_id")
+
+        if dept_id_to_check:
             od = db.query(OutsideDepartment).filter(
-                OutsideDepartment.id == incoming["outside_department_id"],
+                OutsideDepartment.id == dept_id_to_check,
                 OutsideDepartment.is_active == True,
             ).first()
             if not od:
                 raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานภายนอกที่ระบุ")
+
+            # ✅ Sync ค่าทั้งสองให้เหมือนกัน (เพื่อให้รองรับทั้ง frontend เก่าและใหม่)
+            if incoming.get("department_id") and not incoming.get("outside_department_id"):
+                incoming["outside_department_id"] = incoming["department_id"]
+            elif incoming.get("outside_department_id") and not incoming.get("department_id"):
+                incoming["department_id"] = incoming["outside_department_id"]
 
         # อัปเดตฟิลด์
         for field, value in incoming.items():

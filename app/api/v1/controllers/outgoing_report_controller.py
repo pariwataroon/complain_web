@@ -119,7 +119,25 @@ async def create_outgoing_report(
         if not signature_user:
             raise HTTPException(status_code=404, detail="ไม่พบผู้มีอำนาจลงนามที่ระบุ")
 
-        department = db.query(Department).filter(Department.id == report_data.department_id, Department.is_active == True).first()
+        # ✅ รองรับทั้ง Department (ภายใน) และ OutsideDepartment (ภายนอก)
+        department = None
+        try:
+            from models.outside_departments import OutsideDepartment
+            # ลองหาใน OutsideDepartment ก่อน (ระบบใหม่)
+            department = db.query(OutsideDepartment).filter(
+                OutsideDepartment.id == report_data.department_id,
+                OutsideDepartment.is_active == True
+            ).first()
+        except Exception:
+            pass
+
+        # ถ้าไม่เจอ ลองหาใน Department (ระบบเก่า)
+        if not department:
+            department = db.query(Department).filter(
+                Department.id == report_data.department_id,
+                Department.is_active == True
+            ).first()
+
         if not department:
             raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานที่ระบุ")
 
@@ -733,10 +751,23 @@ def update_outgoing_report(
                 raise HTTPException(status_code=404, detail="ไม่พบผู้มีอำนาจลงนามที่ระบุ")
 
         if "department_id" in updates and updates["department_id"]:
-            department = db.query(Department).filter(
-                Department.id == updates["department_id"],
-                Department.is_active == True
-            ).first()
+            # ✅ รองรับทั้ง Department และ OutsideDepartment
+            department = None
+            try:
+                from models.outside_departments import OutsideDepartment
+                department = db.query(OutsideDepartment).filter(
+                    OutsideDepartment.id == updates["department_id"],
+                    OutsideDepartment.is_active == True
+                ).first()
+            except Exception:
+                pass
+
+            if not department:
+                department = db.query(Department).filter(
+                    Department.id == updates["department_id"],
+                    Department.is_active == True
+                ).first()
+
             if not department:
                 logger.error(f"Department not found: {updates['department_id']}")
                 raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานที่ระบุ")
