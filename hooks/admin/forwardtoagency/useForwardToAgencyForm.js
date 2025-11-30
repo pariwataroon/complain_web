@@ -11,6 +11,7 @@ import {
 } from "@utils/Alerts";
 import { CreateOutgoingReport, UploadOutgoingReportAttachments } from "@pages/api/outgoinreports/outgoinreports";
 import axiosInstance from "@pages/api/axiosInstance";
+import { getDepartments } from "@pages/api/department/department";
 
 // สร้าง validation schema (department ถูกทำให้ optional เสมอ ทั้งโหมดสร้างและแก้ไข)
 const createValidationSchema = () => yup.object().shape({
@@ -323,6 +324,44 @@ export const useForwardToAgencyForm = () => {
     return formData;
   }, []);
 
+  // ✅ ฟังก์ชันตรวจสอบว่า department_id เป็น UUID ที่มีอยู่จริงในระบบหรือไม่
+  const ensureRealDepartmentId = useCallback(async (current) => {
+    // ถ้า current มีค่าและไม่ใช่ fallback ให้ใช้ค่านั้นต่อ
+    if (current && current !== DEPARTMENT_FALLBACK) return current;
+
+    try {
+      const resp = await getDepartments();
+      const raw = resp?.res_data || resp?.data || resp;
+      let list = [];
+
+      if (Array.isArray(raw)) list = raw;
+      else if (Array.isArray(raw?.items)) list = raw.items;
+      else if (Array.isArray(raw?.departments)) list = raw.departments;
+      else if (raw?.results && Array.isArray(raw.results)) list = raw.results;
+
+      // หา department แรกที่เป็น UUID จริง
+      const first = list.find(d => d && (isUUID(d.id) || isUUID(d.value)));
+      if (first) {
+        const realId = first.id || first.value;
+        if (isUUID(realId)) {
+          // เก็บไว้ใน ref เพื่อใช้ครั้งต่อไป
+          if (!originalDepartmentIdRef.current) {
+            originalDepartmentIdRef.current = realId;
+          }
+          if (!lastDepartmentIdRef.current) {
+            lastDepartmentIdRef.current = realId;
+          }
+          return realId;
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ ไม่สามารถดึง departments เพื่อหา UUID จริง:', e);
+    }
+
+    // ถ้าหาไม่ได้ ให้ใช้ค่าเดิม (อาจเป็น fallback)
+    return current;
+  }, []);
+
   const handleSave = useCallback(
   async (data) => {
     try {
@@ -350,6 +389,9 @@ export const useForwardToAgencyForm = () => {
       else {
         deptToSend = DEPARTMENT_FALLBACK;
       }
+
+      // ✅ ตรวจสอบและแปลง fallback เป็น UUID จริงจากระบบ
+      deptToSend = await ensureRealDepartmentId(deptToSend);
 
       console.log('🔍 DEBUG Department Values:', {
         'data.department (from form)': data.department,
