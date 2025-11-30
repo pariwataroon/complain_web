@@ -713,6 +713,34 @@ def update_outgoing_report(
                 logger.error(f"Duplicate reference number: {updates['reference_number']}")
                 raise DuplicateKeyError(f"เลข สป.กค {updates['reference_number']} มีอยู่แล้ว")
 
+        # ✅ Validate foreign keys เหมือนกับ create
+        if "position_id" in updates and updates["position_id"]:
+            position = db.query(Position).filter(
+                Position.id == updates["position_id"],
+                Position.is_active == True
+            ).first()
+            if not position:
+                logger.error(f"Position not found: {updates['position_id']}")
+                raise HTTPException(status_code=404, detail="ไม่พบตำแหน่งที่ระบุ")
+
+        if "signature_authority_user_id" in updates and updates["signature_authority_user_id"]:
+            signature_user = db.query(User).filter(
+                User.id == updates["signature_authority_user_id"],
+                User.is_active == True
+            ).first()
+            if not signature_user:
+                logger.error(f"Signature user not found: {updates['signature_authority_user_id']}")
+                raise HTTPException(status_code=404, detail="ไม่พบผู้มีอำนาจลงนามที่ระบุ")
+
+        if "department_id" in updates and updates["department_id"]:
+            department = db.query(Department).filter(
+                Department.id == updates["department_id"],
+                Department.is_active == True
+            ).first()
+            if not department:
+                logger.error(f"Department not found: {updates['department_id']}")
+                raise HTTPException(status_code=404, detail="ไม่พบหน่วยงานที่ระบุ")
+
         updates["updated_by"] = current_user_id
         for field, value in updates.items():
             if hasattr(report, field):
