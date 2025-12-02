@@ -600,6 +600,7 @@ const SearchComplaints = () => {
 
   // Fetch complaint data when ID changes
   const hasComplaintTypes = useRef(false);
+  const hasFetchedComplaint = useRef(false);
 
   useEffect(() => {
     if (complaintTypes.length > 0) {
@@ -608,10 +609,12 @@ const SearchComplaints = () => {
   }, [complaintTypes]);
 
   useEffect(() => {
-    if (id && hasComplaintTypes.current) {
-      fetchComplaints(id);
-    }
-  }, [id]); // ← เอา complaintTypes ออก เพราะทำให้ loop!
+    if (!id) return;
+    if (!complaintTypes.length) return;
+    if (hasFetchedComplaint.current) return; // ป้องกันยิงซ้ำ
+    hasFetchedComplaint.current = true;
+    fetchComplaints(id);
+  }, [id, complaintTypes.length]);
 
   const [departments, setDepartments] = useState([]);
 
