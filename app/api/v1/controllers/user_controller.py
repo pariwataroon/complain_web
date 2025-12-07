@@ -14,6 +14,9 @@ from models.user import User
 from models.user_role import UserRole
 from models.user_positions import UserPosition
 from models.position import Position
+from models.comp_provinces import Province
+from models.comp_amphures import Amphure
+from models.comp_districts import District
 
 logger = get_logger("user_repository", console_output=False)
 
@@ -804,10 +807,10 @@ def get_user_with_roles_and_titles(db: Session, user_id: UUID):
         joinedload(User.roles).joinedload(UserRole.role),
         joinedload(User.positions).joinedload(UserPosition.position)
     ).filter(User.id == user_id).first()
-    
+
     if not user:
         return None
-    
+
     # Basic user data
     user_data = {
         "id": user.id,
@@ -823,19 +826,57 @@ def get_user_with_roles_and_titles(db: Session, user_id: UUID):
         "is_active": user.is_active,
         "created_at": user.created_at,
         "updated_at": user.updated_at,
-        "full_name": f"{user.first_name} {user.last_name}"
+        "full_name": f"{user.first_name} {user.last_name}",
+        # เพิ่มข้อมูลภูมิศาสตร์
+        "province_id": user.province_id,
+        "district_id": user.district_id,
+        "subdistrict_id": user.subdistrict_id,
+        "zipcode": user.zipcode,
+        "province2_id": user.province2_id,
+        "district2_id": user.district2_id,
+        "subdistrict2_id": user.subdistrict2_id,
+        "zipcode2": user.zipcode2
     }
 
     # Get title name - prioritize prefix_other for "Other" titles
-    if user.title_id == 1 and user.prefix_other:
-        title_name = user.prefix_other
-    elif user.title:
-        title_name = user.title.title_name
-    else:
-        title_name = None
+    title_name = None
+    if user.title_id:
+        if user.title_id == 1 and user.prefix_other:
+            # ถ้า title_id = 1 (อื่นๆ) ให้ใช้ prefix_other
+            title_name = user.prefix_other
+        elif user.title:
+            # ใช้ชื่อคำนำหน้าจากตาราง titles
+            title_name = user.title.title_name
 
-    user_data["title_name"] = title_name
-    user_data["full_name_with_title"] = f"{title_name or ''}{' ' if title_name else ''}{user.first_name} {user.last_name}"
+    # Debug log
+    logger.debug(f"User {user.id}: title_id={user.title_id}, title_name={title_name}, has_title_relation={user.title is not None}")
+
+    user_data["title_name"] = title_name if title_name else ""
+
+    # สร้าง full_name_with_title (มีเว้นวรรคระหว่างคำนำหน้ากับชื่อ)
+    if title_name:
+        user_data["full_name_with_title"] = f"{title_name} {user.first_name} {user.last_name}"
+    else:
+        user_data["full_name_with_title"] = f"{user.first_name} {user.last_name}"
+
+    # เพิ่มข้อมูลภูมิศาสตร์ (ชื่อจังหวัด, อำเภอ, ตำบล)
+    if user.province_id:
+        province = db.query(Province).filter(Province.id == user.province_id).first()
+        if province:
+            user_data["province_name"] = province.name_th
+            user_data["province_code"] = province.code
+
+    if user.district_id:
+        amphure = db.query(Amphure).filter(Amphure.id == user.district_id).first()
+        if amphure:
+            user_data["district_name"] = amphure.name_th
+            user_data["amphure_code"] = amphure.code
+
+    if user.subdistrict_id:
+        district = db.query(District).filter(District.id == user.subdistrict_id).first()
+        if district:
+            user_data["subdistrict_name"] = district.name_th
+            user_data["district_code"] = str(district.id)
 
     # Add user roles information
     user_roles = []
