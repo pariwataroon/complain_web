@@ -105,7 +105,9 @@ const Tab1 = ({
     if (authMeData.citizen_id?.trim()) patch.idCard = authMeData.citizen_id;
     if (authMeData.email?.trim()) patch.email = authMeData.email;
     if (authMeData.phone?.trim()) patch.phone = authMeData.phone;
-    if (authMeData.full_name?.trim()) patch.name = authMeData.full_name;
+    // ใช้ full_name_with_title (มีคำนำหน้า) ถ้ามี ไม่เช่นนั้นใช้ full_name
+    const fullName = authMeData.full_name_with_title?.trim() || authMeData.full_name?.trim();
+    if (fullName) patch.name = fullName;
 
     if (Object.keys(patch).length > 0) {
       const newContainer = { ...tabData, general: { ...currentGeneral, ...patch } };

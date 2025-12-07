@@ -35,6 +35,16 @@ const ComplaintPersonalForm = ({
       }
 
       try {
+        // Debug: แสดงข้อมูลที่ได้จาก API
+        console.log("🔍 Auto-populate data from API:", {
+          title_name: dataMe.title_name,
+          full_name: dataMe.full_name,
+          full_name_with_title: dataMe.full_name_with_title,
+          title_id: dataMe.title_id,
+          first_name: dataMe.first_name,
+          last_name: dataMe.last_name
+        });
+
         setTimeout(() => {
           const newLocalData = {};
 
@@ -54,9 +64,57 @@ const ComplaintPersonalForm = ({
             onChange("phone", dataMe.phone);
           }
 
-          if (dataMe.full_name?.trim()) {
-            newLocalData.name = dataMe.full_name;
-            onChange("name", dataMe.full_name);
+          // ใช้ full_name_with_title ถ้ามี ไม่เช่นนั้นใช้ full_name
+          const fullName = dataMe.full_name_with_title?.trim() || dataMe.full_name?.trim();
+          if (fullName) {
+            newLocalData.name = fullName;
+            onChange("name", fullName);
+          }
+
+          // เพิ่มการ auto-populate ที่อยู่
+          if (dataMe.address?.trim()) {
+            newLocalData.address = dataMe.address;
+            onChange("address", dataMe.address);
+          }
+
+          // เพิ่มการ auto-populate จังหวัด
+          if (dataMe.province_id && dataMe.province_name) {
+            const provinceOption = {
+              value: dataMe.province_id,
+              label: dataMe.province_name
+            };
+            newLocalData.province = provinceOption;
+            onChange("province", provinceOption);
+          }
+
+          // เพิ่มการ auto-populate อำเภอ/เขต
+          if (dataMe.district_id && dataMe.district_name) {
+            const districtOption = {
+              value: dataMe.district_id,
+              label: dataMe.district_name
+            };
+            newLocalData.districts = districtOption;
+            onChange("districts", districtOption);
+          }
+
+          // เพิ่มการ auto-populate ตำบล/แขวง
+          if (dataMe.subdistrict_id && dataMe.subdistrict_name) {
+            const subdistrictOption = {
+              value: dataMe.subdistrict_id,
+              label: dataMe.subdistrict_name
+            };
+            newLocalData.subdistricts = subdistrictOption;
+            onChange("subdistricts", subdistrictOption);
+          }
+
+          // เพิ่มการ auto-populate รหัสไปรษณีย์
+          if (dataMe.zipcode) {
+            const zipcodeOption = {
+              value: dataMe.zipcode,
+              label: String(dataMe.zipcode)
+            };
+            newLocalData.zipcode = zipcodeOption;
+            onChange("zipcode", zipcodeOption);
           }
 
           setLocalData(newLocalData);
