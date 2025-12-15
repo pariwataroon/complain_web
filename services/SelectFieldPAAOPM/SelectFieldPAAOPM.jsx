@@ -263,6 +263,11 @@ const SelectFieldPAAOPM = ({
 
   // จัดการข้อมูล options ตาม name
   const allOptions = useMemo(() => {
+    // ถ้ามี options ส่งเข้ามาและไม่ว่างเปล่า ให้ใช้ options นั้นก่อน
+    if (options && options.length > 0) {
+      return options;
+    }
+
     switch (name) {
       case "province":
         return provinceData.map(province => ({

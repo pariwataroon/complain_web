@@ -33,15 +33,14 @@ const SendComplaintOPM = () => {
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedSubDistrict, setSelectedSubDistrict] = useState("");
-  const [provinceName, setProvinceName] = useState("");
-  const [districtName, setDistrictName] = useState("");
-  const [subdistrictName, setSubdistrictName] = useState("");
+  const [provinceOptions, setProvinceOptions] = useState([]);
+  const [districtOptions, setDistrictOptions] = useState([]);
+  const [subdistrictOptions, setSubdistrictOptions] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState("6");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedType, setselectedType] = useState("");
   const [createdDate, setCreatedDate] = useState(new Date().toISOString());
   const [updatedDate, setUpdatedDate] = useState(new Date().toISOString());
-  const [reporterPrefix, setReporterPrefix] = useState("");
   const [reporterFirstName, setReporterFirstName] = useState("");
   const [reporterLastName, setReporterLastName] = useState("");
   const [reporterPhone, setReporterPhone] = useState("");
@@ -77,7 +76,6 @@ const SendComplaintOPM = () => {
       selectedType: !!selectedType,
       createdDate: !!createdDate,
       updatedDate: !!updatedDate,
-      reporterPrefix: !!reporterPrefix,
       reporterFirstName: !!reporterFirstName?.trim(),
       reporterLastName: !!reporterLastName?.trim(),
       reporterPhone: !!reporterPhone?.trim(),
@@ -98,7 +96,6 @@ const SendComplaintOPM = () => {
     selectedType,
     createdDate,
     updatedDate,
-    reporterPrefix,
     reporterFirstName,
     reporterLastName,
     reporterPhone,
@@ -121,47 +118,30 @@ const SendComplaintOPM = () => {
         setReporterPhone(complaint.complainant_phone);
       }
 
-      // ดึงคำนำหน้าชื่อ
-      if (complaint.complainant_prefix && complaint.complainant_prefix !== '-') {
-        setReporterPrefix(complaint.complainant_prefix);
-      }
-
-      // ดึงชื่อ-นามสกุล (ใช้ข้อมูลที่แยกมาจาก API ก่อน)
+      // ดึงชื่อ-นามสกุล (รวมคำนำหน้าไว้ในชื่อ)
       if (complaint.complainant_first_name || complaint.complainant_last_name) {
-        // ถ้า API ส่งชื่อ-นามสกุลแยกมาแล้ว ใช้ข้อมูลนั้นเลย
+        // ถ้า API ส่งชื่อ-นามสกุลแยกมาแล้ว
+        const prefix = complaint.complainant_prefix || '';
         const firstName = complaint.complainant_first_name || '';
         const lastName = complaint.complainant_last_name || '';
-        setReporterFirstName(firstName);
+
+        // รวมคำนำหน้ากับชื่อ
+        const fullFirstName = prefix ? `${prefix} ${firstName}`.trim() : firstName;
+        setReporterFirstName(fullFirstName);
         setReporterLastName(lastName);
       } else if (complaint.complainant_name && complaint.complainant_name !== '-') {
-        // ถ้าไม่มี ให้แยกจาก complainant_name
+        // ถ้าไม่มี ให้แยกจาก complainant_name (ไม่ตัดคำนำหน้าออก)
         const fullName = complaint.complainant_name.trim();
+        const nameParts = fullName.split(' ');
 
-        // ตัดคำนำหน้าออกก่อน
-        const prefixes = ['นาย', 'นาง', 'นางสาว', 'ด.ช.', 'ด.ญ.', 'Mr.', 'Mrs.', 'Miss', 'Ms.'];
-        let nameWithoutPrefix = fullName;
-        let foundPrefix = '';
-
-        for (const prefix of prefixes) {
-          if (fullName.startsWith(prefix + ' ')) {
-            foundPrefix = prefix;
-            nameWithoutPrefix = fullName.substring(prefix.length + 1).trim();
-            break;
-          }
-        }
-
-        if (foundPrefix) {
-          setReporterPrefix(foundPrefix);
-        }
-
-        const nameParts = nameWithoutPrefix.split(' ');
         if (nameParts.length >= 2) {
-          const firstName = nameParts[0];
-          const lastName = nameParts.slice(1).join(' ');
+          // แยกเป็นชื่อและนามสกุล (คำนำหน้ารวมอยู่ในชื่อแล้ว)
+          const firstName = nameParts.slice(0, -1).join(' '); // ทุกคำยกเว้นคำสุดท้าย
+          const lastName = nameParts[nameParts.length - 1]; // คำสุดท้าย
           setReporterFirstName(firstName);
           setReporterLastName(lastName);
         } else {
-          setReporterFirstName(nameWithoutPrefix);
+          setReporterFirstName(fullName);
           setReporterLastName('');
         }
       }
@@ -171,23 +151,37 @@ const SendComplaintOPM = () => {
         setComplaintDetail(complaint.complainant_description);
       }
 
-      // ดึงข้อมูลที่ตั้ง: จังหวัด อำเภอ ตำบล (เก็บทั้ง ID และชื่อ)
+      // ดึงข้อมูลที่ตั้ง: จังหวัด อำเภอ ตำบล (สร้าง options จากข้อมูล OPM)
       if (complaint.province_name && complaint.province_name !== '-') {
-        setSelectedProvince(complaint.province_id || '');
-        setProvinceName(complaint.province_name);
-        console.log('Selected Province:', complaint.province_name, '(ID:', complaint.province_id, ')');
+        const provinceId = complaint.province_id || '';
+        setSelectedProvince(provinceId);
+        // สร้าง option สำหรับจังหวัดจากข้อมูล OPM
+        setProvinceOptions([{
+          value: provinceId,
+          label: complaint.province_name
+        }]);
+        console.log('Selected Province:', complaint.province_name, '(ID:', provinceId, ')');
       }
 
       if (complaint.district_name && complaint.district_name !== '-') {
-        setSelectedDistrict(complaint.district_id || '');
-        setDistrictName(complaint.district_name);
-        console.log('Selected District:', complaint.district_name, '(ID:', complaint.district_id, ')');
+        const districtId = complaint.district_id || '';
+        setSelectedDistrict(districtId);
+        // สร้าง option สำหรับอำเภอจากข้อมูล OPM
+        setDistrictOptions([{
+          value: districtId,
+          label: complaint.district_name
+        }]);
+        console.log('Selected District:', complaint.district_name, '(ID:', districtId, ')');
       }
 
       if (complaint.subdistrict_name && complaint.subdistrict_name !== '-') {
         const subdistrictId = complaint.subdistrict_id || complaint.sub_district_id || '';
         setSelectedSubDistrict(subdistrictId);
-        setSubdistrictName(complaint.subdistrict_name);
+        // สร้าง option สำหรับตำบลจากข้อมูล OPM
+        setSubdistrictOptions([{
+          value: subdistrictId,
+          label: complaint.subdistrict_name
+        }]);
         console.log('Selected Subdistrict:', complaint.subdistrict_name, '(ID:', subdistrictId, ')');
       }
 
@@ -252,10 +246,6 @@ const SendComplaintOPM = () => {
     setReporterLastName(nameValue);
   }, []);
 
-  const handleReporterPrefixChange = useCallback((event) => {
-    setReporterPrefix(event.target.value);
-  }, []);
-
   const handleReporterPhoneChange = useCallback((e) => {
     const value = e.target.value;
     const numericValue = value.replace(/[^0-9]/g, "");
@@ -285,15 +275,14 @@ const SendComplaintOPM = () => {
       setSelectedProvince("");
       setSelectedDistrict("");
       setSelectedSubDistrict("");
-      setProvinceName("");
-      setDistrictName("");
-      setSubdistrictName("");
+      setProvinceOptions([]);
+      setDistrictOptions([]);
+      setSubdistrictOptions([]);
       setSelectedChannel("");
       setSelectedStatus("");
       setselectedType("");
       setCreatedDate(new Date().toISOString());
       setUpdatedDate(new Date().toISOString());
-      setReporterPrefix("");
       setReporterFirstName("");
       setReporterLastName("");
       setReporterPhone("");
@@ -734,17 +723,6 @@ const SendComplaintOPM = () => {
               </Grid>
 
               <Grid item xs={12} md={6}>
-                <SelectFieldPAAOPM
-                  label="คำนำหน้าชื่อ"
-                  name="prefix"
-                  placeholder="เลือกคำนำหน้าชื่อ"
-                  value={reporterPrefix}
-                  onChange={handleReporterPrefixChange}
-                  required={true}
-                />
-              </Grid>
-
-              <Grid item xs={12} md={6}>
                 <FormControl className={styles.formControl} sx={{ mb: 2 }}>
                   <Typography
                     variant="subtitle2"
@@ -921,22 +899,9 @@ const SendComplaintOPM = () => {
                   placeholder="เลือกจังหวัด"
                   value={selectedProvince}
                   onChange={handleProvinceChange}
+                  options={provinceOptions}
                   required={true}
                 />
-                {provinceName && (
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      mt: 1,
-                      pl: 1,
-                      color: "#0891b2",
-                      fontWeight: 500,
-                      fontSize: "0.875rem"
-                    }}
-                  >
-                    📍 จังหวัดจากข้อมูล OPM: {provinceName}
-                  </Typography>
-                )}
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -948,22 +913,9 @@ const SendComplaintOPM = () => {
                   onChange={handleDistrictChange}
                   disabled={!selectedProvince}
                   selectedProvince={selectedProvince}
+                  options={districtOptions}
                   required={true}
                 />
-                {districtName && (
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      mt: 1,
-                      pl: 1,
-                      color: "#0891b2",
-                      fontWeight: 500,
-                      fontSize: "0.875rem"
-                    }}
-                  >
-                    📍 อำเภอจากข้อมูล OPM: {districtName}
-                  </Typography>
-                )}
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -976,22 +928,9 @@ const SendComplaintOPM = () => {
                   disabled={!selectedDistrict}
                   selectedProvince={selectedProvince}
                   selectedDistrict={selectedDistrict}
+                  options={subdistrictOptions}
                   required={true}
                 />
-                {subdistrictName && (
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      mt: 1,
-                      pl: 1,
-                      color: "#0891b2",
-                      fontWeight: 500,
-                      fontSize: "0.875rem"
-                    }}
-                  >
-                    📍 ตำบลจากข้อมูล OPM: {subdistrictName}
-                  </Typography>
-                )}
               </Grid>
 
               {/* Date Fields */}
