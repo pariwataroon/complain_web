@@ -1652,6 +1652,28 @@ def get_complaints_enhanced(
                 (hasattr(complaint, "assigned_date") and complaint.assigned_date)
             )
             
+            # แยกคำนำหน้า ชื่อ นามสกุล จาก complainant_data
+            complainant_prefix = complainant_data.get("prefix", "") or complainant_data.get("title", "")
+            complainant_first_name = complainant_data.get("firstName", "") or complainant_data.get("first_name", "")
+            complainant_last_name = complainant_data.get("lastName", "") or complainant_data.get("last_name", "")
+
+            # ถ้าไม่มี firstName/lastName ลองแยกจาก name
+            if not complainant_first_name and not complainant_last_name:
+                full_name = complainant_data.get("name", "")
+                if full_name and full_name != "-":
+                    # ลองแยกชื่อ-นามสกุล (สมมติว่าคำแรกคือคำนำหน้า+ชื่อ คำที่เหลือคือนามสกุล)
+                    name_parts = full_name.split()
+                    if len(name_parts) >= 2:
+                        # ถ้าคำแรกเป็นคำนำหน้า
+                        prefixes = ["นาย", "นาง", "นางสาว", "ด.ช.", "ด.ญ.", "Mr.", "Mrs.", "Miss", "Ms."]
+                        if name_parts[0] in prefixes:
+                            complainant_prefix = name_parts[0]
+                            complainant_first_name = name_parts[1] if len(name_parts) > 1 else ""
+                            complainant_last_name = " ".join(name_parts[2:]) if len(name_parts) > 2 else ""
+                        else:
+                            complainant_first_name = name_parts[0]
+                            complainant_last_name = " ".join(name_parts[1:])
+
             enhanced_item = {
                 "id": str(complaint.id),
                 "complaint_number": complaint.complaint_number,
@@ -1672,11 +1694,25 @@ def get_complaints_enhanced(
                 "complaint_type_name": complaint.complaint_type or "",
                 "is_master": (complaint.parent_complaint_id is None),
                 "is_assigned": is_assigned,  # เพิ่มฟิลด์สำหรับตรวจสอบสถานะการมอบหมาย
-                
+
                 # เพิ่ม phone และ description สำหรับ enhanced version
                 "complainant_phone": complainant_data.get("phone", ""),
                 "complainant_description": complaint.description or "",
-                
+
+                # เพิ่มข้อมูลคำนำหน้า ชื่อ นามสกุล แยกกัน
+                "complainant_prefix": complainant_prefix,
+                "complainant_first_name": complainant_first_name,
+                "complainant_last_name": complainant_last_name,
+
+                # เพิ่มข้อมูลที่ตั้ง (จังหวัด อำเภอ ตำบล)
+                "province_id": str(complaint.incident_province_id) if complaint.incident_province_id else None,
+                "district_id": str(complaint.incident_district_id) if complaint.incident_district_id else None,
+                "subdistrict_id": complaint.incident_subdistrict_id,
+                "sub_district_id": complaint.incident_subdistrict_id,  # เพิ่มทั้งสองแบบเพื่อความสมบูรณ์
+                "province_name": complaint.incident_province,
+                "district_name": complaint.incident_district,
+                "subdistrict_name": complaint.incident_subdistrict,
+
                 # Enhanced fields - ข้อมูลเพิ่มเติม
                 "additional_reference_number1": complaint.additional_reference_number1,
                 "additional_reference_date1": complaint.additional_reference_date1.isoformat() if complaint.additional_reference_date1 else None,
@@ -1709,6 +1745,13 @@ def get_complaints_enhanced(
                 basic_dict.update({
                     "complainant_phone": "",
                     "complainant_description": "",
+                    "province_id": str(complaint.incident_province_id) if complaint.incident_province_id else None,
+                    "district_id": str(complaint.incident_district_id) if complaint.incident_district_id else None,
+                    "subdistrict_id": complaint.incident_subdistrict_id,
+                    "sub_district_id": complaint.incident_subdistrict_id,
+                    "province_name": complaint.incident_province,
+                    "district_name": complaint.incident_district,
+                    "subdistrict_name": complaint.incident_subdistrict,
                     "additional_reference_number1": None,
                     "additional_reference_date1": None,
                     "additional_reference_number2": None,
