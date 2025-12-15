@@ -33,11 +33,15 @@ const SendComplaintOPM = () => {
   const [selectedProvince, setSelectedProvince] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
   const [selectedSubDistrict, setSelectedSubDistrict] = useState("");
+  const [provinceName, setProvinceName] = useState("");
+  const [districtName, setDistrictName] = useState("");
+  const [subdistrictName, setSubdistrictName] = useState("");
   const [selectedChannel, setSelectedChannel] = useState("6");
   const [selectedStatus, setSelectedStatus] = useState("");
   const [selectedType, setselectedType] = useState("");
   const [createdDate, setCreatedDate] = useState(new Date().toISOString());
   const [updatedDate, setUpdatedDate] = useState(new Date().toISOString());
+  const [reporterPrefix, setReporterPrefix] = useState("");
   const [reporterFirstName, setReporterFirstName] = useState("");
   const [reporterLastName, setReporterLastName] = useState("");
   const [reporterPhone, setReporterPhone] = useState("");
@@ -73,6 +77,7 @@ const SendComplaintOPM = () => {
       selectedType: !!selectedType,
       createdDate: !!createdDate,
       updatedDate: !!updatedDate,
+      reporterPrefix: !!reporterPrefix,
       reporterFirstName: !!reporterFirstName?.trim(),
       reporterLastName: !!reporterLastName?.trim(),
       reporterPhone: !!reporterPhone?.trim(),
@@ -93,6 +98,7 @@ const SendComplaintOPM = () => {
     selectedType,
     createdDate,
     updatedDate,
+    reporterPrefix,
     reporterFirstName,
     reporterLastName,
     reporterPhone,
@@ -105,52 +111,85 @@ const SendComplaintOPM = () => {
     setSelectedComplaintData(complaint);
 
     if (complaint) {
+      // ดึงเลขที่เรื่อง
       if (complaint.complaint_number && complaint.complaint_number !== '-') {
         setCaseCode(complaint.complaint_number);
       }
 
+      // ดึงเบอร์โทร
       if (complaint.complainant_phone && complaint.complainant_phone !== '-') {
         setReporterPhone(complaint.complainant_phone);
       }
 
-      if (complaint.complainant_name && complaint.complainant_name !== '-') {
-        const fullName = complaint.complainant_name.trim();
-        const nameParts = fullName.split(' ');
+      // ดึงคำนำหน้าชื่อ
+      if (complaint.complainant_prefix && complaint.complainant_prefix !== '-') {
+        setReporterPrefix(complaint.complainant_prefix);
+      }
 
+      // ดึงชื่อ-นามสกุล (ใช้ข้อมูลที่แยกมาจาก API ก่อน)
+      if (complaint.complainant_first_name || complaint.complainant_last_name) {
+        // ถ้า API ส่งชื่อ-นามสกุลแยกมาแล้ว ใช้ข้อมูลนั้นเลย
+        const firstName = complaint.complainant_first_name || '';
+        const lastName = complaint.complainant_last_name || '';
+        setReporterFirstName(firstName);
+        setReporterLastName(lastName);
+      } else if (complaint.complainant_name && complaint.complainant_name !== '-') {
+        // ถ้าไม่มี ให้แยกจาก complainant_name
+        const fullName = complaint.complainant_name.trim();
+
+        // ตัดคำนำหน้าออกก่อน
+        const prefixes = ['นาย', 'นาง', 'นางสาว', 'ด.ช.', 'ด.ญ.', 'Mr.', 'Mrs.', 'Miss', 'Ms.'];
+        let nameWithoutPrefix = fullName;
+        let foundPrefix = '';
+
+        for (const prefix of prefixes) {
+          if (fullName.startsWith(prefix + ' ')) {
+            foundPrefix = prefix;
+            nameWithoutPrefix = fullName.substring(prefix.length + 1).trim();
+            break;
+          }
+        }
+
+        if (foundPrefix) {
+          setReporterPrefix(foundPrefix);
+        }
+
+        const nameParts = nameWithoutPrefix.split(' ');
         if (nameParts.length >= 2) {
           const firstName = nameParts[0];
           const lastName = nameParts.slice(1).join(' ');
           setReporterFirstName(firstName);
           setReporterLastName(lastName);
         } else {
-          setReporterFirstName(fullName);
+          setReporterFirstName(nameWithoutPrefix);
           setReporterLastName('');
         }
       }
 
+      // ดึงรายละเอียดเรื่องร้องเรียน
       if (complaint.complainant_description && complaint.complainant_description !== '-') {
         setComplaintDetail(complaint.complainant_description);
       }
 
-      // if (complaint.complaint_type_id) {
-      //   setselectedType(complaint.complaint_type_id);
-      // }
+      // ดึงข้อมูลที่ตั้ง: จังหวัด อำเภอ ตำบล (เก็บทั้ง ID และชื่อ)
+      if (complaint.province_name && complaint.province_name !== '-') {
+        setSelectedProvince(complaint.province_id || '');
+        setProvinceName(complaint.province_name);
+        console.log('Selected Province:', complaint.province_name, '(ID:', complaint.province_id, ')');
+      }
 
-      // ถ้ามี status ที่ตรงกับระบบให้ set
-      // if (complaint.status) {
-      //   const statusMapping = {
-      //     'รับเรื่อง': '1',
-      //     'ติดตามผล': '2',
-      //     'อยู่ระหว่างพิจารณา': '3',
-      //     'กำลังดำเนินการ': '4',
-      //     'มอบหมายเจ้าหน้าที่': '5',
-      //     'เสร็จสิ้น': '6'
-      //   };
+      if (complaint.district_name && complaint.district_name !== '-') {
+        setSelectedDistrict(complaint.district_id || '');
+        setDistrictName(complaint.district_name);
+        console.log('Selected District:', complaint.district_name, '(ID:', complaint.district_id, ')');
+      }
 
-      //   if (statusMapping[complaint.status]) {
-      //     setSelectedStatus(statusMapping[complaint.status]);
-      //   }
-      // }
+      if (complaint.subdistrict_name && complaint.subdistrict_name !== '-') {
+        const subdistrictId = complaint.subdistrict_id || complaint.sub_district_id || '';
+        setSelectedSubDistrict(subdistrictId);
+        setSubdistrictName(complaint.subdistrict_name);
+        console.log('Selected Subdistrict:', complaint.subdistrict_name, '(ID:', subdistrictId, ')');
+      }
 
       // ถ้ามี created_date ให้ set วันที่สร้าง
       if (complaint.created_at) {
@@ -213,6 +252,10 @@ const SendComplaintOPM = () => {
     setReporterLastName(nameValue);
   }, []);
 
+  const handleReporterPrefixChange = useCallback((event) => {
+    setReporterPrefix(event.target.value);
+  }, []);
+
   const handleReporterPhoneChange = useCallback((e) => {
     const value = e.target.value;
     const numericValue = value.replace(/[^0-9]/g, "");
@@ -242,11 +285,15 @@ const SendComplaintOPM = () => {
       setSelectedProvince("");
       setSelectedDistrict("");
       setSelectedSubDistrict("");
+      setProvinceName("");
+      setDistrictName("");
+      setSubdistrictName("");
       setSelectedChannel("");
       setSelectedStatus("");
       setselectedType("");
       setCreatedDate(new Date().toISOString());
       setUpdatedDate(new Date().toISOString());
+      setReporterPrefix("");
       setReporterFirstName("");
       setReporterLastName("");
       setReporterPhone("");
@@ -683,7 +730,18 @@ const SendComplaintOPM = () => {
                 <Typography variant="h6" className={styles.sectionTitle}>
                   ข้อมูลผู้แจ้งเหตุ
                 </Typography>
-                
+
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <SelectFieldPAAOPM
+                  label="คำนำหน้าชื่อ"
+                  name="prefix"
+                  placeholder="เลือกคำนำหน้าชื่อ"
+                  value={reporterPrefix}
+                  onChange={handleReporterPrefixChange}
+                  required={true}
+                />
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -711,7 +769,7 @@ const SendComplaintOPM = () => {
                     fullWidth
                     className={styles.textField}
                     helperText="ใส่ได้เฉพาะตัวอักษรไทย-อังกฤษเท่านั้น"
-                    
+
                   />
                 </FormControl>
               </Grid>
@@ -865,6 +923,20 @@ const SendComplaintOPM = () => {
                   onChange={handleProvinceChange}
                   required={true}
                 />
+                {provinceName && (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mt: 1,
+                      pl: 1,
+                      color: "#0891b2",
+                      fontWeight: 500,
+                      fontSize: "0.875rem"
+                    }}
+                  >
+                    📍 จังหวัดจากข้อมูล OPM: {provinceName}
+                  </Typography>
+                )}
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -878,6 +950,20 @@ const SendComplaintOPM = () => {
                   selectedProvince={selectedProvince}
                   required={true}
                 />
+                {districtName && (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mt: 1,
+                      pl: 1,
+                      color: "#0891b2",
+                      fontWeight: 500,
+                      fontSize: "0.875rem"
+                    }}
+                  >
+                    📍 อำเภอจากข้อมูล OPM: {districtName}
+                  </Typography>
+                )}
               </Grid>
 
               <Grid item xs={12} md={6}>
@@ -892,6 +978,20 @@ const SendComplaintOPM = () => {
                   selectedDistrict={selectedDistrict}
                   required={true}
                 />
+                {subdistrictName && (
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      mt: 1,
+                      pl: 1,
+                      color: "#0891b2",
+                      fontWeight: 500,
+                      fontSize: "0.875rem"
+                    }}
+                  >
+                    📍 ตำบลจากข้อมูล OPM: {subdistrictName}
+                  </Typography>
+                )}
               </Grid>
 
               {/* Date Fields */}
