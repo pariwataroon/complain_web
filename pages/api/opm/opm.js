@@ -396,9 +396,21 @@ const AddCase = async (submitData) => {
     if (!org_id) {
       throw new Error("Token not found in cookies. Please authenticate first.");
     }
-    const response = await soapInstance.post(
-      process.env.NEXT_PUBLIC_OPM_API_MANAGECENTER,
-      `<?xml version="1.0" encoding="utf-8"?>
+
+    // Debug: แสดงข้อมูลที่จะส่งไปยัง OPM
+    console.log("=== DEBUG: AddCase Data ===");
+    console.log("Submit Data:", submitData);
+    console.log("Token ID:", token_id);
+    console.log("Org ID:", org_id);
+    console.log("Province ID:", submitData.province_id);
+    console.log("District ID:", submitData.district_id);
+    console.log("Subdistrict ID:", submitData.subdistrict_id);
+    console.log("Contact Name:", submitData.reporter_first_name);
+    console.log("Contact Lastname:", submitData.reporter_last_name);
+    console.log("Contact Phone:", submitData.reporter_phone);
+    console.log("Detail:", submitData.complaint_detail);
+
+    const soapXML = `<?xml version="1.0" encoding="utf-8"?>
         <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
           <soap:Body>
             <AddCase xmlns="http://tempuri.org/">
@@ -420,7 +432,15 @@ const AddCase = async (submitData) => {
               <updated_date>${submitData.updated_date}</updated_date>
             </AddCase>
           </soap:Body>
-        </soap:Envelope>`,
+        </soap:Envelope>`;
+
+    console.log("=== SOAP XML ที่จะส่งไป ===");
+    console.log(soapXML);
+    console.log("========================");
+
+    const response = await soapInstance.post(
+      process.env.NEXT_PUBLIC_OPM_API_MANAGECENTER,
+      soapXML,
       {
         soapActionSuffix: "AddCase",
       }
