@@ -485,8 +485,9 @@ const handleExportExcel = () => {
           wrapText: true
         };
         ws[cellAddress].s.font = {
+          name: "TH Sarabun",
           bold: true,
-          size: 14
+          sz: 16
         };
       }
       // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์)
@@ -497,8 +498,9 @@ const handleExportExcel = () => {
           wrapText: true
         };
         ws[cellAddress].s.font = {
+          name: "TH Sarabun",
           bold: true,
-          size: 11
+          sz: 11
         };
       }
       // จัดรูปแบบแถวข้อมูล
@@ -506,8 +508,9 @@ const handleExportExcel = () => {
         if (officerRows.has(R)) {
           // แถวเจ้าหน้าที่
           ws[cellAddress].s.font = {
+            name: "TH Sarabun",
             bold: true,
-            size: 11
+            sz: 11
           };
           ws[cellAddress].s.alignment = {
             horizontal: "left",
@@ -531,12 +534,31 @@ const handleExportExcel = () => {
             };
           }
           ws[cellAddress].s.font = {
-            size: 11
+            name: "TH Sarabun",
+            sz: 11
           };
         }
       }
     }
   }
+
+  // ตั้งค่า Page Setup เป็น A4
+  ws['!pageSetup'] = {
+    paperSize: 9, // A4 = 9
+    orientation: "portrait",
+    fitToPage: false,
+    scale: 100,
+  };
+
+  // ตั้งค่า margins
+  ws['!margins'] = {
+    left: 0.5,
+    right: 0.5,
+    top: 0.5,
+    bottom: 0.5,
+    header: 0.3,
+    footer: 0.3,
+  };
 
   // เพิ่ม worksheet เข้า workbook
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");

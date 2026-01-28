@@ -280,18 +280,17 @@ const PendingWorkfollowupComponents = () => {
     // filter ประเภทเรื่อง
     if (filterData.dataType && filterData.dataType !== "") {
       if (filterData.dataType === "new_complaint") {
-        // เรื่องร้องเรียนใหม่
+        // เรื่องร้องเรียนใหม่ - กรองด้วย filing_type เท่านั้น
         result = result.filter((item) =>
-          item.status === "submitted" || item.status === "ส่งคำร้อง" ||
-          item.status === "sent_to_agency" || item.status === "มอบหมายเจ้าหน้าที่"
+          item.filing_type === "new" || item.filing_type === "ใหม่" || item.filing_type === "เรื่องร้องเรียนใหม่"
         );
       } else if (filterData.dataType === "additional_complaint") {
-        // เรื่องร้องเรียนเพิ่มเติม
+        // เรื่องร้องเรียนเพิ่มเติม - กรองด้วย filing_type เท่านั้น
         result = result.filter((item) =>
-          item.status === "additional" || item.status === "เรื่องร้องเรียนเพิ่มเติม"
+          item.filing_type === "additional" || item.filing_type === "เพิ่มเติม" || item.filing_type === "เรื่องร้องเรียนเพิ่มเติม"
         );
       } else if (filterData.dataType === "department_decision") {
-        // ผลการพิจารณาจากหน่วยงาน
+        // ผลการพิจารณาจากหน่วยงาน - กรองด้วย status
         result = result.filter((item) =>
           item.status === "in_review" || item.status === "อยู่ระหว่างการพิจารณา" ||
           item.status === "tracking" || item.status === "ติดตามผลการพิจารณา" ||

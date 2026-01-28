@@ -428,6 +428,24 @@ const SendComplaintOPM = () => {
       if (result) {
         if (typeof result === "string" && result.includes("<AddCaseResult>")) {
           addCaseResult = extractAddCaseResult(result);
+
+          // เช็คว่ามี Error หรือไม่
+          if (addCaseResult && (addCaseResult.includes("Err:") || addCaseResult.includes("Error"))) {
+            // ถ้ามี Error ให้แสดง Alert แล้ว return
+            if (addCaseResult.includes("Not found user")) {
+              await alertError(
+                "ไม่สามารถส่งข้อมูลได้",
+                "คุณไม่มีสิทธิ์ในการส่งรายงานไปยัง สปน. (ศูนย์ปฏิบัติการนายกรัฐมนตรี)\n\nกรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์การใช้งาน"
+              );
+            } else {
+              await alertError(
+                "เกิดข้อผิดพลาด",
+                `ไม่สามารถส่งข้อมูลไปยัง สปน. ได้\n\nรายละเอียด: ${addCaseResult}`
+              );
+            }
+            return;
+          }
+
           isSuccess = !!addCaseResult;
           responseData = result;
         } else if (
@@ -436,6 +454,24 @@ const SendComplaintOPM = () => {
           result.data.includes("<AddCaseResult>")
         ) {
           addCaseResult = extractAddCaseResult(result.data);
+
+          // เช็คว่ามี Error หรือไม่
+          if (addCaseResult && (addCaseResult.includes("Err:") || addCaseResult.includes("Error"))) {
+            // ถ้ามี Error ให้แสดง Alert แล้ว return
+            if (addCaseResult.includes("Not found user")) {
+              await alertError(
+                "ไม่สามารถส่งข้อมูลได้",
+                "คุณไม่มีสิทธิ์ในการส่งรายงานไปยัง สปน. (ศูนย์ปฏิบัติการนายกรัฐมนตรี)\n\nกรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์การใช้งาน"
+              );
+            } else {
+              await alertError(
+                "เกิดข้อผิดพลาด",
+                `ไม่สามารถส่งข้อมูลไปยัง สปน. ได้\n\nรายละเอียด: ${addCaseResult}`
+              );
+            }
+            return;
+          }
+
           isSuccess = !!addCaseResult;
           responseData = result.data;
         } else if (result.success === true) {

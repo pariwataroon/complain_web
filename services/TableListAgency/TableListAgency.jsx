@@ -14,6 +14,7 @@ import {
   useTheme,
   Stack,
   Typography,
+  TextField,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
@@ -289,18 +290,18 @@ const TableListAgency = ({
 
         // สร้าง style object
         let style = {
-          font: { name: "Calibri", sz: 11 },
+          font: { name: "TH Sarabun", sz: 11 },
           alignment: { vertical: "center", wrapText: true },
         };
 
         // แถว 0-2: หัวข้อ (ตัวหนา, จัดกลาง, ไม่มีกรอบ)
         if (R <= 2) {
-          style.font = { name: "Calibri", sz: 14, bold: true };
+          style.font = { name: "TH Sarabun", sz: 16, bold: true };
           style.alignment = { horizontal: "center", vertical: "center" };
         }
         // แถวที่ 4: Header (ตัวหนา, จัดกลาง, มีกรอบ, พื้นหลังเทา)
         else if (R === 4) {
-          style.font = { name: "Calibri", sz: 11, bold: true };
+          style.font = { name: "TH Sarabun", sz: 11, bold: true };
           style.alignment = { horizontal: "center", vertical: "center", wrapText: true };
           style.fill = { fgColor: { rgb: "D9D9D9" } };
           style.border = {
@@ -328,6 +329,24 @@ const TableListAgency = ({
         ws[cellAddress].s = style;
       }
     }
+
+    // ตั้งค่า Page Setup เป็น A4
+    ws["!pageSetup"] = {
+      paperSize: 9, // A4 = 9
+      orientation: "portrait",
+      fitToPage: false,
+      scale: 100,
+    };
+
+    // ตั้งค่า margins
+    ws["!margins"] = {
+      left: 0.5,
+      right: 0.5,
+      top: 0.5,
+      bottom: 0.5,
+      header: 0.3,
+      footer: 0.3,
+    };
 
     // Export file
     const wb = XLSXStyle.utils.book_new();
@@ -408,7 +427,7 @@ const TableListAgency = ({
           </Box>
         )}
 
-        {/* ⬇️ แถบฟิลเตอร์ 5 ช่อง */}
+        {/* ⬇️ แถบฟิลเตอร์ */}
         <Box
           sx={{
             px: { xs: 2, sm: 3 },
@@ -427,7 +446,7 @@ const TableListAgency = ({
                 xs: "1fr",
                 sm: "repeat(2, 1fr)",
                 md: "repeat(3, 1fr)",
-                lg: "repeat(5, 1fr)",
+                lg: "repeat(3, 1fr)",
               },
             }}
           >
@@ -468,6 +487,22 @@ const TableListAgency = ({
                 />
               </Box>
             </Box>
+          </Box>
+
+          {/* แถวที่ 2: สถานะ, เจ้าหน้าที่, ชื่อผู้ร้อง */}
+          <Box
+            display="grid"
+            gap={{ xs: 1.2, sm: 1.5 }}
+            sx={{
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, 1fr)",
+                md: "repeat(3, 1fr)",
+                lg: "repeat(3, 1fr)",
+              },
+            }}
+            mt={{ xs: 1, sm: 1.5 }}
+          >
             <SelectField
               label="สถานะเรื่อง"
               value={filters.status}
@@ -475,6 +510,37 @@ const TableListAgency = ({
               options={statusOptions}
               size="small"
             />
+            <SelectField
+              label="เจ้าหน้าที่ผู้รับผิดชอบ"
+              value={filters.responsibleOfficer}
+              onChange={handleChange("responsibleOfficer")}
+              options={officerOptions}
+              size="small"
+            />
+            <Box>
+              <Typography
+                variant="subtitle2"
+                sx={{ color: "#1120A3", fontWeight: 600, mb: 1 }}
+              >
+                ชื่อผู้ร้อง
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="พิมพ์ชื่อผู้ร้อง..."
+                value={filters.claimantName}
+                onChange={handleChange("claimantName")}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    height: "40px",
+                    borderRadius: "10px",
+                    "& fieldset": {
+                      borderColor: "#1120A3",
+                    },
+                  },
+                }}
+              />
+            </Box>
           </Box>
 
           <Stack direction="row" spacing={1} mt={1.5} justifyContent="flex-end">

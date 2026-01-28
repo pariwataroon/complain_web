@@ -124,13 +124,14 @@ const transformComplaintData = (apiItems) => {
 
     // Determine master flag:
     // 1. If the API gives item.is_master explicitly, use that exact boolean.
-    // 2. Only if it's undefined (not present) then fall back to master_complaint.is_master.
-    // (Previous logic used OR which caused every child (with a master_complaint) to appear as master.)
+    // 2. If undefined, check if it has a master_complaint reference:
+    //    - If has master_complaint → it's a child (additional complaint) → isMaster = false
+    //    - If no master_complaint → it's a master complaint → isMaster = true
     const isMaster =
       item.is_master !== undefined
         ? item.is_master
-        : !!item.master_complaint?.is_master;
-    // console.debug("Row", id, "is_master(raw)=", item.is_master, "=> isMaster=", isMaster);
+        : !item.master_complaint;
+    // console.debug("Row", id, "is_master(raw)=", item.is_master, "has master_complaint=", !!item.master_complaint, "=> isMaster=", isMaster);
 
     return {
       id,
@@ -280,7 +281,7 @@ const ComplaintArchives = () => {
       }
 
       if (filters.status && filters.status !== "") {
-        ok = ok && item.status === filters.status; // เทียบภาษาไทยในตาราง
+        ok = ok && item.status === filters.status; 
       }
 
       if (filters.complaintNumber && filters.complaintNumber.trim() !== "") {
@@ -336,10 +337,11 @@ const ComplaintArchives = () => {
         const res = await getDocumentStorageForWebsite({ skip: 0, limit: 10000 });
         const items = res?.res_data?.items ?? [];
 
-        // 1) แปลงข้อมูลเพื่อแสดงผล
+        // 1) แปลงข้อมูลเพื่อแสดงผล และกรองเอาเฉพาะเรื่องร้องหลัก (ไม่แสดงเรื่องร้องเพิ่มเติม)
         const transformed = transformComplaintData(items);
-        setAllComplaints(transformed);
-        setFilteredComplaints(transformed);
+        const masterComplaintsOnly = transformed.filter(item => item.isMaster);
+        setAllComplaints(masterComplaintsOnly);
+        setFilteredComplaints(masterComplaintsOnly);
 
         // 2) สกัด options จาก API items
         const opts = extractFilterOptionsFromItems(items);
