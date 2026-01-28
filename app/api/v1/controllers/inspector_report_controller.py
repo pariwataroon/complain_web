@@ -18,6 +18,11 @@ def get_inspector_report(
     limit: int = 100,
     search: Optional[str] = None,
     year: Optional[int] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    department_id: Optional[str] = None,
+    inspector_id: Optional[str] = None,
+    status: Optional[str] = None,
 ) -> Dict:
     """
     รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจราชการกระทรวงการคลัง
@@ -29,16 +34,27 @@ def get_inspector_report(
 
     เงื่อนไขสำคัญ:
       - ใช้ช่วงปี (UTC naive) จาก COALESCE(reference_date, document_date, created_at)
+      - รองรับ date_from/date_to แทนการใช้ปี ถ้าระบุ
       - outerjoin กับ OutsideDepartment และ User เพื่อไม่ตัดแถวที่ค่านั้นเป็น NULL
       - ครอบคลุมงานผู้ตรวจด้วย or_(report_type == 'inspector', signature_authority_user_id IS NOT NULL)
       - MSSQL ต้องมี order_by ก่อน offset/limit
     """
-    if year is None:
-        year = datetime.utcnow().year
+    # Determine date range: date_from/date_to take precedence over year
+    if date_from:
+        start_date = datetime.fromisoformat(date_from.replace('Z', '+00:00').replace('+00:00', ''))
+        start_date = datetime(start_date.year, start_date.month, start_date.day)
+    elif year is not None:
+        start_date = datetime(year, 1, 1)
+    else:
+        start_date = datetime(datetime.utcnow().year, 1, 1)
 
-    # ใช้ naive-UTC ให้สอดคล้อง datetime2 ของ MSSQL
-    start_date = datetime(year, 1, 1)
-    end_date = datetime(year + 1, 1, 1)
+    if date_to:
+        end_date = datetime.fromisoformat(date_to.replace('Z', '+00:00').replace('+00:00', ''))
+        end_date = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+    elif year is not None:
+        end_date = datetime(year + 1, 1, 1)
+    else:
+        end_date = datetime(datetime.utcnow().year + 1, 1, 1)
 
     # ใช้วันที่อ้างอิง ถ้าไม่มีค่อย fallback เป็น created_at
     date_expr = func.coalesce(
@@ -160,6 +176,25 @@ def get_inspector_report(
                 User.first_name.ilike(like),
                 User.last_name.ilike(like),
                 Department.name.ilike(like),
+            )
+        )
+
+    # Filter by department_id
+    if department_id:
+        q = q.filter(OutgoingReport.department_id == department_id)
+
+    # Filter by inspector_id
+    if inspector_id:
+        q = q.filter(OutgoingReport4.signature_authority_user_id == inspector_id)
+
+    # Filter by status
+    if status == "closed":
+        q = q.filter(OutgoingReport4.consideration_result.ilike("%ยุติ%"))
+    elif status == "in_progress":
+        q = q.filter(
+            or_(
+                OutgoingReport4.consideration_result.is_(None),
+                ~OutgoingReport4.consideration_result.ilike("%ยุติ%")
             )
         )
 

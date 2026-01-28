@@ -27,7 +27,6 @@ def get_agency_complaints(
     responsible_officer: Optional[str] = Query(None, description="เจ้าหน้าที่รับผิดชอบ"),
     claimant_name: Optional[str] = Query(None, description="ชื่อผู้ร้อง/เรื่อง"),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(can_read("dashboard")),
 ):
     """
     รายงานสรุปเรื่องร้องเรียนของหน่วยงาน

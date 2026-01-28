@@ -17,6 +17,11 @@ def list_inspector_reports(
     limit: int = Query(100, ge=1, le=1000),
     search: Optional[str] = Query(None, description="ค้นหา (ชื่อผู้ตรวจ, หน่วยงาน, เรื่อง)",),
     year: Optional[int] = Query(None, description="ปี ค.ศ. สำหรับค้นหา (default: ปีปัจจุบัน)",),
+    date_from: Optional[str] = Query(None, description="วันที่เริ่มต้น (ISO format YYYY-MM-DD)",),
+    date_to: Optional[str] = Query(None, description="วันที่สิ้นสุด (ISO format YYYY-MM-DD)",),
+    department_id: Optional[str] = Query(None, description="ID หน่วยงาน",),
+    inspector_id: Optional[str] = Query(None, description="ID ผู้ตรวจ",),
+    status: Optional[str] = Query(None, description="สถานะ (closed/in_progress)",),
     db: Session = Depends(get_db),
     current_user: dict = Depends(can_read("dashboard")),
 ):
@@ -27,6 +32,11 @@ def list_inspector_reports(
             limit=limit,
             search=search,
             year=year,
+            date_from=date_from,
+            date_to=date_to,
+            department_id=department_id,
+            inspector_id=inspector_id,
+            status=status,
         )
         return format_response("0000", result)
     except HTTPException:
