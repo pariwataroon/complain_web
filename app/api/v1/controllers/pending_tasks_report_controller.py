@@ -243,8 +243,7 @@ def get_pending_tasks_report(
                             or_(
                                 OutgoingReport3.created_by == officer_uuid,
                                 OutgoingReport3.updated_by == officer_uuid,
-                                OutgoingReport3.signature_authority_user_id == officer_uuid,
-                                OutgoingReport3.user_id == officer_uuid
+                                OutgoingReport3.signature_authority_user_id == officer_uuid
                             )
                         )
                     ).exists(),
