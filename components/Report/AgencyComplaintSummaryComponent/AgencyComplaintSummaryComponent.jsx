@@ -74,6 +74,8 @@ const formatToThaiDate = (date) => {
 };
 
 const AgencyComplaintSummary = () => {
+  console.log("[AgencyComplaintSummary] Component rendered!");
+
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -81,13 +83,16 @@ const AgencyComplaintSummary = () => {
 
   // Fetch data on mount
   useEffect(() => {
+    console.log("[AgencyComplaintSummary] useEffect triggered, calling fetchData...");
     fetchData();
   }, []);
 
   const fetchData = async (filters = {}) => {
     setLoading(true);
+    console.log("[AgencyComplaintSummary] Starting fetch with filters:", filters);
     try {
-      const year = filters.year || new Date().getFullYear();
+      const year = filters.year || 2025; // ใช้ 2025 เป็น default
+      console.log("[AgencyComplaintSummary] Year:", year);
 
       // แปลงวันที่เป็น ISO format (YYYY-MM-DD) สำหรับ API
       let date_from = "";
@@ -113,6 +118,18 @@ const AgencyComplaintSummary = () => {
         date_to = `${toYear}-${String(toDate.getMonth() + 1).padStart(2, '0')}-${String(toDate.getDate()).padStart(2, '0')}`;
       }
 
+      console.log("[AgencyComplaintSummary] Calling API with params:", {
+        skip: 0,
+        limit: 100,
+        year,
+        date_from,
+        date_to,
+        status: filters.status || "",
+        agency: filters.agency || "",
+        responsibleOfficer: filters.responsibleOfficer || "",
+        claimantName: filters.claimantName || ""
+      });
+
       const res = await GetAgencyComplaintReport(
         0,
         100,
@@ -125,12 +142,15 @@ const AgencyComplaintSummary = () => {
         filters.responsibleOfficer || "",
         filters.claimantName || ""
       );
+
+      console.log("[AgencyComplaintSummary] API Response:", res);
       const items = res?.res_data?.items || [];
 
+      console.log("[AgencyComplaintSummary] Items count:", items.length);
       setAllComplaints(items);
       setFilteredComplaints(items);
     } catch (error) {
-      console.error("Error fetching agency complaint report:", error);
+      console.error("[AgencyComplaintSummary] Error fetching agency complaint report:", error);
       setAllComplaints([]);
       setFilteredComplaints([]);
     }

@@ -1,8 +1,8 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
-// กำหนด PREFIX และ API หากต้องการ (กรณีใช้ ENV อัตโนมัติ)
-const API = process.env.NEXT_PUBLIC_API || "";
-const PREFIX = process.env.NEXT_PUBLIC_API_PREFIX || "";
+// ใช้ API_BASE_URL จาก .env
+const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+const PREFIX = "";
 
 // ฟังก์ชันดึงรายงานผู้ตรวจสอบ (inspector) ตามปี, แผนก, ผู้ตรวจ, สถานะ, วันที่
 const GetAllReportsInspector = async (year = "", department_id = "", inspector_id = "", status = "", date_from = "", date_to = "", include_details = false) => {
@@ -90,6 +90,7 @@ const GetAgencyComplaintReport = async (
   responsible_officer = "",
   claimant_name = ""
 ) => {
+  console.log("[GetAgencyComplaintReport] Called with API:", `${API}${PREFIX}/reports/agency-complaint/list`);
   try {
     const { data } = await axiosInstance.get(`${API}${PREFIX}/reports/agency-complaint/list`, {
       params: {
