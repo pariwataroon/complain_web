@@ -16,6 +16,8 @@ PENDING_STATUSES = {
     ComplaintStatus.IN_PROCESS,
     ComplaintStatus.IN_REVIEW,
     ComplaintStatus.TRACKING,
+    ComplaintStatus.REVIEWED,
+    ComplaintStatus.COMPLETED,  # เพิ่มสถานะเสร็จสิ้น เพื่อให้แสดงครบทุกเรื่อง
 }
 
 def get_pending_tasks_report(
@@ -44,14 +46,8 @@ def get_pending_tasks_report(
     from models.outgoing_reports2 import OutgoingReport2
     from models.outgoing_reports4 import OutgoingReport4
 
-    # สถานะที่ถือว่าเป็น "งานค้าง" (ถ้าไฟล์คุณมีรายการนี้อยู่แล้ว ให้คงของเดิม)
-    PENDING_STATUSES = [
-        getattr(Complaint.status.type.enum_class, "IN_REVIEW", None) or "in_review",
-        getattr(Complaint.status.type.enum_class, "IN_PROCESS", None) or "in_process",
-        getattr(Complaint.status.type.enum_class, "TRACKING", None) or "tracking",
-        getattr(Complaint.status.type.enum_class, "SENT_TO_EXTERNAL", None) or "sent_to_external",
-        getattr(Complaint.status.type.enum_class, "SENT_TO_AGENCY", None) or "sent_to_agency",
-    ]
+    # ใช้ PENDING_STATUSES จากด้านบน (รวม SUBMITTED, SENT_TO_AGENCY, SENT_TO_EXTERNAL, IN_PROCESS, IN_REVIEW, TRACKING, REVIEWED)
+    # ไม่รวม COMPLETED (เสร็จสิ้น), CANCELLED (ยกเลิก), SUBMITTED (ส่งคำร้อง) ถ้าต้องการกรองเฉพาะที่กำลังดำเนินการ
 
     # ---------- Subqueries: department_name (internal) ----------
     # รวมชื่อหน่วยงานภายในจาก OR/OR2/OR4 แล้วเลือกอันที่ created_at ใหม่สุด
