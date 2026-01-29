@@ -1156,9 +1156,17 @@ const TableListCollapsReport = ({
                             d.children.map((c, j) => (
                               <TableRow
                                 key={`${key}_${j}`}
+                                onClick={() => {
+                                  // คลิกที่เรื่อง → ไปหน้า detail
+                                  if (c.complaintData && c.complaintData.id) {
+                                    router.push(`/admin/box/list/${c.complaintData.id}`);
+                                  }
+                                }}
                                 sx={{
                                   position: "relative",
                                   zIndex: 1,
+                                  cursor: "pointer",
+                                  "&:hover": { backgroundColor: "#e8f0fe" },
                                 }}
                               >
                                 <TableCell
@@ -1169,6 +1177,8 @@ const TableListCollapsReport = ({
                                     fontSize: { xs: 12, sm: 14 },
                                     position: "relative",
                                     zIndex: 1,
+                                    fontWeight: "500",
+                                    color: "#1976d2",
                                   }}
                                 >
                                   {c.department}

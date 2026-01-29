@@ -152,6 +152,7 @@ const transformComplaintData = (apiItems) => {
       isMaster,
       complaintNumberSorn,
       created_at: item.created_at, // เก็บ created_at สำหรับ filter
+      filing_type: item.complaint_filing_type || item.filing_type || "-",  // เพิ่ม filing_type สำหรับกรอง
     };
   });
 };
@@ -233,6 +234,11 @@ const ComplaintArchives = () => {
 
     const result = allComplaints.filter((item) => {
       let ok = true;
+
+      // กรองด้วย filing_type (ประเภทการร้องเรียน: new/additional)
+      if (filters.filing_type && filters.filing_type !== "") {
+        ok = ok && item.filing_type === filters.filing_type;
+      }
 
       if (filters.claimantName && filters.claimantName.trim() !== "") {
         const q = filters.claimantName.toLowerCase();
@@ -421,6 +427,15 @@ const ComplaintArchives = () => {
         filterFields={[
           { name: "claimantName", label: "ชื่อผู้ร้อง", type: "text" },
           { name: "issue", label: "เรื่อง", type: "text" },
+          {
+            name: "filing_type",
+            label: "ประเภทการร้องเรียน",
+            type: "select",
+            options: [
+              { value: "new", label: "เรื่องร้องเรียนใหม่" },
+              { value: "additional", label: "เรื่องร้องเรียนเพิ่มเติม" },
+            ],
+          },
           {
             name: "issueType",
             label: "ประเภทเรื่อง",

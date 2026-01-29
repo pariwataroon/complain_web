@@ -425,8 +425,8 @@ const sectionConfigs = [
       // "เลขคำร้อง (complaint_id)",
       "ผู้ตรวจฯ / ผู้ร้อง / หน่วยงานอื่น",
       "เลขที่หนังสือ",
-      "เรื่อง",
       "ลงวันที่",
+      "เรื่อง",
       "เอกสารแนบ",
       "การจัดการ",
     ],
@@ -445,10 +445,10 @@ const sectionConfigs = [
       // "เลขคำร้อง (complaint_id)": row.complaint_id || row.complaint?.id || "-",
       "ผู้ตรวจฯ / ผู้ร้อง / หน่วยงานอื่น":positionDisplay,
       เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-      เรื่อง: row.issue || row.subject || "-",
       ลงวันที่: row.document_date 
           ? new Date(row.document_date).toLocaleDateString("th-TH")
           : "-",
+      เรื่อง: row.issue || row.subject || "-",
       เอกสารแนบ:
         row.attachment_name ||
         (row.attachments && row.attachments.length > 0

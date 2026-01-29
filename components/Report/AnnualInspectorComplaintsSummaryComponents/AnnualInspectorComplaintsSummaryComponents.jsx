@@ -61,45 +61,62 @@ const flattenToInspectors = (resData) => {
   return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
 };
 
-// รวมสิทธิ์ผู้ตรวจ + ตัวเลขรายงาน เป็น rows สำหรับ TableListCollapsReport
+// รวมสิทธิ์ผู้ตรวจ + ตัวเลขรายงาน + รายการเรื่อง เป็น rows สำหรับ TableListCollapsReport
 const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
-  const byUser = new Map();
+  // รายงานตอนนี้มาแบบรวมกับรายละเอียดแล้ว (เพราะ include_details=true)
+  // จัดกลุ่มตาม inspector_id
+  const byInspector = new Map();
+
   for (const it of reportItems || []) {
     const uid = it.signature_authority_user_id;
-    // ใช้ department_name จาก outgoing_reports (ผ่าน complaint_number)
-    const deptKey = norm(it.department_name);
-    if (!deptKey) continue;
-    if (!byUser.has(uid)) byUser.set(uid, new Map());
-    const m = byUser.get(uid);
-    const total = Number(it.total_sent || 0);
-    const inProgress = Number(it.total_in_progress || 0);
-    const closed = Number(it.total_closed || 0);
-    if (!m.has(deptKey)) {
-      m.set(deptKey, {
-        name: it.department_name || "",
-        total,
-        inProgress,
-        closed,
+    if (!uid) continue;
+
+    if (!byInspector.has(uid)) {
+      byInspector.set(uid, {
+        inspector_id: uid,
+        inspector_name: it.signature_authority_user_name || "(ไม่พบชื่อ)",
+        group_order: it.signature_group_order_index,
+        group_name: it.signature_group_name,
+        departments: new Map(), // key: department_id, value: { name, total, inProgress, closed, complaints }
+      });
+    }
+
+    const inspectorData = byInspector.get(uid);
+    const deptId = it.department_id || "unknown";
+    const deptKey = norm(it.department_name || "ไม่ระบุหน่วยงาน");
+
+    if (!inspectorData.departments.has(deptId)) {
+      inspectorData.departments.set(deptId, {
+        id: deptId,
+        name: it.department_name || "ไม่ระบุหน่วยงาน",
+        total: Number(it.total_sent || 0),
+        inProgress: Number(it.total_in_progress || 0),
+        closed: Number(it.total_closed || 0),
+        complaints: it.complaints || [],
       });
     } else {
-      const agg = m.get(deptKey);
-      agg.total += total;
-      agg.inProgress += inProgress;
-      agg.closed += closed;
+      // ถ้ามี department ซ้ำ (ไม่น่าจะเกิด) ให้รวมข้อมูล
+      const dept = inspectorData.departments.get(deptId);
+      dept.total += Number(it.total_sent || 0);
+      dept.inProgress += Number(it.total_in_progress || 0);
+      dept.closed += Number(it.total_closed || 0);
+      if (it.complaints && it.complaints.length > 0) {
+        dept.complaints.push(...it.complaints);
+      }
     }
   }
 
   // รองรับผู้ตรวจที่มีเฉพาะในรายงาน
   const inspectorMap = new Map(inspectors.map((i) => [i.id, i]));
-  for (const uid of byUser.keys()) {
+  for (const uid of byInspector.keys()) {
     if (!inspectorMap.has(uid)) {
-      const repOne = (reportItems || []).find((x) => x.signature_authority_user_id === uid);
+      const repOne = byInspector.get(uid);
       inspectorMap.set(uid, {
         id: uid,
-        name: repOne?.signature_authority_user_name || "(ไม่พบในสิทธิ์)",
+        name: repOne?.inspector_name || "(ไม่พบในสิทธิ์)",
         email: "",
         position: "", // ไม่มีข้อมูลตำแหน่งจากรายงาน
-        groupName: "",
+        groupName: repOne?.group_name || "",
         departments: [],
       });
     }
@@ -110,32 +127,66 @@ const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
     : Array.from(inspectorMap.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
 
   return baseList.map((ins) => {
-    const reportMap = byUser.get(ins.id) || new Map();
+    const inspectorData = byInspector.get(ins.id);
+    const departmentsData = [];
 
-    const departmentsData = (ins.departments || []).map((d) => {
-      const key = norm(d.name);
-      const r = reportMap.get(key);
-      return {
-        department: d.name,
-        totalDept: r ? r.total : 0,
-        inProgressCnt: r ? r.inProgress : 0,
-        closedCnt: r ? r.closed : 0,
-      };
-    });
+    // เพิ่ม departments จาก inspector rights
+    for (const d of ins.departments || []) {
+      const deptId = d.id || "unknown";
+      const reportDept = inspectorData?.departments.get(deptId);
 
-    for (const [k, r] of reportMap.entries()) {
-      const exists = departmentsData.find((x) => norm(x.department) === k);
-      if (!exists) {
+      if (reportDept) {
+        // มีข้อมูลจากรายงาน
         departmentsData.push({
-          department: r.name || "(ไม่พบในสิทธิ์ผู้ตรวจ)",
-          totalDept: r.total,
-          inProgressCnt: r.inProgress,
-          closedCnt: r.closed,
+          department: reportDept.name,
+          totalDept: reportDept.total,
+          inProgressCnt: reportDept.inProgress,
+          closedCnt: reportDept.closed,
+          children: reportDept.complaints.map(c => ({
+            id: c.id,
+            department: c.subject || c.reference_number || "-",
+            totalDept: 1,
+            inProgressCnt: c.status === "in_progress" ? 1 : 0,
+            closedCnt: c.status === "closed" ? 1 : 0,
+            complaintData: c, // เก็บข้อมูลเรื่องไว้สำหรับคลิก
+          })),
+        });
+      } else {
+        // ไม่มีข้อมูลจากรายงาน
+        departmentsData.push({
+          department: d.name,
+          totalDept: 0,
+          inProgressCnt: 0,
+          closedCnt: 0,
+          children: [],
         });
       }
     }
 
-    // สร้างชื่อแสดงผลในรูปแบบ "ตำแหน่ง(ชื่อ)"
+    // เพิ่ม departments ที่มีแต่ไม่อยู่ใน rights
+    if (inspectorData) {
+      for (const [deptId, dept] of inspectorData.departments.entries()) {
+        const exists = departmentsData.find((x) => norm(x.department) === norm(dept.name));
+        if (!exists) {
+          departmentsData.push({
+            department: dept.name,
+            totalDept: dept.total,
+            inProgressCnt: dept.inProgress,
+            closedCnt: dept.closed,
+            children: dept.complaints.map(c => ({
+              id: c.id,
+              department: c.subject || c.reference_number || "-",
+              totalDept: 1,
+              inProgressCnt: c.status === "in_progress" ? 1 : 0,
+              closedCnt: c.status === "closed" ? 1 : 0,
+              complaintData: c,
+            })),
+          });
+        }
+      }
+    }
+
+    // สร้างชื่อแสดงผล
     const displayName = ins.position
       ? `${ins.position}(${ins.name})`
       : ins.name;
@@ -192,7 +243,7 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
 
       const [sig, rep] = await Promise.all([
         getSignatureAuthorities(),
-        GetAllReportsInspector(year, "", "", "", dateFrom, dateTo),
+        GetAllReportsInspector(year, "", "", "", dateFrom, dateTo, true),
       ]);
 
       // รายชื่อผู้ตรวจ “ทุกคน”
@@ -248,7 +299,7 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
       const year = yearFrom(filters);
       const dateFrom = filters.receiveDateFrom || "";
       const dateTo = filters.receiveDateTo || "";
-      const rep = await GetAllReportsInspector(year, "", "", "", dateFrom, dateTo);
+      const rep = await GetAllReportsInspector(year, "", "", "", dateFrom, dateTo, true);
       const reportItems = rep?.res_data?.items || [];
 
       // อัปเดตตัวเลือก (กันกรณีมีผู้ตรวจใหม่โผล่มาจากข้อมูลรายงาน)

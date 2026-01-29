@@ -686,8 +686,7 @@ const InformRelatedParties = () => {
                               />
                                <span style={{ fontWeight: 500 }}>
                                 {item.complaint_number}
-                                {item.subject}
-                                <span style={{ marginLeft: 8 }}>{item.subject}</span>
+                                {item.subject && <span style={{ marginLeft: 8 }}>{item.subject}</span>}
                               </span>
                             </ListItemButton>
                           </ListItem>
