@@ -26,7 +26,7 @@ def list_pending_tasks(
     department: Optional[str] = Query(None, description="หน่วยงาน (assigned_to)"),
     officer_id: Optional[str] = Query(None, description="รหัสเจ้าหน้าที่"),
     db: Session = Depends(get_db),
-    current_user: dict = Depends(can_read("dashboard")),
+    current_user_id: str = Depends(can_read("dashboard")),  # เปลี่ยนจาก dict เป็น str
 ):
     try:
         date_from_obj = datetime.strptime(date_from, "%Y-%m-%d") if date_from else None
@@ -34,8 +34,8 @@ def list_pending_tasks(
 
         # กำหนด officer_id: ใช้ค่าที่ระบุมา หรือใช้ user_id ของตัวเอง (เหมือนหน้าคลัง)
         final_officer_id = officer_id
-        if not final_officer_id and current_user and current_user.get("user_id"):
-            final_officer_id = current_user.get("user_id")
+        if not final_officer_id and current_user_id:
+            final_officer_id = current_user_id
 
         result = get_pending_tasks_report(
             db=db,
