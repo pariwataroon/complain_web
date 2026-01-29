@@ -32,6 +32,11 @@ def list_pending_tasks(
         date_from_obj = datetime.strptime(date_from, "%Y-%m-%d") if date_from else None
         date_to_obj = datetime.strptime(date_to, "%Y-%m-%d") if date_to else None
 
+        # กำหนด officer_id: ใช้ค่าที่ระบุมา หรือใช้ user_id ของตัวเอง (เหมือนหน้าคลัง)
+        final_officer_id = officer_id
+        if not final_officer_id and current_user and current_user.get("user_id"):
+            final_officer_id = current_user.get("user_id")
+
         result = get_pending_tasks_report(
             db=db,
             skip=skip,
@@ -41,7 +46,7 @@ def list_pending_tasks(
             date_from=date_from_obj,
             date_to=date_to_obj,
             department=department,
-            officer_id=officer_id,
+            officer_id=final_officer_id,
         )
         return format_response("0000", result)
     except HTTPException:

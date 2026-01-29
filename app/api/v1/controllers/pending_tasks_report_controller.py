@@ -2,10 +2,15 @@ from datetime import datetime, timezone
 from uuid import UUID
 from typing import Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_, case
+from sqlalchemy import func, or_, case, and_
 
 from models.comp_complaint import Complaint, ComplaintStatus
+from models.outgoing_reports import OutgoingReport
+from models.outgoing_reports2 import OutgoingReport2
+from models.outgoing_reports3 import OutgoingReport3
 from models.outgoing_reports4 import OutgoingReport4
+from models.outgoing_reports5 import OutgoingReport5
+from models.outgoing_reports6 import OutgoingReport6
 from models.outside_departments import OutsideDepartment
 from models.user import User
 
@@ -195,7 +200,85 @@ def get_pending_tasks_report(
         ordered_subq = ordered_subq.filter(Complaint.assigned_to == department)
 
     if officer_id:
-        ordered_subq = ordered_subq.filter(Complaint.assigned_officer_id == officer_id)
+        # Filter เหมือนหน้าคลัง: รวม created_by, assigned_officer_id, confirm_assigned_by, และ OutgoingReport/2/3
+        ordered_subq = ordered_subq.filter(
+            or_(
+                Complaint.created_by == officer_id,
+                Complaint.assigned_officer_id == officer_id,
+                Complaint.confirm_assigned_by == officer_id,
+                # OutgoingReport
+                db.query(OutgoingReport.id).filter(
+                    and_(
+                        OutgoingReport.complaint_id == Complaint.id,
+                        or_(
+                            OutgoingReport.created_by == officer_id,
+                            OutgoingReport.updated_by == officer_id,
+                            OutgoingReport.signature_authority_user_id == officer_id
+                        )
+                    )
+                ).exists(),
+                # OutgoingReport2
+                db.query(OutgoingReport2.id).filter(
+                    and_(
+                        OutgoingReport2.complaint_id == Complaint.id,
+                        or_(
+                            OutgoingReport2.created_by == officer_id,
+                            OutgoingReport2.updated_by == officer_id,
+                            OutgoingReport2.signature_authority_user_id == officer_id,
+                            OutgoingReport2.user_id == officer_id
+                        )
+                    )
+                ).exists(),
+                # OutgoingReport3
+                db.query(OutgoingReport3.id).filter(
+                    and_(
+                        OutgoingReport3.complaint_id == Complaint.id,
+                        or_(
+                            OutgoingReport3.created_by == officer_id,
+                            OutgoingReport3.updated_by == officer_id,
+                            OutgoingReport3.signature_authority_user_id == officer_id,
+                            OutgoingReport3.user_id == officer_id
+                        )
+                    )
+                ).exists(),
+                # OutgoingReport4
+                db.query(OutgoingReport4.id).filter(
+                    and_(
+                        OutgoingReport4.complaint_id == Complaint.id,
+                        or_(
+                            OutgoingReport4.created_by == officer_id,
+                            OutgoingReport4.updated_by == officer_id,
+                            OutgoingReport4.signature_authority_user_id == officer_id,
+                            OutgoingReport4.user_id == officer_id
+                        )
+                    )
+                ).exists(),
+                # OutgoingReport5
+                db.query(OutgoingReport5.id).filter(
+                    and_(
+                        OutgoingReport5.complaint_id == Complaint.id,
+                        or_(
+                            OutgoingReport5.created_by == officer_id,
+                            OutgoingReport5.updated_by == officer_id,
+                            OutgoingReport5.signature_authority_user_id == officer_id,
+                            OutgoingReport5.user_id == officer_id
+                        )
+                    )
+                ).exists(),
+                # OutgoingReport6
+                db.query(OutgoingReport6.id).filter(
+                    and_(
+                        OutgoingReport6.complaint_id == Complaint.id,
+                        or_(
+                            OutgoingReport6.created_by == officer_id,
+                            OutgoingReport6.updated_by == officer_id,
+                            OutgoingReport6.signature_authority_user_id == officer_id,
+                            OutgoingReport6.user_id == officer_id
+                        )
+                    )
+                ).exists(),
+            )
+        )
 
     subq = ordered_subq.subquery()
 
