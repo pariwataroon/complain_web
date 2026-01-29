@@ -22,6 +22,7 @@ def list_inspector_reports(
     department_id: Optional[str] = Query(None, description="ID หน่วยงาน",),
     inspector_id: Optional[str] = Query(None, description="ID ผู้ตรวจ",),
     status: Optional[str] = Query(None, description="สถานะ (closed/in_progress)",),
+    include_details: bool = Query(False, description="รวมรายละเอียดทุกเรื่องด้วยหรือไม่"),
     db: Session = Depends(get_db),
     current_user: dict = Depends(can_read("dashboard")),
 ):
@@ -37,6 +38,7 @@ def list_inspector_reports(
             department_id=department_id,
             inspector_id=inspector_id,
             status=status,
+            include_details=include_details,
         )
         return format_response("0000", result)
     except HTTPException:

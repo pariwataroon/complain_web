@@ -152,6 +152,8 @@ def get_pending_tasks_report(
             Complaint.status.label("status"),
             Complaint.created_at.label("created_at"),
             Complaint.assigned_officer_id.label("assigned_officer_id"),
+            Complaint.complaint_filing_type.label("filing_type"),  # เพิ่ม filing_type
+            Complaint.processing_notes.label("assigned_remark"),  # เพิ่ม remark
             start_ref.label("start_ref"),
             func.row_number()
             .over(order_by=(assigned_nulls_last, Complaint.assigned_date.desc(), Complaint.created_at.desc()))
@@ -238,6 +240,9 @@ def get_pending_tasks_report(
                 "status": r.status.value if hasattr(r.status, "value") else r.status,
                 "days_in_progress": days_in_progress,
                 "assigned_officer_name": officers.get(str(r.assigned_officer_id)) if r.assigned_officer_id else None,
+                "filing_type": r.filing_type.value if hasattr(r.filing_type, "value") else r.filing_type,  # เพิ่ม filing_type
+                "assigned_remark": r.assigned_remark,  # เพิ่ม remark
+                "remark": r.assigned_remark,  # เพิ่ม remark (alias เพิ่อความยืดหยุ่น)
             }
         )
 

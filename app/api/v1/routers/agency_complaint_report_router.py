@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from datetime import datetime
 from config.database import get_db
-from app.api.middleware.permission_middleware import can_read
 from lib.format_data import FormatResponseModel, format_response
 from app.api.v1.controllers.agency_complaint_report_controller import (
     get_agency_complaint_report

@@ -4,12 +4,12 @@ from datetime import datetime
 from sqlalchemy import func, or_, case, and_
 from sqlalchemy.orm import Session
 
-from models.outgoing_reports4 import OutgoingReport4
 from models.outgoing_reports import OutgoingReport
 from models.departments import Department
 from models.user import User
 from models.signature_authorities import SignatureAuthority
 from models.group_signature_authorities import GroupSignatureAuthority
+from models.comp_complaint import Complaint
 
 
 def get_inspector_report(
@@ -23,9 +23,14 @@ def get_inspector_report(
     department_id: Optional[str] = None,
     inspector_id: Optional[str] = None,
     status: Optional[str] = None,
+    include_details: bool = False,
 ) -> Dict:
     """
     รายงานผลการจัดการเรื่องร้องเรียนของผู้ตรวจราชการกระทรวงการคลัง
+
+    ดึงข้อมูลจาก OutgoingReport table โดยจัดกลุ่มตาม:
+      - signature_authority_user_id (ผู้ลงนาม/ผู้ตรวจ)
+      - department_id (หน่วยงาน)
 
     นับ:
       - total_sent: จำนวนงานทั้งหมดที่ส่งถึงผู้ตรวจ
@@ -35,9 +40,12 @@ def get_inspector_report(
     เงื่อนไขสำคัญ:
       - ใช้ช่วงปี (UTC naive) จาก COALESCE(reference_date, document_date, created_at)
       - รองรับ date_from/date_to แทนการใช้ปี ถ้าระบุ
-      - outerjoin กับ OutsideDepartment และ User เพื่อไม่ตัดแถวที่ค่านั้นเป็น NULL
-      - ครอบคลุมงานผู้ตรวจด้วย or_(report_type == 'inspector', signature_authority_user_id IS NOT NULL)
+      - outerjoin กับ Department และ User เพื่อไม่ตัดแถวที่ค่านั้นเป็น NULL
+      - ดึงเฉพาะรายการที่มี signature_authority_user_id (ผู้ลงนาม)
       - MSSQL ต้องมี order_by ก่อน offset/limit
+
+    Args:
+        include_details: ถ้า True จะ return รายละเอียดทุกเรื่องด้วย
     """
     # Determine date range: date_from/date_to take precedence over year
     if date_from:
@@ -56,11 +64,11 @@ def get_inspector_report(
     else:
         end_date = datetime(datetime.utcnow().year + 1, 1, 1)
 
-    # ใช้วันที่อ้างอิง ถ้าไม่มีค่อย fallback เป็น created_at
+    # ใช้วันที่อ้างอิงจาก OutgoingReport
     date_expr = func.coalesce(
-        OutgoingReport4.reference_date,
-        OutgoingReport4.document_date,
-        OutgoingReport4.created_at
+        OutgoingReport.reference_date,
+        OutgoingReport.document_date,
+        OutgoingReport.created_at
     )
 
     # เตรียม subquery หา order ของกลุ่มผู้มีสิทธิ์เซ็นต่อผู้ใช้ โดยใช้ค่าน้อยสุดเป็นตัวแทน
@@ -98,19 +106,20 @@ def get_inspector_report(
         .subquery()
     )
 
+    # Query หลัก - ดึงข้อมูลรวม
     q = (
         db.query(
             OutgoingReport.department_id,
             Department.name.label("department_name"),
-            OutgoingReport4.signature_authority_user_id,
+            OutgoingReport.signature_authority_user_id,
             User.first_name,
             User.last_name,
             sa_group_pick_subq.c.group_order_index,
             sa_group_pick_subq.c.group_name,
-            func.count(OutgoingReport4.id).label("total_sent"),
+            func.count(OutgoingReport.id).label("total_sent"),
             func.sum(
                 case(
-                    (OutgoingReport4.consideration_result.ilike("%ยุติ%"), 1),
+                    (OutgoingReport.consideration_result.ilike("%ยุติ%"), 1),
                     else_=0,
                 )
             ).label("total_closed"),
@@ -118,8 +127,8 @@ def get_inspector_report(
                 case(
                     (
                         or_(
-                            OutgoingReport4.consideration_result.is_(None),
-                            ~OutgoingReport4.consideration_result.ilike("%ยุติ%")
+                            OutgoingReport.consideration_result.is_(None),
+                            ~OutgoingReport.consideration_result.ilike("%ยุติ%")
                         ),
                         1,
                     ),
@@ -127,33 +136,24 @@ def get_inspector_report(
                 )
             ).label("total_in_progress"),
         )
-        .join(
-            OutgoingReport,
-            OutgoingReport4.complaint_number == OutgoingReport.complaint_number,
-        )
         .outerjoin(
             Department,
             OutgoingReport.department_id == Department.id,
         )
         .outerjoin(
             User,
-            OutgoingReport4.signature_authority_user_id == User.id,
+            OutgoingReport.signature_authority_user_id == User.id,
         )
         .outerjoin(
             sa_group_pick_subq,
-            sa_group_pick_subq.c.user_id == OutgoingReport4.signature_authority_user_id,
+            sa_group_pick_subq.c.user_id == OutgoingReport.signature_authority_user_id,
         )
-        .filter(
-            or_(
-                OutgoingReport4.report_type == "inspector",
-                OutgoingReport4.signature_authority_user_id.isnot(None),
-            )
-        )
+        .filter(OutgoingReport.signature_authority_user_id.isnot(None))
         .filter(date_expr >= start_date, date_expr < end_date)
         .group_by(
             OutgoingReport.department_id,
             Department.name,
-            OutgoingReport4.signature_authority_user_id,
+            OutgoingReport.signature_authority_user_id,
             User.first_name,
             User.last_name,
             sa_group_pick_subq.c.group_order_index,
@@ -185,16 +185,16 @@ def get_inspector_report(
 
     # Filter by inspector_id
     if inspector_id:
-        q = q.filter(OutgoingReport4.signature_authority_user_id == inspector_id)
+        q = q.filter(OutgoingReport.signature_authority_user_id == inspector_id)
 
     # Filter by status
     if status == "closed":
-        q = q.filter(OutgoingReport4.consideration_result.ilike("%ยุติ%"))
+        q = q.filter(OutgoingReport.consideration_result.ilike("%ยุติ%"))
     elif status == "in_progress":
         q = q.filter(
             or_(
-                OutgoingReport4.consideration_result.is_(None),
-                ~OutgoingReport4.consideration_result.ilike("%ยุติ%")
+                OutgoingReport.consideration_result.is_(None),
+                ~OutgoingReport.consideration_result.ilike("%ยุติ%")
             )
         )
 
@@ -203,6 +203,58 @@ def get_inspector_report(
 
     items = []
     for r in rows:
+        # ถ้าต้องการรายละเอียด ให้ดึงรายการ OutgoingReport ทั้งหมดของ inspector + department นี้
+        complaints = []
+        if include_details:
+            # Query รายการ OutgoingReport ทั้งหมดของ inspector + department นี้
+            detail_query = (
+                db.query(
+                    OutgoingReport.id,
+                    OutgoingReport.reference_number,
+                    OutgoingReport.subject,
+                    OutgoingReport.reference_date,
+                    OutgoingReport.document_date,
+                    OutgoingReport.consideration_result,
+                    OutgoingReport.complaint_id,
+                    Complaint.complaint_number,
+                    Complaint.id.label("complaint_storage_id"),
+                )
+                .outerjoin(
+                    Complaint,
+                    OutgoingReport.complaint_id == Complaint.id,
+                )
+                .filter(OutgoingReport.signature_authority_user_id == r.signature_authority_user_id)
+                .filter(OutgoingReport.department_id == r.department_id)
+                .filter(date_expr >= start_date, date_expr < end_date)
+                .order_by(OutgoingReport.created_at.desc())
+            )
+
+            # Apply status filter to details as well
+            if status == "closed":
+                detail_query = detail_query.filter(OutgoingReport.consideration_result.ilike("%ยุติ%"))
+            elif status == "in_progress":
+                detail_query = detail_query.filter(
+                    or_(
+                        OutgoingReport.consideration_result.is_(None),
+                        ~OutgoingReport.consideration_result.ilike("%ยุติ%")
+                    )
+                )
+
+            detail_rows = detail_query.all()
+
+            for dr in detail_rows:
+                complaints.append({
+                    "id": str(dr.complaint_storage_id) if dr.complaint_storage_id else str(dr.id),
+                    "outgoing_report_id": str(dr.id),
+                    "reference_number": dr.reference_number,
+                    "subject": dr.subject,
+                    "reference_date": dr.reference_date.isoformat() if dr.reference_date else None,
+                    "document_date": dr.document_date.isoformat() if dr.document_date else None,
+                    "consideration_result": dr.consideration_result,
+                    "complaint_number": dr.complaint_number,
+                    "status": "closed" if dr.consideration_result and "ยุติ" in dr.consideration_result else "in_progress",
+                })
+
         items.append({
             "department_id": str(r.department_id) if r.department_id else None,
             "department_name": r.department_name or "ไม่ระบุหน่วยงาน",
@@ -213,6 +265,7 @@ def get_inspector_report(
             "total_sent": int(r.total_sent or 0),
             "total_closed": int(r.total_closed or 0),
             "total_in_progress": int(r.total_in_progress or 0),
+            "complaints": complaints if include_details else [],
         })
 
     return {
