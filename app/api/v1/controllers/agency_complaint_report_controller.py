@@ -191,13 +191,23 @@ def get_agency_complaint_report(
             # Get claimant name - ใช้ subject เป็นหลัก
             claimant_name_val = outgoing.subject or (complaint.subject if complaint else "-")
 
-            # Get agency name
-            agency_val = dept.name if dept else "ไม่ระบุ"
+            # Get agency name - ดึงจาก Complaint.assigned_to (หน่วยงานที่รับผิดชอบเรื่อง) เป็นหลัก
+            agency_val = "-"
+            if complaint:
+                # ลำดับความสำคัญ: 1. assigned_to (หน่วยงานที่รับผิดชอบเรื่อง), 2. department จาก OutgoingReport, 3. agency_sender
+                if complaint.assigned_to:
+                    agency_val = complaint.assigned_to
+                elif dept:
+                    agency_val = dept.name
+                elif complaint.agency_sender:
+                    agency_val = complaint.agency_sender
+            elif dept:
+                agency_val = dept.name
 
-            # Get issue
-            issue_val = outgoing.subject or (complaint.subject if complaint else "-")
+            # Get issue - ใช้ subject จาก Complaint เป็นหลัก (เรื่องร้องเรียน)
+            issue_val = complaint.subject if complaint else (outgoing.subject or "-")
 
-            # Get issue type
+            # Get issue type - ดึงจาก Complaint.complaint_type_relation หรือ complaint_type
             issue_type_val = "-"
             if complaint:
                 if hasattr(complaint, 'complaint_type_relation') and complaint.complaint_type_relation:
@@ -205,12 +215,10 @@ def get_agency_complaint_report(
                 elif complaint.complaint_type:
                     issue_type_val = complaint.complaint_type
 
-            # Get responsible officer
+            # Get responsible officer - ดึงจาก Complaint.assigned_officer (เจ้าหน้าที่ผู้รับผิดชอบเรื่อง)
             officer_val = "-"
             if user:
                 officer_val = f"{user.first_name} {user.last_name}"
-            elif hasattr(outgoing, 'assigned_to'):
-                officer_val = outgoing.assigned_to or "-"
 
             # Get note/remarks - แสดงเลขที่หนังสือ + วันที่ที่ส่งหน่วยงาน
             letter_number = outgoing.document_number or "-"
