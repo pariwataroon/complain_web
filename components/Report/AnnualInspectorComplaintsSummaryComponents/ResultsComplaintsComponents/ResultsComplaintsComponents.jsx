@@ -1,302 +1,211 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
-import TableListCollapsReport from "@services/TableListCollapsReport/TableListCollapsReport";
-import { GetAllReportsInspector } from "@pages/api/report/report";
+import TableListTab from "@services/TableListTab/TableListTab";
+import {
+  GetAllReportsInspectorPending,
+  GetAllReportsInspector,
+} from "@pages/api/report/report"; // เพิ่ม GetAllReportsInspector
 import { getSignatureAuthorities } from "@pages/api/department/department";
 
-/* ───────────────────────── helpers ───────────────────────── */
-const norm = (s) => (s || "").toString().trim().replace(/\s+/g, " ").toLowerCase();
-
-const flattenToInspectors = (resData) => {
-  const map = new Map();
-  const groups = resData?.groups ?? [];
-  // groups
-  for (const g of groups) {
-    const users = g?.users ?? [];
-    const deps = g?.departments ?? [];
-    const position = g?.group_description || "";
-    const groupName = g?.group_name || "";
-
-    for (const u of users) {
-      if (!map.has(u.user_id)) {
-        map.set(u.user_id, {
-          id: u.user_id,
-          name: u.user_name,
-          email: u.user_email,
-          position: position,
-          groupName: groupName,
-          departments: [],
-        });
-      } else {
-        const entry = map.get(u.user_id);
-        if (position) entry.position = position;
-        if (groupName) entry.groupName = groupName;
-      }
-      const entry = map.get(u.user_id);
-      const had = new Set(entry.departments.map((d) => d.id));
-      for (const d of deps) {
-        if (!had.has(d.department_id)) {
-          entry.departments.push({ id: d.department_id, name: d.department_name });
-          had.add(d.department_id);
-        }
-      }
-    }
-  }
-  // individuals
-  const individuals = resData?.individuals ?? [];
-  for (const u of individuals) {
-    if (!map.has(u.user_id)) {
-      map.set(u.user_id, {
-        id: u.user_id,
-        name: u.user_name,
-        email: u.user_email,
-        position: "",
-        groupName: "",
-        departments: [],
-      });
-    }
-  }
-
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
-};
-
-// รวมสิทธิ์ผู้ตรวจ + ตัวเลขรายงาน + รายการเรื่อง เป็น rows สำหรับ TableListCollapsReport
-const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
-  const byInspector = new Map();
-
-  for (const it of reportItems || []) {
-    const uid = it.signature_authority_user_id;
-    if (!uid) continue;
-
-    if (!byInspector.has(uid)) {
-      byInspector.set(uid, {
-        inspector_id: uid,
-        inspector_name: it.signature_authority_user_name || "(ไม่พบชื่อ)",
-        group_order: it.signature_group_order_index,
-        group_name: it.signature_group_name,
-        departments: new Map(),
-      });
-    }
-
-    const inspectorData = byInspector.get(uid);
-    const deptId = it.department_id || "unknown";
-
-    if (!inspectorData.departments.has(deptId)) {
-      inspectorData.departments.set(deptId, {
-        id: deptId,
-        name: it.department_name || "ไม่ระบุหน่วยงาน",
-        total: Number(it.total_sent || 0),
-        inProgress: Number(it.total_in_progress || 0),
-        closed: Number(it.total_closed || 0),
-        complaints: it.complaints || [],
-      });
-    } else {
-      const dept = inspectorData.departments.get(deptId);
-      dept.total += Number(it.total_sent || 0);
-      dept.inProgress += Number(it.total_in_progress || 0);
-      dept.closed += Number(it.total_closed || 0);
-      if (it.complaints && it.complaints.length > 0) {
-        dept.complaints.push(...it.complaints);
-      }
-    }
-  }
-
-  const inspectorMap = new Map(inspectors.map((i) => [i.id, i]));
-  for (const uid of byInspector.keys()) {
-    if (!inspectorMap.has(uid)) {
-      const repOne = byInspector.get(uid);
-      inspectorMap.set(uid, {
-        id: uid,
-        name: repOne?.inspector_name || "(ไม่พบในสิทธิ์)",
-        email: "",
-        position: "",
-        groupName: repOne?.group_name || "",
-        departments: [],
-      });
-    }
-  }
-
-  const baseList = selectedInspectorId
-    ? [inspectorMap.get(selectedInspectorId)].filter(Boolean)
-    : Array.from(inspectorMap.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
-
-  return baseList.map((ins) => {
-    const inspectorData = byInspector.get(ins.id);
-    const departmentsData = [];
-
-    for (const d of ins.departments || []) {
-      const deptId = d.id || "unknown";
-      const reportDept = inspectorData?.departments.get(deptId);
-
-      if (reportDept) {
-        departmentsData.push({
-          department: reportDept.name,
-          totalDept: reportDept.total,
-          inProgressCnt: reportDept.inProgress,
-          closedCnt: reportDept.closed,
-          children: reportDept.complaints.map(c => ({
-            id: c.id,
-            department: c.subject || c.reference_number || "-",
-            totalDept: 1,
-            inProgressCnt: c.status === "in_progress" ? 1 : 0,
-            closedCnt: c.status === "closed" ? 1 : 0,
-            complaintData: c,
-          })),
-        });
-      } else {
-        departmentsData.push({
-          department: d.name,
-          totalDept: 0,
-          inProgressCnt: 0,
-          closedCnt: 0,
-          children: [],
-        });
-      }
-    }
-
-    if (inspectorData) {
-      for (const [, dept] of inspectorData.departments.entries()) {
-        const exists = departmentsData.find((x) => norm(x.department) === norm(dept.name));
-        if (!exists) {
-          departmentsData.push({
-            department: dept.name,
-            totalDept: dept.total,
-            inProgressCnt: dept.inProgress,
-            closedCnt: dept.closed,
-            children: dept.complaints.map(c => ({
-              id: c.id,
-              department: c.subject || c.reference_number || "-",
-              totalDept: 1,
-              inProgressCnt: c.status === "in_progress" ? 1 : 0,
-              closedCnt: c.status === "closed" ? 1 : 0,
-              complaintData: c,
-            })),
-          });
-        }
-      }
-    }
-
-    const displayName = ins.position
-      ? `${ins.position}(${ins.name})`
-      : ins.name;
-
-    return { id: ins.id, claimantName: displayName, departmentsData };
-  });
-};
-
-const formatDateThai = (isoDate) => {
-  if (!isoDate) return "";
-  const d = new Date(isoDate);
-  return `${d.getDate().toString().padStart(2, "0")}/${(d.getMonth() + 1)
-    .toString()
-    .padStart(2, "0")}/${d.getFullYear() + 543}`;
-};
-
-const withAllOption = (opts) => {
-  const uniq = Array.from(new Map(opts.map((o) => [o.value, o])).values()).sort((a, b) =>
-    a.label.localeCompare(b.label, "th")
-  );
-  return [{ value: "", label: "ทั้งหมด" }, ...uniq];
-};
-
-/* ───────────────────────── component ───────────────────────── */
 const ResultsComplaintsComponents = () => {
+  const [allSummaryData, setAllSummaryData] = useState([]);
+  const [filteredSummary, setFilteredSummary] = useState([]);
+  const [allPendingData, setAllPendingData] = useState([]);
+  const [filteredPending, setFilteredPending] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [inspectors, setInspectors] = useState([]);
-  const [claimantOptions, setClaimantOptions] = useState([]);
-  const [filteredComplaints, setFilteredComplaints] = useState([]);
-  const [dateRange, setDateRange] = useState("");
+  const [maxDate, setMaxDate] = useState(null);
+  const [inspectorPositions, setInspectorPositions] = useState(new Map());
+  const [rawSummaryData, setRawSummaryData] = useState([]);
+  const [rawPendingData, setRawPendingData] = useState([]);
+  const router = useRouter();
 
-  useEffect(() => {
-    loadInitial();
-  }, []);
 
-  const yearFrom = (filters = {}) =>
-    filters.receiveDateFrom
-      ? new Date(filters.receiveDateFrom).getFullYear().toString()
-      : new Date().getFullYear().toString();
-
-  const loadInitial = async (filters = {}) => {
-    setLoading(true);
+  // เพิ่มฟังก์ชันเพื่อดึงข้อมูลตำแหน่งผู้ตรวจ
+  const fetchInspectorPositions = async () => {
     try {
-      const year = yearFrom(filters);
-      const dateFrom = filters.receiveDateFrom || "";
-      const dateTo = filters.receiveDateTo || "";
+      const sig = await getSignatureAuthorities();
+      const positions = new Map();
 
-      const [sig, rep] = await Promise.all([
-        getSignatureAuthorities(),
-        GetAllReportsInspector(year, "", "", "", dateFrom, dateTo, true),
-      ]);
+      const groups = sig?.res_data?.groups || sig?.groups || [];
+      for (const group of groups) {
+        const position = group?.group_description || "";
+        const users = group?.users || [];
 
-      const inspectorList = flattenToInspectors(sig?.res_data ?? sig);
-      setInspectors(inspectorList);
+        for (const user of users) {
+          if (user.user_id && position) {
+            positions.set(user.user_id, position);
+          }
+        }
+      }
 
-      const reportItems = rep?.res_data?.items || [];
-
-      const fromSig = inspectorList.map((x) => ({
-        value: x.id,
-        label: x.position ? `${x.position}(${x.name})` : x.name
-      }));
-      const fromReport = Array.from(
-        new Map(
-          reportItems.map((i) => [
-            i.signature_authority_user_id,
-            { value: i.signature_authority_user_id, label: i.signature_authority_user_name },
-          ])
-        ).values()
-      );
-      setClaimantOptions(withAllOption([...fromSig, ...fromReport]));
-
-      setFilteredComplaints(buildRows(inspectorList, reportItems, filters.claimantName || ""));
+      setInspectorPositions(positions);
     } catch (e) {
-      console.error("loadInitial error:", e);
-      setInspectors([]);
-      setClaimantOptions(withAllOption([]));
-      setFilteredComplaints([]);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching inspector positions:", e);
     }
   };
 
-  const handleSearch = async (filters) => {
+  // อัปเดตข้อมูลเมื่อ inspectorPositions เปลี่ยนแปลง
+  useEffect(() => {
+    if (inspectorPositions.size > 0 && rawSummaryData.length > 0) {
+      const transformed = rawSummaryData.map((item, idx) => {
+        const userName = item.signature_authority_user_name || "";
+        const userId = item.signature_authority_user_id;
+        const position = inspectorPositions.get(userId) || "";
+        const displayName = position ? `${position}(${userName})` : userName;
 
-    let range = "";
-    if (filters.receiveDateFrom && filters.receiveDateTo) {
-      range = `ตั้งแต่วันที่ ${formatDateThai(filters.receiveDateFrom)} ถึงวันที่ ${formatDateThai(
-        filters.receiveDateTo
-      )}`;
-    } else if (filters.receiveDateFrom) {
-      range = `ตั้งแต่วันที่ ${formatDateThai(filters.receiveDateFrom)}`;
-    } else if (filters.receiveDateTo) {
-      range = `ถึงวันที่ ${formatDateThai(filters.receiveDateTo)}`;
+        return {
+          id: idx + 1,
+          claimantName: displayName,
+          totalDept: item.total_sent,
+          inProgressCnt: item.total_in_progress,
+          closedCnt: item.total_closed,
+          receiveDate: "-",
+        };
+      });
+      setAllSummaryData(transformed);
+      setFilteredSummary(transformed);
     }
-    setDateRange(range);
+  }, [inspectorPositions, rawSummaryData]);
 
+  useEffect(() => {
+    if (inspectorPositions.size > 0 && rawPendingData.length > 0) {
+      const transformed = rawPendingData.map((item, idx) => {
+        const userName = item.signature_authority_user_name || "";
+        const userId = item.signature_authority_user_id;
+        const position = inspectorPositions.get(userId) || "";
+        const displayName = position ? `${position}(${userName})` : userName;
+
+        return {
+          id: idx + 1,
+          claimantName: displayName,
+          pendingBetween: item.pending_count,
+          inProcessFY2568: item.inprogress_count,
+          total: (item.pending_count || 0) + (item.inprogress_count || 0),
+          receiveDate: "-",
+        };
+      });
+      setAllPendingData(transformed);
+      setFilteredPending(transformed);
+    }
+  }, [inspectorPositions, rawPendingData]);
+
+  // Hydration-safe date state
+  useEffect(() => {
+    setMaxDate(new Date());
+    fetchInspectorPositions();
+    fetchSummaryData();
+    fetchPendingData();
+    // eslint-disable-next-line
+  }, []);
+
+  const fetchSummaryData = async (filters = {}) => {
     setLoading(true);
     try {
-      const year = yearFrom(filters);
       const dateFrom = filters.receiveDateFrom || "";
       const dateTo = filters.receiveDateTo || "";
-      const rep = await GetAllReportsInspector(year, "", "", "", dateFrom, dateTo, true);
-      const reportItems = rep?.res_data?.items || [];
+      const res = await GetAllReportsInspector("2025", "", "", "", dateFrom, dateTo);
+      const items = res?.res_data?.items ?? [];
+      // เก็บข้อมูลดิบไว้ เพื่อใช้ในการแปลงข้อมูลเมื่อ inspectorPositions พร้อม
+      setRawSummaryData(items);
 
-      const extraOptions = Array.from(
-        new Map(
-          reportItems.map((i) => [
-            i.signature_authority_user_id,
-            { value: i.signature_authority_user_id, label: i.signature_authority_user_name },
-          ])
-        ).values()
-      );
-      setClaimantOptions((prev) => withAllOption([...(prev || []), ...extraOptions]));
+      // ถ้า positions โหลดแล้ว ให้แปลงข้อมูลทันที
+      if (inspectorPositions.size > 0) {
+        const transformed = items.map((item, idx) => {
+          const userName = item.signature_authority_user_name || "";
+          const userId = item.signature_authority_user_id;
+          const position = inspectorPositions.get(userId) || "";
+          const displayName = position ? `${position}(${userName})` : userName;
 
-      setFilteredComplaints(buildRows(inspectors, reportItems, filters.claimantName || ""));
+          return {
+            id: idx + 1,
+            claimantName: displayName,
+            totalDept: item.total_sent,
+            inProgressCnt: item.total_in_progress,
+            closedCnt: item.total_closed,
+            receiveDate: "-",
+          };
+        });
+        setAllSummaryData(transformed);
+        setFilteredSummary(transformed);
+      } else {
+        // ถ้ายังไม่โหลด ให้แสดงแบบไม่มีตำแหน่งก่อน
+        const basicTransformed = items.map((item, idx) => ({
+          id: idx + 1,
+          claimantName: item.signature_authority_user_name,
+          totalDept: item.total_sent,
+          inProgressCnt: item.total_in_progress,
+          closedCnt: item.total_closed,
+          receiveDate: "-",
+        }));
+        setAllSummaryData(basicTransformed);
+        setFilteredSummary(basicTransformed);
+      }
     } catch (e) {
-      console.error("search error:", e);
-      setFilteredComplaints([]);
-    } finally {
-      setLoading(false);
+      setRawSummaryData([]);
+      setAllSummaryData([]);
+      setFilteredSummary([]);
     }
+    setLoading(false);
+  };
+
+  const fetchPendingData = async (filters = {}) => {
+    setLoading(true);
+    try {
+      const dateFrom = filters.receiveDateFrom || "";
+      const dateTo = filters.receiveDateTo || "";
+      const res = await GetAllReportsInspectorPending("2025", "", "", dateFrom, dateTo);
+      const items = res?.res_data?.items ?? [];
+      // เก็บข้อมูลดิบไว้ เพื่อใช้ในการแปลงข้อมูลเมื่อ inspectorPositions พร้อม
+      setRawPendingData(items);
+
+      // ถ้า positions โหลดแล้ว ให้แปลงข้อมูลทันที
+      if (inspectorPositions.size > 0) {
+        const transformed = items.map((item, idx) => {
+          const userName = item.signature_authority_user_name || "";
+          const userId = item.signature_authority_user_id;
+          const position = inspectorPositions.get(userId) || "";
+          const displayName = position ? `${position}(${userName})` : userName;
+
+          return {
+            id: idx + 1,
+            claimantName: displayName,
+            pendingBetween: item.pending_count,
+            inProcessFY2568: item.inprogress_count,
+            total: (item.pending_count || 0) + (item.inprogress_count || 0),
+            receiveDate: "-",
+          };
+        });
+        setAllPendingData(transformed);
+        setFilteredPending(transformed);
+      } else {
+        // ถ้ายังไม่โหลด ให้แสดงแบบไม่มีตำแหน่งก่อน
+        const basicTransformed = items.map((item, idx) => ({
+          id: idx + 1,
+          claimantName: item.signature_authority_user_name,
+          pendingBetween: item.pending_count,
+          inProcessFY2568: item.inprogress_count,
+          total: (item.pending_count || 0) + (item.inprogress_count || 0),
+          receiveDate: "-",
+        }));
+        setAllPendingData(basicTransformed);
+        setFilteredPending(basicTransformed);
+      }
+    } catch (e) {
+      setRawPendingData([]);
+      setAllPendingData([]);
+      setFilteredPending([]);
+    }
+    setLoading(false);
+  };
+
+  // ฟิลเตอร์ข้อมูลสองตาราง
+  const handleSearch = async (filters) => {
+    // เรียก API ใหม่พร้อมพารามิเตอร์วันที่
+    await Promise.all([
+      fetchSummaryData(filters),
+      fetchPendingData(filters)
+    ]);
   };
 
   return (
@@ -322,23 +231,26 @@ const ResultsComplaintsComponents = () => {
         ]}
       />
 
-      <TableListCollapsReport
-        data={filteredComplaints}
-        title="ผลการดำเนินการและเรื่องค้างพิจารณา"
-        reportTitle="ผลการดำเนินการและเรื่องค้างพิจารณา"
-        reportSubTitle="รายงานสรุปเรื่องราวร้องทุกข์ของผู้ตรวจประจำปีงบประมาณ"
-        dateRange={dateRange}
-        onSearch={handleSearch}
+      <TableListTab
+        summaryData={filteredSummary}
+        pendingData={filteredPending}
         loading={loading}
+        onSearch={handleSearch}
         filterFields={[
           {
-            name: "claimantName",
-            label: "รายชื่อผู้ตรวจ",
-            type: "select",
-            options: claimantOptions,
+            name: "receiveDateFrom",
+            label: "ตั้งแต่วันที่",
+            type: "date",
+            placeholder: "เลือกวันที่เริ่มต้น",
+            maxDate: maxDate,
           },
-          { name: "receiveDateFrom", label: "ตั้งแต่วันที่", type: "date" },
-          { name: "receiveDateTo", label: "ถึงวันที่", type: "date" },
+          {
+            name: "receiveDateTo",
+            label: "ถึงวันที่",
+            type: "date",
+            placeholder: "เลือกวันที่สิ้นสุด",
+            maxDate: maxDate,
+          },
         ]}
       />
     </>
