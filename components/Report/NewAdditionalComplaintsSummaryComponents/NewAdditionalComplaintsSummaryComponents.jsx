@@ -69,7 +69,7 @@ const NewAdditionalComplaintsSummaryComponents = () => {
       // หากอยากส่ง filter จริงๆ ให้ส่งใน params ได้เลย
       const response = await getNewAdditionalComplaintsReport({
         skip: 0,
-        limit: 10000,
+        limit: 1000, // API limit สูงสุด 1000
         // สามารถใส่ filter เพิ่มได้ เช่น date_from, date_to, department_id, officer_id, search
       });
 

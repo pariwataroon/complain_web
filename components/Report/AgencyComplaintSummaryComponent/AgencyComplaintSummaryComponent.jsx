@@ -132,7 +132,7 @@ const AgencyComplaintSummary = () => {
 
       const res = await GetAgencyComplaintReport(
         0,
-        10000, // ดึงข้อมูลทั้งหมด
+        1000, // ดึงข้อมูลสูงสุด 1000 รายการ (API limit)
         year,
         date_from,
         date_to,
