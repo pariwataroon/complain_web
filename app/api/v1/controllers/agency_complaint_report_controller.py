@@ -7,8 +7,8 @@ from sqlalchemy import func, cast, or_
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.mssql import DATETIME2
 
-from models.outgoing_reports4 import OutgoingReport4
 from models.outgoing_reports import OutgoingReport
+from models.outgoing_reports4 import OutgoingReport4
 from models.departments import Department
 from models.comp_complaint import Complaint
 from models.user import User
@@ -67,24 +67,24 @@ def get_agency_complaint_report(
 
         # ใช้วันที่อ้างอิง
         date_expr = func.coalesce(
-            OutgoingReport4.reference_date,
-            OutgoingReport4.document_date,
-            OutgoingReport4.created_at
+            OutgoingReport.reference_date,
+            OutgoingReport.document_date,
+            OutgoingReport.created_at
         )
 
-        # Query หลักจาก OutgoingReport4 แล้ว join กับข้อมูลอื่นๆ
+        # Query หลักจาก OutgoingReport (แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง) แล้ว join กับข้อมูลอื่นๆ
         q = (
-            db.query(OutgoingReport4)
+            db.query(OutgoingReport)
             .outerjoin(
                 Department,
                 or_(
-                    OutgoingReport4.department_id == Department.id,
-                    OutgoingReport4.outside_department_id == Department.id
+                    OutgoingReport.department_id == Department.id,
+                    OutgoingReport.outside_department_id == Department.id
                 )
             )
             .outerjoin(
-                OutgoingReport,
-                OutgoingReport4.complaint_number == OutgoingReport.complaint_number,
+                OutgoingReport4,
+                OutgoingReport.complaint_number == OutgoingReport4.complaint_number,
             )
             .outerjoin(
                 Complaint,
@@ -107,8 +107,8 @@ def get_agency_complaint_report(
         if department_id:
             q = q.filter(
                 or_(
-                    OutgoingReport4.department_id == department_id,
-                    OutgoingReport4.outside_department_id == department_id
+                    OutgoingReport.department_id == department_id,
+                    OutgoingReport.outside_department_id == department_id
                 )
             )
 
@@ -118,7 +118,7 @@ def get_agency_complaint_report(
                 func.coalesce(Department.name, '').ilike(f"%{agency}%")
             )
 
-        # Filter by status (consideration_result)
+        # Filter by status (consideration_result) - ดึงจาก OutgoingReport4
         if status:
             # Map Thai status to database values
             status_map = {
@@ -140,10 +140,10 @@ def get_agency_complaint_report(
         # Filter by claimant name (search in both subject and complainant data)
         if claimant_name:
             q = q.filter(
-                func.coalesce(Complaint.subject, OutgoingReport4.subject, '').ilike(f"%{claimant_name}%")
+                func.coalesce(Complaint.subject, OutgoingReport.subject, '').ilike(f"%{claimant_name}%")
             )
 
-        q = q.order_by(OutgoingReport4.created_at.desc())
+        q = q.order_by(OutgoingReport.created_at.desc())
 
         total = q.count()
         logger.info(f"[AGENCY_COMPLAINT_REPORT] Total records: {total}")
@@ -152,12 +152,13 @@ def get_agency_complaint_report(
 
         items = []
         for r in rows:
-            or4 = r  # ตอนนี้เรา query แค่ OutgoingReport4 เพราะใช้ outerjoin
+            outgoing = r  # ตอนนี้เรา query หลักจาก OutgoingReport (แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง)
 
             # ดึงข้อมูลจาก relation
             dept = None
             complaint = None
             user = None
+            or4 = None  # OutgoingReport4 สำหรับดึง consideration_result
 
             # พยายามดึงข้อมูลเพิ่มเติม
             if hasattr(r, 'Department'):
@@ -166,15 +167,18 @@ def get_agency_complaint_report(
                 complaint = r.Complaint
             if hasattr(r, 'User'):
                 user = r.User
+            if hasattr(r, 'OutgoingReport4'):
+                or4 = r.OutgoingReport4
 
             # คำนวณระยะเวลาดำเนินการ
             working_days = 0
-            if or4.created_at:
-                delta = datetime.now() - or4.created_at
+            if outgoing.created_at:
+                delta = datetime.now() - outgoing.created_at
                 working_days = delta.days
 
-            # แปลง consideration_result เป็น status label ไทย
-            status_text = or4.consideration_result or "อยู่ระหว่างดำเนินการ"
+            # แปลง consideration_result เป็น status label ไทย (ดึงจาก OutgoingReport4)
+            consideration_result = or4.consideration_result if or4 else None
+            status_text = consideration_result or "อยู่ระหว่างดำเนินการ"
             status_map_reverse = {
                 "รับทราบ": "ทราบ",
                 "อนุมัติ": "ทราบไว้ชั้นหนึ่ง",
@@ -188,16 +192,16 @@ def get_agency_complaint_report(
                     break
 
             # Format date to Thai format
-            receive_date = format_thai_date(or4.document_date or or4.created_at)
+            receive_date = format_thai_date(outgoing.document_date or outgoing.created_at)
 
             # Get claimant name - ใช้ subject เป็นหลัก
-            claimant_name_val = or4.subject or complaint.subject if complaint else "-"
+            claimant_name_val = outgoing.subject or (complaint.subject if complaint else "-")
 
             # Get agency name
             agency_val = dept.name if dept else "ไม่ระบุ"
 
             # Get issue
-            issue_val = or4.subject or (complaint.subject if complaint else "-")
+            issue_val = outgoing.subject or (complaint.subject if complaint else "-")
 
             # Get issue type
             issue_type_val = "-"
@@ -211,16 +215,18 @@ def get_agency_complaint_report(
             officer_val = "-"
             if user:
                 officer_val = f"{user.first_name} {user.last_name}"
-            elif hasattr(or4, 'assigned_to'):
-                officer_val = or4.assigned_to or "-"
+            elif hasattr(outgoing, 'assigned_to'):
+                officer_val = outgoing.assigned_to or "-"
 
-            # Get note/remarks
-            note_val = or4.remarks or "-"
+            # Get note/remarks - แสดงเลขที่หนังสือ + วันที่ที่ส่งหน่วยงาน
+            letter_number = outgoing.document_number or "-"
+            letter_date = format_thai_date(outgoing.document_date) if outgoing.document_date else "-"
+            note_val = f"{letter_number} {letter_date}" if letter_number != "-" and letter_date != "-" else (letter_number if letter_number != "-" else (letter_date if letter_date != "-" else "-"))
 
             items.append({
-                "id": str(or4.id),
+                "id": str(outgoing.id),
                 "claimantName": claimant_name_val or "-",
-                "receiptNumber": or4.complaint_number or "-",
+                "receiptNumber": outgoing.complaint_number or "-",
                 "receiveDate": receive_date,
                 "agency": agency_val,
                 "issue": issue_val,
