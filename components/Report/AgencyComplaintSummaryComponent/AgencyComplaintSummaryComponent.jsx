@@ -132,7 +132,7 @@ const AgencyComplaintSummary = () => {
 
       const res = await GetAgencyComplaintReport(
         0,
-        100,
+        10000, // ดึงข้อมูลทั้งหมด
         year,
         date_from,
         date_to,

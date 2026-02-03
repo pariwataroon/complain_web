@@ -162,7 +162,8 @@ const DetailOPMExportPDF = ({
         const lbl = `${label}`;
         const val = `${value}`;
         const xVal = margin + doc.getTextWidth(lbl) + 2;
-        const maxW = Math.max(10, (pageW - margin) - xVal);
+        // จำกัดความกว้างสูงสุดไม่ให้ทับขวา - ใช้ maxWidth แทน
+        const maxW = maxWidth - doc.getTextWidth(lbl);
         const lines = doc.splitTextToSize(val, maxW);
         doc.setTextColor(0,0,0); doc.text(lbl, margin, yPos);
         doc.setTextColor(0,0,0); doc.text(lines[0], xVal, yPos);
@@ -203,11 +204,16 @@ const DetailOPMExportPDF = ({
       doc.text(fullName, col2X + 22, yPos);
       yPos += lineHeight;
 
+      // จำกัดที่อยู่สูงสุด 20 ตัวอักษรต่อบรรทัด
       doc.text("ที่อยู่ที่ติดต่อได้ :", col1X, yPos);
-      doc.text(addressText, col1X + 26, yPos);
+      const addressLines = doc.splitTextToSize(addressText, 60); // 60mm ≈ 20-25 ตัวอักษร
+      addressLines.forEach((line, i) => {
+        doc.text(line, col1X + 26, yPos + (i * lineHeight));
+      });
+      const addressHeight = addressLines.length * lineHeight;
       doc.text("ตำบล/แขวง :", col2X, yPos);
       doc.text(subdistrictText, col2X + 22, yPos);
-      yPos += lineHeight;
+      yPos += Math.max(lineHeight, addressHeight);
 
       doc.text("อำเภอ/เขต :", col1X, yPos);
       doc.text(districtText, col1X + 22, yPos);

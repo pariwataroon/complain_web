@@ -15,6 +15,7 @@ import {
   Stack,
   Typography,
   TextField,
+  CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
@@ -37,6 +38,7 @@ const TableListAgency = ({
   navigateTo = "",
   onSearch = () => {},
   statusOptions = [],
+  loading = false,
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
@@ -248,7 +250,15 @@ const TableListAgency = ({
     data.forEach((item, idx) => {
       const row = [idx + 1];
       columns.forEach((col) => {
-        row.push(item[col.name] ?? "-");
+        // สำหรับคอลัมน์สถานะเรื่อง ให้ใช้ค่าจาก statusOptions ถ้ามี
+        let value = item[col.name] ?? "-";
+        if (col.name === "status" && statusOptions.length > 0) {
+          const statusOption = statusOptions.find(opt => opt.value === value);
+          if (statusOption) {
+            value = statusOption.label || value;
+          }
+        }
+        row.push(value);
       });
       exportData.push(row);
     });
@@ -283,6 +293,14 @@ const TableListAgency = ({
     // จัดรูปแบบ style
     const range = XLSXStyle.utils.decode_range(ws["!ref"]);
 
+    // Border style เดียวกันทั้งหมด
+    const borderStyle = {
+      top: { style: "thin", color: { rgb: "000000" } },
+      bottom: { style: "thin", color: { rgb: "000000" } },
+      left: { style: "thin", color: { rgb: "000000" } },
+      right: { style: "thin", color: { rgb: "000000" } },
+    };
+
     for (let R = range.s.r; R <= range.e.r; R++) {
       for (let C = range.s.c; C <= range.e.c; C++) {
         const cellAddress = XLSXStyle.utils.encode_cell({ r: R, c: C });
@@ -294,36 +312,28 @@ const TableListAgency = ({
           alignment: { vertical: "center", wrapText: true },
         };
 
-        // แถว 0-2: หัวข้อ (ตัวหนา, จัดกลาง, ไม่มีกรอบ)
+        // แถว 0-2: หัวข้อรายงาน (ตัวหนา 16pt, จัดกลาง, ไม่มีกรอบ)
         if (R <= 2) {
           style.font = { name: "TH Sarabun", sz: 16, bold: true };
-          style.alignment = { horizontal: "center", vertical: "center" };
+          style.alignment = { horizontal: "center", vertical: "center", wrapText: true };
         }
-        // แถวที่ 4: Header (ตัวหนา, จัดกลาง, มีกรอบ, พื้นหลังเทา)
+        // แถวที่ 4: Header ตาราง (ตัวหนา 11pt, จัดกลาง, มีกรอบ, พื้นหลังเทา)
         else if (R === 4) {
           style.font = { name: "TH Sarabun", sz: 11, bold: true };
           style.alignment = { horizontal: "center", vertical: "center", wrapText: true };
           style.fill = { fgColor: { rgb: "D9D9D9" } };
-          style.border = {
-            top: { style: "thin", color: { rgb: "000000" } },
-            bottom: { style: "thin", color: { rgb: "000000" } },
-            left: { style: "thin", color: { rgb: "000000" } },
-            right: { style: "thin", color: { rgb: "000000" } },
-          };
+          style.border = borderStyle;
         }
-        // แถวข้อมูล (มีกรอบ, ลำดับจัดกลาง)
+        // แถวข้อมูล (มีกรอบ, คอลัมน์ตัวเลข/วันที่จัดกลาง, อื่นๆ จัดซ้าย)
         else if (R > 4) {
+          // คอลัมน์ที่จัดกลาง: ลำดับ(0), เลข สรร.(1), ลงวันที่(2)
+          const centerColumns = [0, 1, 2];
           style.alignment = {
-            horizontal: C === 0 ? "center" : "left",
+            horizontal: centerColumns.includes(C) ? "center" : "left",
             vertical: "center",
             wrapText: true
           };
-          style.border = {
-            top: { style: "thin", color: { rgb: "000000" } },
-            bottom: { style: "thin", color: { rgb: "000000" } },
-            left: { style: "thin", color: { rgb: "000000" } },
-            right: { style: "thin", color: { rgb: "000000" } },
-          };
+          style.border = borderStyle;
         }
 
         ws[cellAddress].s = style;
@@ -610,38 +620,71 @@ const TableListAgency = ({
                 </TableRow>
               </TableHead>
               <TableBody>
-                {pagedData.map((item, idx) => (
-                  <TableRow
-                    key={item.id}
-                    onClick={() => handleRowClick(item)}
-                    sx={{ cursor: "pointer", "&:hover": { backgroundColor: "#f5f7ff" } }}
-                  >
+                {loading ? (
+                  <TableRow>
                     <TableCell
+                      colSpan={columns.length + 1}
                       align="center"
                       sx={{
-                        width: { xs: 60, sm: 80 },
-                        fontWeight: 600,
-                        color: HEADER_COLOR,
-                        fontSize: { xs: 12, sm: 14 },
+                        py: 4,
                       }}
                     >
-                      {page * rowsPerPage + idx + 1}
+                      <Box display="flex" flexDirection="column" alignItems="center" gap={2}>
+                        <CircularProgress sx={{ color: HEADER_COLOR }} />
+                        <Typography sx={{ fontSize: { xs: 14, sm: 16 }, color: "#666" }}>
+                          กำลังโหลดข้อมูล...
+                        </Typography>
+                      </Box>
                     </TableCell>
-                    {columns.map((col) => (
+                  </TableRow>
+                ) : data.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length + 1}
+                      align="center"
+                      sx={{
+                        py: 4,
+                        fontSize: { xs: 14, sm: 16 },
+                        color: "#666",
+                      }}
+                    >
+                      ไม่พบข้อมูล
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pagedData.map((item, idx) => (
+                    <TableRow
+                      key={item.id}
+                      onClick={() => handleRowClick(item)}
+                      sx={{ cursor: "pointer", "&:hover": { backgroundColor: "#f5f7ff" } }}
+                    >
                       <TableCell
-                        key={col.name}
+                        align="center"
                         sx={{
-                          width: col.width,
+                          width: { xs: 60, sm: 80 },
+                          fontWeight: 600,
+                          color: HEADER_COLOR,
                           fontSize: { xs: 12, sm: 14 },
-                          wordWrap: "break-word",
-                          whiteSpace: "normal",
                         }}
                       >
-                        {item[col.name] ?? "-"}
+                        {page * rowsPerPage + idx + 1}
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
+                      {columns.map((col) => (
+                        <TableCell
+                          key={col.name}
+                          sx={{
+                            width: col.width,
+                            fontSize: { xs: 12, sm: 14 },
+                            wordWrap: "break-word",
+                            whiteSpace: "normal",
+                          }}
+                        >
+                          {item[col.name] ?? "-"}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
 

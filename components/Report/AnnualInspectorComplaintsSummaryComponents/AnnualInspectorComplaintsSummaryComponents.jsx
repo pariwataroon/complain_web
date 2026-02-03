@@ -142,14 +142,16 @@ const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
           totalDept: reportDept.total,
           inProgressCnt: reportDept.inProgress,
           closedCnt: reportDept.closed,
-          children: reportDept.complaints.map(c => ({
-            id: c.id,
-            department: c.subject || c.reference_number || "-",
-            totalDept: 1,
-            inProgressCnt: c.status === "in_progress" ? 1 : 0,
-            closedCnt: c.status === "closed" ? 1 : 0,
-            complaintData: c, // เก็บข้อมูลเรื่องไว้สำหรับคลิก
-          })),
+          children: reportDept.complaints
+            .filter(c => c.is_master !== false) // กรองเอาเฉพาะเรื่องร้องหลัก (เอาที่เป็น master หรือไม่ระบุ)
+            .map(c => ({
+              id: c.id,
+              department: c.subject || c.reference_number || "-",
+              totalDept: 1,
+              inProgressCnt: c.status === "in_progress" ? 1 : 0,
+              closedCnt: c.status === "closed" ? 1 : 0,
+              complaintData: c, // เก็บข้อมูลเรื่องไว้สำหรับคลิก
+            })),
         });
       } else {
         // ไม่มีข้อมูลจากรายงาน
@@ -173,14 +175,16 @@ const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
             totalDept: dept.total,
             inProgressCnt: dept.inProgress,
             closedCnt: dept.closed,
-            children: dept.complaints.map(c => ({
-              id: c.id,
-              department: c.subject || c.reference_number || "-",
-              totalDept: 1,
-              inProgressCnt: c.status === "in_progress" ? 1 : 0,
-              closedCnt: c.status === "closed" ? 1 : 0,
-              complaintData: c,
-            })),
+            children: dept.complaints
+              .filter(c => c.is_master !== false) // กรองเอาเฉพาะเรื่องร้องหลัก
+              .map(c => ({
+                id: c.id,
+                department: c.subject || c.reference_number || "-",
+                totalDept: 1,
+                inProgressCnt: c.status === "in_progress" ? 1 : 0,
+                closedCnt: c.status === "closed" ? 1 : 0,
+                complaintData: c,
+              })),
           });
         }
       }

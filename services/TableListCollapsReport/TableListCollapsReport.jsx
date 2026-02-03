@@ -257,10 +257,10 @@ const TableListCollapsReport = ({
 
     // จัดรูปแบบเซลล์
     const borderStyle = {
-      top: { style: "thin" },
-      bottom: { style: "thin" },
-      left: { style: "thin" },
-      right: { style: "thin" }
+      top: { style: "thin", color: { rgb: "000000" } },
+      bottom: { style: "thin", color: { rgb: "000000" } },
+      left: { style: "thin", color: { rgb: "000000" } },
+      right: { style: "thin", color: { rgb: "000000" } }
     };
 
     const range = XLSX.utils.decode_range(ws['!ref']);
@@ -275,10 +275,7 @@ const TableListCollapsReport = ({
 
         if (!ws[cellAddress].s) ws[cellAddress].s = {};
 
-        // ใส่เส้นตารางทุกเซลล์
-        ws[cellAddress].s.border = borderStyle;
-
-        // จัดรูปแบบแถวที่ 1 (หัวข้อรายงาน)
+        // แถวที่ 0 (หัวข้อรายงาน): ตัวหนา 16pt, จัดกลาง, ไม่มีกรอบ
         if (R === 0) {
           ws[cellAddress].s.alignment = {
             horizontal: "center",
@@ -291,7 +288,7 @@ const TableListCollapsReport = ({
             sz: 16
           };
         }
-        // จัดรูปแบบแถวที่ 2 (หัวคอลัมน์)
+        // แถวที่ 1 (หัวคอลัมน์): ตัวหนา 11pt, จัดกลาง, มีกรอบ, พื้นหลังเทา
         else if (R === 1) {
           ws[cellAddress].s.alignment = {
             horizontal: "center",
@@ -306,11 +303,15 @@ const TableListCollapsReport = ({
           ws[cellAddress].s.fill = {
             fgColor: { rgb: "D9D9D9" }
           };
+          ws[cellAddress].s.border = borderStyle;
         }
-        // จัดรูปแบบแถวข้อมูล
+        // แถวข้อมูล: มีกรอบ, คอลัมน์ตัวเลขจัดกลาง, อื่นๆ จัดซ้าย
         else {
+          ws[cellAddress].s.border = borderStyle;
+          // คอลัมน์ที่จัดกลาง: จำนวน(3), อยู่ระหว่างดำเนินการ(4), ยุติ(5)
+          const centerColumns = [3, 4, 5];
           ws[cellAddress].s.alignment = {
-            horizontal: C === 3 ? "center" : "left", // คอลัมน์จำนวนจัดกลาง
+            horizontal: centerColumns.includes(C) ? "center" : "left",
             vertical: "center",
             wrapText: true
           };

@@ -186,6 +186,20 @@ const handleManage = (
   }
 };
 
+// ฟังก์ชันแปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกันทั่วทั้งไฟล์
+const formatDate = (date) => {
+  if (!date) return "-";
+  try {
+    return new Date(date).toLocaleDateString("th-TH", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "2-digit",
+    });
+  } catch {
+    return "-";
+  }
+};
+
 const sectionConfigs = [
   {
     key: "RECEIVED",
@@ -238,7 +252,7 @@ const sectionConfigs = [
       const posName = row.position?.name || row.position_name || "";
       const other = row.position_other_text || "";
       let positionDisplay = [posName, other].filter(Boolean).join(other ? " " : "") || "-";
-      
+
       if (posName === "ผู้ร้อง" || posName === "ผู้ร้องเรียน") {
         positionDisplay = positionDisplay.replace(/^ผู้ร้อง(เรียน)?/, "(ผู้ร้อง)");
       } else if (posName === "อื่นๆ") {
@@ -258,12 +272,26 @@ const sectionConfigs = [
         ? (prefix + (other || deptName || "-"))
         : (deptName || "-");
 
+      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
+      const formatDate = (date) => {
+        if (!date) return "-";
+        try {
+          return new Date(date).toLocaleDateString("th-TH", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          });
+        } catch {
+          return "-";
+        }
+      };
+
       return {
         ลำดับ: idx + 1,
         "หน่วยงาน(ครั้งที่ส่ง)": departmentDisplay,
         เรื่อง: row.issue || row.subject || "-",
         เลขที่หนังสือ: row.document_number || "-",
-        ลงวันที่: row.document_date || "-",
+        ลงวันที่: formatDate(row.document_date),
         ผู้ลงนาม:
           row.signer ||
           (row.signature_authority_user && row.signature_authority_user.name) ||
@@ -300,13 +328,26 @@ const sectionConfigs = [
       } else if (posName === "อื่นๆ") {
         positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
       }
+
+      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
+      const formatDate = (date) => {
+        if (!date) return "-";
+        try {
+          return new Date(date).toLocaleDateString("th-TH", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          });
+        } catch {
+          return "-";
+        }
+      };
+
       return {
         ลำดับ: idx + 1,
         "หน่วยงานหรือผู้ร้อง(ครั้งที่ส่ง)": positionDisplay,
         เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-        ลงวันที่: row.document_date 
-          ? new Date(row.document_date).toLocaleDateString("th-TH")
-          : "-",
+        ลงวันที่: formatDate(row.document_date),
         เรื่อง: row.issue || row.subject || "-",
         ผู้ลงนาม:
           row.signer ||
@@ -341,7 +382,7 @@ const sectionConfigs = [
       const posName = row.position?.name || row.position_name || "";
       const other = row.position_other_text || "";
       let positionDisplay = [posName, other].filter(Boolean).join(other ? " " : "") || "-";
-      
+
       if (posName === "ผู้ร้อง" || posName === "ผู้ร้องเรียน") {
         positionDisplay = positionDisplay.replace(/^ผู้ร้อง(เรียน)?/, "(ผู้ร้อง)");
       } else if (posName === "อื่นๆ") {
@@ -359,12 +400,26 @@ const sectionConfigs = [
         ? (prefix + (other || deptName || "-"))
         : (deptName || "-");
 
+      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
+      const formatDate = (date) => {
+        if (!date) return "-";
+        try {
+          return new Date(date).toLocaleDateString("th-TH", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          });
+        } catch {
+          return "-";
+        }
+      };
+
       return {
         ลำดับ: idx + 1,
         "ส่งหน่วยงาน(ครั้งที่ส่ง)": departmentDisplay,
         เรื่อง: row.issue || row.subject || "-",
         เลขที่หนังสือ: row.document_number || row.document_number || "-",
-        ลงวันที่: row.document_date || row.document_date || "-",
+        ลงวันที่: formatDate(row.document_date),
         ผู้ลงนาม:
           row.signer ||
           (row.signature_authority_user && row.signature_authority_user.name) ||
@@ -396,24 +451,41 @@ const sectionConfigs = [
       "เอกสารแนบ",
       "การจัดการ",
     ],
-    rowMapper: (row, idx) => ({
-      ลำดับ: idx + 1,
-      เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-      ลงวันที่: row.document_date 
-          ? new Date(row.document_date).toLocaleDateString("th-TH")
-          : "-",
-      เรื่อง: row.issue || row.subject || "-",
-      วันรับงาน: row.reference_date || "-",
-      วันที่เสนองาน: row.created_at || "-",
-      หน่วยงาน: filterDepartmentName(row.agency) || filterDepartmentName(row.department?.name) || "-",
-      เอกสารแนบ:
-        row.attachment_name ||
-        (row.attachments && row.attachments.length > 0
-          ? row.attachments.map((a) => a.file_name || a.name).join(", ")
-          : "-"),
-      การจัดการ: row.id,
-      id: row.id,
-    }),
+    rowMapper: (row, idx) => {
+      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
+      const formatDate = (date) => {
+        if (!date) return "-";
+        try {
+          return new Date(date).toLocaleDateString("th-TH", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          });
+        } catch {
+          return "-";
+        }
+      };
+
+      return {
+        ลำดับ: idx + 1,
+        หน่วยงาน: filterDepartmentName(row.agency) || filterDepartmentName(row.department?.name) || "-",
+        เลขที่หนังสือ: row.document_number || row.reference_number || "-",
+        // ลงวันที่: ใช้ internal_register_date (ตามหน้า Detail/Edit)
+        ลงวันที่: formatDate(row.internal_register_date || row.document_date),
+        เรื่อง: row.issue || row.subject || "-",
+        // วันรับงาน: ใช้ document_date (ตามหน้า Detail/Edit)
+        วันรับงาน: formatDate(row.document_date),
+        // วันที่เสนองาน: ใช้ present_to_director_date (ตามหน้า Detail/Edit)
+        วันที่เสนองาน: formatDate(row.present_to_director_date),
+        เอกสารแนบ:
+          row.attachment_name ||
+          (row.attachments && row.attachments.length > 0
+            ? row.attachments.map((a) => a.file_name || a.name).join(", ")
+            : "-"),
+        การจัดการ: row.id,
+        id: row.id,
+      };
+    },
     filter: (row) => row.status === "agency_report",
   },
   {
@@ -440,14 +512,26 @@ const sectionConfigs = [
       } else if (posName === "อื่นๆ") {
         positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
       }
+      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
+      const formatDate = (date) => {
+        if (!date) return "-";
+        try {
+          return new Date(date).toLocaleDateString("th-TH", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "2-digit",
+          });
+        } catch {
+          return "-";
+        }
+      };
+
       return {
       ลำดับ: idx + 1,
       // "เลขคำร้อง (complaint_id)": row.complaint_id || row.complaint?.id || "-",
       "ผู้ตรวจฯ / ผู้ร้อง / หน่วยงานอื่น":positionDisplay,
       เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-      ลงวันที่: row.document_date 
-          ? new Date(row.document_date).toLocaleDateString("th-TH")
-          : "-",
+      ลงวันที่: formatDate(row.document_date),
       เรื่อง: row.issue || row.subject || "-",
       เอกสารแนบ:
         row.attachment_name ||
@@ -1258,9 +1342,7 @@ const FollowComp = () => {
     agency: filterDepartmentName(item.department?.name) || "-",
     issue: item.subject || "-",
     document_number: item.document_number || "-",
-    document_date: item.document_date
-      ? new Date(item.document_date).toLocaleDateString("th-TH")
-      : "-",
+    document_date: formatDate(item.document_date),
     signer: item.signature_authority_user?.name || "-",
     attachment_name:
       item.attachments && item.attachments.length > 0
@@ -1289,9 +1371,7 @@ const FollowComp = () => {
     department: item.department,
     agency: filterDepartmentName(item.department?.name) || "-",
     reference_number: item.reference_number || "-",
-    complaint_number_date: item.complaint_number_date
-      ? new Date(item.complaint_number_date).toLocaleDateString("th-TH")
-      : "-",
+    complaint_number_date: formatDate(item.complaint_number_date),
     subject: item.subject || "-",
     signer: item.signature_authority_user?.name || "-",
     attachments: item.attachments,
@@ -1321,9 +1401,7 @@ const FollowComp = () => {
     agency: filterDepartmentName(item.department?.name) || "-",
     issue: item.subject || "-",
     document_number: item.document_number || "-",
-    document_date: item.document_date
-      ? new Date(item.document_date).toLocaleDateString("th-TH")
-      : "-",
+    document_date: formatDate(item.document_date),
     signer: item.signature_authority_user?.name || "-",
     attachment_name:
       item.attachments && item.attachments.length > 0
@@ -1349,15 +1427,13 @@ const outgoingType5 = outgoing_reports.type5 || [];
 const agencyReportRows = outgoingType5.map((item) => ({
  ...item,
   document_number: item.document_number || item.reference_number || "-",
-  reference_date: item.document_date
-    ? new Date(item.document_date).toLocaleDateString("th-TH")
-    : item.reference_date
-    ? new Date(item.reference_date).toLocaleDateString("th-TH")
-    : "-",
+  // ลงวันที่: ใช้ internal_register_date (หรือ fallback เป็น document_date)
+  document_date: formatDate(item.internal_register_date || item.document_date),
+  // วันรับงาน: ใช้ document_date
+  reference_date: formatDate(item.document_date),
   issue: item.subject || "-",
-  created_at: item.created_at
-    ? new Date(item.created_at).toLocaleDateString("th-TH")
-    : "-",
+  // วันที่เสนองาน: ใช้ present_to_director_date
+  created_at: formatDate(item.present_to_director_date),
   agency: filterDepartmentName(item.department?.name) || "-",
   attachment_name:
     item.attachments && item.attachments.length > 0
@@ -1369,9 +1445,9 @@ const agencyReportRows = outgoingType5.map((item) => ({
     ? documentData.items.filter(agencyReportSection.filter)
     : [];
   const agencyReportRowsSorted = [...agencyReportItems, ...agencyReportRows].sort((a, b) => {
-    // เรียงตามวันที่หนังสือล่าสุดก่อน (descending)
-    const dateA = new Date(a.document_date || a.reference_date || 0);
-    const dateB = new Date(b.document_date || b.reference_date || 0);
+    // เรียงตามวันที่หนังสือล่าสุดก่อน (descending) - ใช้ internal_register_date
+    const dateA = new Date(a.internal_register_date || a.document_date || 0);
+    const dateB = new Date(b.internal_register_date || b.document_date || 0);
     return dateB - dateA;
   });
 
@@ -1385,12 +1461,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
     agency: filterDepartmentName(item.department?.name) || "-",
     complaint_id: item.complaint_id || id,
     document_number: item.document_number || item.reference_number || "-",
-    receiveDate:
-      item.receive_date || item.document_date || item.reference_date
-        ? new Date(
-            item.receive_date || item.document_date || item.reference_date
-          ).toLocaleDateString("th-TH")
-        : "-",
+    receiveDate: formatDate(item.receive_date || item.document_date || item.reference_date),
     issue: item.subject || "-",
     attachment_name:
       item.attachments && item.attachments.length > 0
