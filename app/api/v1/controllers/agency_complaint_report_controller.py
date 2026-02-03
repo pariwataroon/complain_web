@@ -11,7 +11,8 @@ from models.outgoing_reports import OutgoingReport
 from models.outgoing_reports4 import OutgoingReport4
 from models.departments import Department
 from models.comp_complaint import Complaint
-from models.user import User
+from models.user import User as UserModel
+from sqlalchemy.orm import aliased
 
 logger = logging.getLogger(__name__)
 
@@ -65,34 +66,38 @@ def get_agency_complaint_report(
         if date_to is None:
             date_to = datetime(year + 1, 1, 1)
 
-        # ใช้วันที่อ้างอิง
+        # ใช้วันที่อ้างอิงจาก Complaint (วันที่ร้องเรียน) หรือ OutgoingReport
         date_expr = func.coalesce(
-            OutgoingReport.reference_date,
-            OutgoingReport.document_date,
+            Complaint.created_at,
+            Complaint.reference_date4,
             OutgoingReport.created_at
         )
 
-        # Query หลักจาก OutgoingReport (แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง) แล้ว join กับข้อมูลอื่นๆ
+        # Query หลักจาก OutgoingReport (เฉพาะเรื่องที่ส่งหนังสือไปหน่วยงาน) join กับ Complaint เพื่อดึงข้อมูลเรื่องร้องเรียน
+        AssignedOfficer = aliased(UserModel)
+        SignatureUser = aliased(UserModel)
+
         q = (
             db.query(OutgoingReport)
-            .outerjoin(
-                Department,
-                OutgoingReport.department_id == Department.id
+            .join(
+                Complaint,
+                OutgoingReport.complaint_id == Complaint.id,
             )
             .outerjoin(
                 OutgoingReport4,
                 OutgoingReport.complaint_number == OutgoingReport4.complaint_number,
             )
             .outerjoin(
-                Complaint,
-                or_(
-                    OutgoingReport.complaint_id == Complaint.id,
-                    OutgoingReport4.complaint_id == Complaint.id
-                )
+                AssignedOfficer,
+                Complaint.assigned_officer_id == AssignedOfficer.id,
             )
             .outerjoin(
-                User,
-                Complaint.assigned_officer_id == User.id,
+                Department,
+                OutgoingReport.department_id == Department.id,
+            )
+            .outerjoin(
+                SignatureUser,
+                OutgoingReport.signature_authority_user_id == SignatureUser.id,
             )
             .filter(
                 date_expr >= date_from,
@@ -100,22 +105,26 @@ def get_agency_complaint_report(
             )
         )
 
-        # Filter by department
+        # Filter by department (ตรวจสอบจาก OutgoingReport.department_id)
         if department_id:
             q = q.filter(
                 OutgoingReport.department_id == department_id
             )
 
-        # Filter by agency name (filter on both direct department_id and joined department)
+        # Filter by agency name (ค้นหาจาก Complaint.assigned_to หรือ Department.name)
         if agency:
             q = q.filter(
-                func.coalesce(Department.name, '').ilike(f"%{agency}%")
+                or_(
+                    Complaint.assigned_to.ilike(f"%{agency}%"),
+                    func.coalesce(Department.name, '').ilike(f"%{agency}%")
+                )
             )
 
         # Filter by status (consideration_result) - ดึงจาก OutgoingReport4
         if status:
             # Map Thai status to database values
             status_map = {
+                "ทั้งหมด": "",
                 "ทราบ": "รับทราบ",
                 "ทราบไว้ชั้นหนึ่ง": "อนุมัติ",
                 "ยุติเรื่องได้": "ยุติเรื่อง",
@@ -123,18 +132,19 @@ def get_agency_complaint_report(
                 "อยู่ระหว่างดำเนินการ": "ดำเนินการ",
             }
             db_status = status_map.get(status, status)
-            q = q.filter(OutgoingReport4.consideration_result.ilike(f"%{db_status}%"))
+            if db_status:  # ถ้าไม่ใช่ "ทั้งหมด"
+                q = q.filter(OutgoingReport4.consideration_result.ilike(f"%{db_status}%"))
 
-        # Filter by responsible officer
+        # Filter by responsible officer (จาก Complaint.assigned_officer)
         if responsible_officer:
             q = q.filter(
-                func.concat(User.first_name, ' ', User.last_name).ilike(f"%{responsible_officer}%")
+                func.concat(AssignedOfficer.first_name, ' ', AssignedOfficer.last_name).ilike(f"%{responsible_officer}%")
             )
 
-        # Filter by claimant name (search in both subject and complainant data)
+        # Filter by claimant name (ค้นหาจาก Complaint.subject)
         if claimant_name:
             q = q.filter(
-                func.coalesce(Complaint.subject, OutgoingReport.subject, '').ilike(f"%{claimant_name}%")
+                Complaint.subject.ilike(f"%{claimant_name}%")
             )
 
         q = q.order_by(OutgoingReport.created_at.desc())
@@ -146,25 +156,37 @@ def get_agency_complaint_report(
 
         items = []
         for r in rows:
-            outgoing = r  # ตอนนี้เรา query หลักจาก OutgoingReport (แบบรายงานส่งหน่วยงานที่เกี่ยวข้อง)
+            outgoing = r  # Query หลักจาก OutgoingReport (เฉพาะเรื่องที่ส่งหนังสือไปหน่วยงาน)
 
             # ดึงข้อมูลจาก relation
-            dept = None
-            complaint = None
-            user = None
-            or4 = None  # OutgoingReport4 สำหรับดึง consideration_result
+            complaint = None  # Complaint - เรื่องร้องเรียน
+            dept = None  # Department - หน่วยงานที่ส่งไป
+            assigned_officer = None  # User - เจ้าหน้าที่ผู้รับผิดชอบเรื่อง
+            signature_user = None  # User - คนลงนาม
+            or4 = None  # OutgoingReport4 - สถานะเรื่อง
 
             # พยายามดึงข้อมูลเพิ่มเติม
-            if hasattr(r, 'Department'):
-                dept = r.Department
             if hasattr(r, 'Complaint'):
                 complaint = r.Complaint
-            if hasattr(r, 'User'):
-                user = r.User
+            if hasattr(r, 'Department'):
+                dept = r.Department
+            # User relations เรียงตามลำดับการ join (ลำดับสุดท้ายคือ signature_user)
+            user_relations = getattr(r, 'User', [])
+            if user_relations:
+                if len(user_relations) >= 2:
+                    assigned_officer = user_relations[0]  # AssignedOfficer
+                    signature_user = user_relations[1]  # SignatureUser
+                elif len(user_relations) == 1:
+                    # ตรวจสอบว่าเป็น assigned_officer หรือ signature_user
+                    u = user_relations[0]
+                    if complaint and complaint.assigned_officer_id == u.id:
+                        assigned_officer = u
+                    else:
+                        signature_user = u
             if hasattr(r, 'OutgoingReport4'):
                 or4 = r.OutgoingReport4
 
-            # คำนวณระยะเวลาดำเนินการ
+            # คำนวณระยะเวลาดำเนินการ (จากวันที่สร้าง OutgoingReport)
             working_days = 0
             if outgoing.created_at:
                 delta = datetime.now() - outgoing.created_at
@@ -185,26 +207,39 @@ def get_agency_complaint_report(
                     status_text = val
                     break
 
-            # Format date to Thai format
-            receive_date = format_thai_date(outgoing.document_date or outgoing.created_at)
+            # Format date to Thai format (ลงวันที่ = วันที่ร้องเรียนจาก Complaint)
+            receive_date = format_thai_date(complaint.created_at) if complaint else format_thai_date(outgoing.created_at)
 
-            # Get claimant name - ใช้ subject เป็นหลัก
-            claimant_name_val = outgoing.subject or (complaint.subject if complaint else "-")
-
-            # Get agency name - ดึงจาก Complaint.assigned_to (หน่วยงานที่รับผิดชอบเรื่อง) เป็นหลัก
-            agency_val = "-"
+            # Get claimant name - ดึงจาก Complaint.complainant_data (ชื่อผู้ร้องจริงๆ) เป็นหลัก
+            claimant_name_val = "-"
             if complaint:
-                # ลำดับความสำคัญ: 1. assigned_to (หน่วยงานที่รับผิดชอบเรื่อง), 2. department จาก OutgoingReport, 3. agency_sender
-                if complaint.assigned_to:
-                    agency_val = complaint.assigned_to
-                elif dept:
-                    agency_val = dept.name
-                elif complaint.agency_sender:
-                    agency_val = complaint.agency_sender
-            elif dept:
-                agency_val = dept.name
+                # เริ่มด้วยจาก complainant_data
+                if complaint.complainant_data:
+                    try:
+                        complainant_info = json.loads(complaint.complainant_data) if isinstance(complaint.complainant_data, str) else complaint.complainant_data
+                        # ลองดึงชื่อจากหลายที่เป็นไปได้
+                        if complainant_info.get('name'):
+                            claimant_name_val = complainant_info['name']
+                        elif complainant_info.get('complainant_name'):
+                            claimant_name_val = complainant_info['complainant_name']
+                        elif complainant_info.get('complainantFirstName'):
+                            first_name = complainant_info.get('complainantFirstName', '')
+                            last_name = complainant_info.get('complainantLastName', '')
+                            claimant_name_val = f"{first_name} {last_name}".strip() or "-"
+                        elif complainant_info.get('firstName'):
+                            first_name = complainant_info.get('firstName', '')
+                            last_name = complainant_info.get('lastName', '')
+                            claimant_name_val = f"{first_name} {last_name}".strip() or "-"
+                    except:
+                        pass
+                # ถ้าไม่มใน complainant_data ใช้ subject แทน
+                if claimant_name_val == "-" or claimant_name_val == "":
+                    claimant_name_val = complaint.subject or "-"
 
-            # Get issue - ใช้ subject จาก Complaint เป็นหลัก (เรื่องร้องเรียน)
+            # Get agency name - ดึงจาก Department.name (หน่วยงานที่ส่งหนังสือไป) เป็นหลัก
+            agency_val = dept.name if dept else (complaint.assigned_to if complaint else "-")
+
+            # Get issue - ใช้ subject จาก Complaint
             issue_val = complaint.subject if complaint else (outgoing.subject or "-")
 
             # Get issue type - ดึงจาก Complaint.complaint_type_relation หรือ complaint_type
@@ -217,18 +252,18 @@ def get_agency_complaint_report(
 
             # Get responsible officer - ดึงจาก Complaint.assigned_officer (เจ้าหน้าที่ผู้รับผิดชอบเรื่อง)
             officer_val = "-"
-            if user:
-                officer_val = f"{user.first_name} {user.last_name}"
+            if assigned_officer:
+                officer_val = f"{assigned_officer.first_name} {assigned_officer.last_name}"
 
-            # Get note/remarks - แสดงเลขที่หนังสือ + วันที่ที่ส่งหน่วยงาน
+            # Get note/remarks - แสดงเลขที่หนังสือ + วันที่ที่ส่งหน่วยงาน (จาก OutgoingReport)
             letter_number = outgoing.document_number or "-"
             letter_date = format_thai_date(outgoing.document_date) if outgoing.document_date else "-"
             note_val = f"{letter_number} {letter_date}" if letter_number != "-" and letter_date != "-" else (letter_number if letter_number != "-" else (letter_date if letter_date != "-" else "-"))
 
             items.append({
-                "id": str(outgoing.id),
+                "id": str(complaint.id) if complaint else str(outgoing.id),
                 "claimantName": claimant_name_val or "-",
-                "receiptNumber": outgoing.complaint_number or "-",
+                "receiptNumber": complaint.complaint_number if complaint else (outgoing.complaint_number or "-"),
                 "receiveDate": receive_date,
                 "agency": agency_val,
                 "issue": issue_val,
