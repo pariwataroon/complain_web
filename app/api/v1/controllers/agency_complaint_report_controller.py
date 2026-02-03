@@ -77,10 +77,7 @@ def get_agency_complaint_report(
             db.query(OutgoingReport)
             .outerjoin(
                 Department,
-                or_(
-                    OutgoingReport.department_id == Department.id,
-                    OutgoingReport.outside_department_id == Department.id
-                )
+                OutgoingReport.department_id == Department.id
             )
             .outerjoin(
                 OutgoingReport4,
@@ -106,10 +103,7 @@ def get_agency_complaint_report(
         # Filter by department
         if department_id:
             q = q.filter(
-                or_(
-                    OutgoingReport.department_id == department_id,
-                    OutgoingReport.outside_department_id == department_id
-                )
+                OutgoingReport.department_id == department_id
             )
 
         # Filter by agency name (filter on both direct department_id and joined department)
