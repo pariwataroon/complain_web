@@ -78,7 +78,7 @@ def get_agency_complaint_report(
         SignatureUser = aliased(UserModel)
 
         q = (
-            db.query(OutgoingReport)
+            db.query(OutgoingReport, Complaint, AssignedOfficer, Department, SignatureUser, OutgoingReport4)
             .join(
                 Complaint,
                 OutgoingReport.complaint_id == Complaint.id,
@@ -156,35 +156,13 @@ def get_agency_complaint_report(
 
         items = []
         for r in rows:
-            outgoing = r  # Query หลักจาก OutgoingReport (เฉพาะเรื่องที่ส่งหนังสือไปหน่วยงาน)
-
-            # ดึงข้อมูลจาก relation
-            complaint = None  # Complaint - เรื่องร้องเรียน
-            dept = None  # Department - หน่วยงานที่ส่งไป
-            assigned_officer = None  # User - เจ้าหน้าที่ผู้รับผิดชอบเรื่อง
-            signature_user = None  # User - คนลงนาม
-            or4 = None  # OutgoingReport4 - สถานะเรื่อง
-
-            # พยายามดึงข้อมูลเพิ่มเติม
-            if hasattr(r, 'Complaint'):
-                complaint = r.Complaint
-            if hasattr(r, 'Department'):
-                dept = r.Department
-            # User relations เรียงตามลำดับการ join (ลำดับสุดท้ายคือ signature_user)
-            user_relations = getattr(r, 'User', [])
-            if user_relations:
-                if len(user_relations) >= 2:
-                    assigned_officer = user_relations[0]  # AssignedOfficer
-                    signature_user = user_relations[1]  # SignatureUser
-                elif len(user_relations) == 1:
-                    # ตรวจสอบว่าเป็น assigned_officer หรือ signature_user
-                    u = user_relations[0]
-                    if complaint and complaint.assigned_officer_id == u.id:
-                        assigned_officer = u
-                    else:
-                        signature_user = u
-            if hasattr(r, 'OutgoingReport4'):
-                or4 = r.OutgoingReport4
+            # r คือ tuple (OutgoingReport, Complaint, AssignedOfficer, Department, SignatureUser, OutgoingReport4)
+            outgoing = r[0]  # OutgoingReport - แบบรายงานส่งหน่วยงาน
+            complaint = r[1]  # Complaint - เรื่องร้องเรียน
+            assigned_officer = r[2]  # User - เจ้าหน้าที่ผู้รับผิดชอบเรื่อง
+            dept = r[3]  # Department - หน่วยงานที่ส่งไป
+            signature_user = r[4]  # User - คนลงนาม
+            or4 = r[5]  # OutgoingReport4 - สถานะเรื่อง
 
             # คำนวณระยะเวลาดำเนินการ (จากวันที่สร้าง OutgoingReport)
             working_days = 0
