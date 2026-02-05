@@ -161,6 +161,11 @@ const TableListAgency = ({
   const handleRowClick = (item) =>
     navigateTo && router.push(`${navigateTo}/${item.id}`);
 
+  const handleIssueClick = (item, e) => {
+    e.stopPropagation();
+    router.push(`/admin/box/list/${item.id}/?status=submitted`);
+  };
+
   const columns = [
     { name: "claimantName", label: "ชื่อผู้ร้อง", width: 140 },
     { name: "receiptNumber", label: "เลข สรร.", width: 120 },
@@ -672,11 +677,16 @@ const TableListAgency = ({
                       {columns.map((col) => (
                         <TableCell
                           key={col.name}
+                          onClick={col.name === "issue" ? (e) => handleIssueClick(item, e) : undefined}
                           sx={{
                             width: col.width,
                             fontSize: { xs: 12, sm: 14 },
                             wordWrap: "break-word",
                             whiteSpace: "normal",
+                            cursor: col.name === "issue" ? "pointer" : "default",
+                            color: col.name === "issue" ? "#1120A3" : "inherit",
+                            textDecoration: col.name === "issue" ? "underline" : "none",
+                            "&:hover": col.name === "issue" ? { color: "#0d1991" } : undefined,
                           }}
                         >
                           {item[col.name] ?? "-"}

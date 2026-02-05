@@ -63,14 +63,14 @@ const SendComplaintOPM = () => {
     return mobileRegex.test(phone) || landlineRegex.test(phone);
   };
 
-  const isPhoneValid = validatePhoneNumber(reporterPhone);
-
+  // เบอร์โทรศัพท์: ถ้ามีข้อมูลต้องถูกต้อง แต่ไม่บังคับให้กรอก
+  const isPhoneValid = !reporterPhone || validatePhoneNumber(reporterPhone);
 
   const isFormValid = useMemo(() => {
     const validations = {
-      selectedProvince: !!selectedProvince,
-      selectedDistrict: !!selectedDistrict,
-      selectedSubDistrict: !!selectedSubDistrict,
+      selectedProvince: true, // ไม่บังคับกรอกจังหวัด
+      selectedDistrict: true, // ไม่บังคับกรอกอำเภอ
+      selectedSubDistrict: true, // ไม่บังคับกรอกตำบล
       selectedChannel: true,
       selectedStatus: !!selectedStatus,
       selectedType: !!selectedType,
@@ -78,7 +78,7 @@ const SendComplaintOPM = () => {
       updatedDate: !!updatedDate,
       reporterFirstName: !!reporterFirstName?.trim(),
       reporterLastName: !!reporterLastName?.trim(),
-      reporterPhone: !!reporterPhone?.trim(),
+      reporterPhone: true, // ไม่บังคับกรอกเบอร์โทร
       caseCode: !!caseCode?.trim(),
       complaintDetail: !!complaintDetail?.trim(),
       isPhoneValid: isPhoneValid
@@ -296,14 +296,8 @@ const SendComplaintOPM = () => {
   const handleSubmit = useCallback(async () => {
     // ตรวจสอบข้อมูลครบถ้วน
     if (!isFormValid) {
-      if (!reporterPhone) {
-        await alertError(
-          "ข้อมูลไม่ครบถ้วน",
-          "กรุณากรอกเบอร์โทรศัพท์ผู้แจ้งเหตุ"
-        );
-        return;
-      }
-      if (!isPhoneValid) {
+      // ถ้ากรอกเบอร์โทรแล้วต้องถูกต้อง (แต่ไม่บังคับให้กรอก)
+      if (reporterPhone && !isPhoneValid) {
         await alertError(
           "เบอร์โทรไม่ถูกต้อง",
           "กรุณากรอกเบอร์โทรศัพท์ในรูปแบบที่ถูกต้อง เช่น 0812345678 หรือ 0212345678"
@@ -314,8 +308,8 @@ const SendComplaintOPM = () => {
       return;
     }
 
-    // ตรวจสอบเบอร์โทรเพิ่มเติม
-    if (reporterPhone.length < 9) {
+    // ตรวจสอบเบอร์โทรเพิ่มเติม (เฉพาะถ้ามีกรอก)
+    if (reporterPhone && reporterPhone.length < 9) {
       await alertError(
         "เบอร์โทรไม่ถูกต้อง",
         "เบอร์โทรศัพท์ต้องมีอย่างน้อย 9 หลัก"
@@ -829,7 +823,6 @@ const SendComplaintOPM = () => {
                     }}
                   >
                     เบอร์โทรศัพท์ผู้แจ้งเหตุ
-                    <span className={styles.requiredAsterisk}>*</span>
                   </Typography>
                   <TextField
                     name="reporterPhone"
@@ -936,7 +929,7 @@ const SendComplaintOPM = () => {
                   value={selectedProvince}
                   onChange={handleProvinceChange}
                   options={provinceOptions}
-                  required={true}
+                  required={false}
                 />
               </Grid>
 
@@ -950,7 +943,7 @@ const SendComplaintOPM = () => {
                   disabled={!selectedProvince}
                   selectedProvince={selectedProvince}
                   options={districtOptions}
-                  required={true}
+                  required={false}
                 />
               </Grid>
 
@@ -965,7 +958,7 @@ const SendComplaintOPM = () => {
                   selectedProvince={selectedProvince}
                   selectedDistrict={selectedDistrict}
                   options={subdistrictOptions}
-                  required={true}
+                  required={false}
                 />
               </Grid>
 
