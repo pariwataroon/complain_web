@@ -10,7 +10,7 @@ from sqlalchemy.dialects.mssql import DATETIME2
 from models.outgoing_reports import OutgoingReport
 from models.outgoing_reports4 import OutgoingReport4
 from models.departments import Department
-from models.comp_complaint import Complaint
+from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User as UserModel
 from sqlalchemy.orm import aliased
 
@@ -85,7 +85,7 @@ def get_agency_complaint_report(
             )
             .outerjoin(
                 OutgoingReport4,
-                OutgoingReport.complaint_number == OutgoingReport4.complaint_number,
+                OutgoingReport.complaint_id == OutgoingReport4.complaint_id,
             )
             .outerjoin(
                 AssignedOfficer,
@@ -133,12 +133,32 @@ def get_agency_complaint_report(
             }
             db_status = status_map.get(status, status)
             if db_status:  # ถ้าไม่ใช่ "ทั้งหมด"
-                q = q.filter(OutgoingReport4.consideration_result.ilike(f"%{db_status}%"))
+                # Filter โดยคำนึงถึงกรณีที่ OutgoingReport4.consideration_result เป็น null
+                if db_status == "ดำเนินการ":
+                    # ถ้าเลือก "อยู่ระหว่างดำเนินการ" ให้แสดงทั้งที่มี consideration_result ที่ตรง และที่เป็น null
+                    q = q.filter(
+                        or_(
+                            OutgoingReport4.consideration_result.ilike(f"%{db_status}%"),
+                            OutgoingReport4.consideration_result.is_(None)
+                        )
+                    )
+                else:
+                    # สถานะอื่นๆ ให้ filter ตามค่าที่มี
+                    q = q.filter(OutgoingReport4.consideration_result.ilike(f"%{db_status}%"))
 
         # Filter by responsible officer (จาก Complaint.assigned_officer)
         if responsible_officer:
+            # Filter โดยคำนึงถึงกรณีที่ AssignedOfficer เป็น null
             q = q.filter(
-                func.concat(AssignedOfficer.first_name, ' ', AssignedOfficer.last_name).ilike(f"%{responsible_officer}%")
+                or_(
+                    func.concat(
+                        func.coalesce(AssignedOfficer.first_name, ''),
+                        ' ',
+                        func.coalesce(AssignedOfficer.last_name, '')
+                    ).ilike(f"%{responsible_officer}%"),
+                    # ค้นหาจาก assigned_to ใน Complaint ด้วย (กรณีที่ไม่มีเจ้าหน้าที่ในระบบ)
+                    Complaint.assigned_to.ilike(f"%{responsible_officer}%")
+                )
             )
 
         # Filter by claimant name (ค้นหาจาก Complaint.subject)
