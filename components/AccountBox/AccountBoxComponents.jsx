@@ -202,6 +202,12 @@ const AccountBoxComponents = () => {
       const apiSummary = data?.summary ?? {};
       const sc = apiSummary?.status_counts ?? {};
 
+      // 🔍 Debug log
+      console.log('=== Staff Workload Debug ===');
+      console.log('API Summary:', apiSummary);
+      console.log('Status Counts:', sc);
+      console.log('All status keys:', Object.keys(sc));
+
       const completed = Number(sc.completed ?? 0);
       const cancelled = Number(sc.cancelled ?? 0);
       const closedSum = completed + cancelled;
@@ -215,6 +221,12 @@ const AccountBoxComponents = () => {
         Number(sc.in_review ?? 0) +
         Number(sc.tracking ?? 0) +
         Number(sc.reviewed ?? 0);
+
+      console.log('Calculated values:');
+      console.log('- Total from API:', apiSummary.total_complaints);
+      console.log('- In progress sum:', inProgressSum);
+      console.log('- Closed sum:', closedSum);
+      console.log('- Total calculated:', inProgressSum + closedSum);
 
       setSummaryState({
         total_staff: Number(apiSummary.total_staff ?? 0),
@@ -276,6 +288,23 @@ const AccountBoxComponents = () => {
           done,
           complaints,
         };
+      });
+
+      // ✅ คำนวณ total_complaints จาก staff_data ทั้งหมดให้ตรงกับผลรวม
+      const calculatedTotalComplaints = nextStaff.reduce((sum, staff) => sum + staff.received, 0);
+
+      // 🔍 Debug log
+      console.log('=== Total Complaints Calculation ===');
+      console.log('- Total from API summary:', Number(apiSummary.total_complaints ?? 0));
+      console.log('- Total calculated from staff:', calculatedTotalComplaints);
+      console.log('- Difference:', calculatedTotalComplaints - Number(apiSummary.total_complaints ?? 0));
+
+      // ✅ อัปเดต summaryState ด้วยค่าที่คำนวณใหม่
+      setSummaryState({
+        total_staff: Number(apiSummary.total_staff ?? 0),
+        total_complaints: calculatedTotalComplaints, // ใช้ค่าที่คำนวณจาก staff_data
+        in_progress_cases: inProgressSum,
+        closed_cases: closedSum,
       });
 
       setStaffStats(nextStaff);

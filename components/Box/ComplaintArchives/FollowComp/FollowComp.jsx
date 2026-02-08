@@ -187,15 +187,45 @@ const handleManage = (
 };
 
 // ฟังก์ชันแปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกันทั่วทั้งไฟล์
+// รองรับ format: DD/MM/YY, DD/MM/YYYY, YYYY-MM-DD, และ ISO string
 const formatDate = (date) => {
   if (!date) return "-";
   try {
-    return new Date(date).toLocaleDateString("th-TH", {
+    // ตรวจสอบว่าเป็น string หรือไม่
+    const dateStr = String(date).trim();
+
+    // กรณีที่ 1: Format DD/MM/YY หรือ DD/MM/YYYY (เช่น 13/01/69, 13/01/2569)
+    if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
+      const [day, month, year] = dateStr.split('/').map(Number);
+      // แปลงปี 2 หลักให้เป็น 4 หลัก (เช่น 69 -> 2569)
+      const fullYear = year < 100 ? year + 2500 : year;
+      // สร้าง Date object และตรวจสอบความถูกต้อง
+      const parsedDate = new Date(fullYear - 543, month - 1, day);
+      if (isNaN(parsedDate.getTime())) return "-";
+      return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${String(fullYear).slice(-2)}`;
+    }
+
+    // กรณีที่ 2: Format YYYY-MM-DD หรือ ISO string
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}/) || dateStr.includes('T')) {
+      const parsedDate = new Date(date);
+      if (isNaN(parsedDate.getTime())) return "-";
+      return parsedDate.toLocaleDateString("th-TH", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+      });
+    }
+
+    // กรณีที่ 3: ลองใช้ new Date() โดยตรง
+    const parsedDate = new Date(date);
+    if (isNaN(parsedDate.getTime())) return "-";
+    return parsedDate.toLocaleDateString("th-TH", {
       day: "2-digit",
       month: "2-digit",
       year: "2-digit",
     });
-  } catch {
+  } catch (e) {
+    console.error("Date parsing error:", date, e);
     return "-";
   }
 };
@@ -499,6 +529,8 @@ const sectionConfigs = [
       "เลขที่หนังสือ",
       "ลงวันที่",
       "เรื่อง",
+      "วันที่รับ",
+      "วันที่ส่งกลับ",
       "เอกสารแนบ",
       "การจัดการ",
     ],
@@ -533,6 +565,8 @@ const sectionConfigs = [
       เลขที่หนังสือ: row.document_number || row.reference_number || "-",
       ลงวันที่: formatDate(row.document_date),
       เรื่อง: row.issue || row.subject || "-",
+      "วันที่รับ": row.receiveDate || formatDate(row.receive_date || row.document_date || row.reference_date),
+      "วันที่ส่งกลับ": formatDate(row.return_date) || "-",
       เอกสารแนบ:
         row.attachment_name ||
         (row.attachments && row.attachments.length > 0
@@ -1462,6 +1496,7 @@ const agencyReportRows = outgoingType5.map((item) => ({
     complaint_id: item.complaint_id || id,
     document_number: item.document_number || item.reference_number || "-",
     receiveDate: formatDate(item.receive_date || item.document_date || item.reference_date),
+    returnDate: formatDate(item.return_date),
     issue: item.subject || "-",
     attachment_name:
       item.attachments && item.attachments.length > 0
