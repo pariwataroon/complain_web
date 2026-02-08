@@ -189,7 +189,7 @@ const handleManage = (
 // ฟังก์ชันแปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกันทั่วทั้งไฟล์
 // รองรับ format: DD/MM/YY, DD/MM/YYYY, YYYY-MM-DD, และ ISO string
 const formatDate = (date) => {
-  if (!date) return "-";
+  if (!date || date === null || date === undefined || date === "") return "-";
   try {
     // ตรวจสอบว่าเป็น string หรือไม่
     const dateStr = String(date).trim();
@@ -199,31 +199,23 @@ const formatDate = (date) => {
       const [day, month, year] = dateStr.split('/').map(Number);
       // แปลงปี 2 หลักให้เป็น 4 หลัก (เช่น 69 -> 2569)
       const fullYear = year < 100 ? year + 2500 : year;
-      // สร้าง Date object และตรวจสอบความถูกต้อง
-      const parsedDate = new Date(fullYear - 543, month - 1, day);
-      if (isNaN(parsedDate.getTime())) return "-";
+      // ใช้ dayjs สร้างและตรวจสอบความถูกต้อง
+      const parsedDate = dayjs(`${fullYear - 543}-${month}-${day}`);
+      if (!parsedDate.isValid()) return "-";
       return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${String(fullYear).slice(-2)}`;
     }
 
     // กรณีที่ 2: Format YYYY-MM-DD หรือ ISO string
     if (dateStr.match(/^\d{4}-\d{2}-\d{2}/) || dateStr.includes('T')) {
-      const parsedDate = new Date(date);
-      if (isNaN(parsedDate.getTime())) return "-";
-      return parsedDate.toLocaleDateString("th-TH", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "2-digit",
-      });
+      const parsedDate = dayjs(date);
+      if (!parsedDate.isValid()) return "-";
+      return parsedDate.format("DD/MM/") + String(parsedDate.year() + 543).slice(-2);
     }
 
-    // กรณีที่ 3: ลองใช้ new Date() โดยตรง
-    const parsedDate = new Date(date);
-    if (isNaN(parsedDate.getTime())) return "-";
-    return parsedDate.toLocaleDateString("th-TH", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "2-digit",
-    });
+    // กรณีที่ 3: ลองใช้ dayjs โดยตรง
+    const parsedDate = dayjs(date);
+    if (!parsedDate.isValid()) return "-";
+    return parsedDate.format("DD/MM/") + String(parsedDate.year() + 543).slice(-2);
   } catch (e) {
     console.error("Date parsing error:", date, e);
     return "-";
@@ -304,13 +296,11 @@ const sectionConfigs = [
 
       // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
       const formatDate = (date) => {
-        if (!date) return "-";
+        if (!date || date === null || date === undefined || date === "") return "-";
         try {
-          return new Date(date).toLocaleDateString("th-TH", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-          });
+          const d = dayjs(date);
+          if (!d.isValid()) return "-";
+          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
         } catch {
           return "-";
         }
@@ -361,13 +351,11 @@ const sectionConfigs = [
 
       // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
       const formatDate = (date) => {
-        if (!date) return "-";
+        if (!date || date === null || date === undefined || date === "") return "-";
         try {
-          return new Date(date).toLocaleDateString("th-TH", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-          });
+          const d = dayjs(date);
+          if (!d.isValid()) return "-";
+          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
         } catch {
           return "-";
         }
@@ -432,13 +420,11 @@ const sectionConfigs = [
 
       // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
       const formatDate = (date) => {
-        if (!date) return "-";
+        if (!date || date === null || date === undefined || date === "") return "-";
         try {
-          return new Date(date).toLocaleDateString("th-TH", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-          });
+          const d = dayjs(date);
+          if (!d.isValid()) return "-";
+          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
         } catch {
           return "-";
         }
@@ -484,13 +470,11 @@ const sectionConfigs = [
     rowMapper: (row, idx) => {
       // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
       const formatDate = (date) => {
-        if (!date) return "-";
+        if (!date || date === null || date === undefined || date === "") return "-";
         try {
-          return new Date(date).toLocaleDateString("th-TH", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-          });
+          const d = dayjs(date);
+          if (!d.isValid()) return "-";
+          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
         } catch {
           return "-";
         }
@@ -546,13 +530,11 @@ const sectionConfigs = [
       }
       // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
       const formatDate = (date) => {
-        if (!date) return "-";
+        if (!date || date === null || date === undefined || date === "") return "-";
         try {
-          return new Date(date).toLocaleDateString("th-TH", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "2-digit",
-          });
+          const d = dayjs(date);
+          if (!d.isValid()) return "-";
+          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
         } catch {
           return "-";
         }
@@ -981,13 +963,10 @@ const StatusHistorySection = ({ statusHistory }) => (
               >
                 <TableCell align="center">{idx + 1}</TableCell>
                 <TableCell align="center">
-                  {new Date(item.changed_at).toLocaleString("th-TH", {
-                    year: "numeric",
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {item.changed_at ? (() => {
+                    const d = dayjs(item.changed_at);
+                    return d.isValid() ? d.format("D MMM BBBB HH:mm") : '-';
+                  })() : '-'}
                 </TableCell>
                 <TableCell align="center">{item.changed_by_name || '-'}</TableCell>
                 <TableCell align="center">{item.remark || '-'}</TableCell>
@@ -1390,8 +1369,8 @@ const FollowComp = () => {
     ...forwardedExtra,
   ].sort((a, b) => {
     // เรียงตามวันที่หนังสือล่าสุดก่อน (descending)
-    const dateA = new Date(a.document_date || 0);
-    const dateB = new Date(b.document_date || 0);
+    const dateA = dayjs(a.document_date || 0).valueOf();
+    const dateB = dayjs(b.document_date || 0).valueOf();
     return dateB - dateA;
   });
 
@@ -1420,8 +1399,8 @@ const FollowComp = () => {
     : [];
   const initialNotifyRows = [...initialItems, ...initialNotifyExtra].sort((a, b) => {
     // เรียงตามวันที่ล่าสุดก่อน (descending)
-    const dateA = new Date(a.document_date || a.complaint_number_date || 0);
-    const dateB = new Date(b.document_date || b.complaint_number_date || 0);
+    const dateA = dayjs(a.document_date || a.complaint_number_date || 0).valueOf();
+    const dateB = dayjs(b.document_date || b.complaint_number_date || 0).valueOf();
     return dateB - dateA;
   });
 
@@ -1448,8 +1427,8 @@ const FollowComp = () => {
     : [];
   const requestUpdateRows = [...requestUpdateItems, ...requestUpdateExtra].sort((a, b) => {
     // เรียงตามวันที่ล่าสุดก่อน (descending)
-    const dateA = new Date(a.document_date || 0);
-    const dateB = new Date(b.document_date || 0);
+    const dateA = dayjs(a.document_date || 0).valueOf();
+    const dateB = dayjs(b.document_date || 0).valueOf();
     return dateB - dateA;
   });
   
@@ -1480,8 +1459,8 @@ const agencyReportRows = outgoingType5.map((item) => ({
     : [];
   const agencyReportRowsSorted = [...agencyReportItems, ...agencyReportRows].sort((a, b) => {
     // เรียงตามวันที่หนังสือล่าสุดก่อน (descending) - ใช้ internal_register_date
-    const dateA = new Date(a.internal_register_date || a.document_date || 0);
-    const dateB = new Date(b.internal_register_date || b.document_date || 0);
+    const dateA = dayjs(a.internal_register_date || a.document_date || 0).valueOf();
+    const dateB = dayjs(b.internal_register_date || b.document_date || 0).valueOf();
     return dateB - dateA;
   });
 
@@ -1512,8 +1491,8 @@ const agencyReportRows = outgoingType5.map((item) => ({
 
   const finalNotifyRows = [...finalNotifyItems, ...finalNotifyExtra].sort((a, b) => {
     // เรียงตามวันที่ล่าสุดก่อน (descending)
-    const dateA = new Date(a.receive_date || a.document_date || a.reference_date || 0);
-    const dateB = new Date(b.receive_date || b.document_date || b.reference_date || 0);
+    const dateA = dayjs(a.receive_date || a.document_date || a.reference_date || 0).valueOf();
+    const dateB = dayjs(b.receive_date || b.document_date || b.reference_date || 0).valueOf();
     return dateB - dateA;
   });
 

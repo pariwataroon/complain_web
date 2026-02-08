@@ -290,21 +290,24 @@ const AccountBoxComponents = () => {
         };
       });
 
-      // ✅ คำนวณ total_complaints จาก staff_data ทั้งหมดให้ตรงกับผลรวม
+      // ✅ คำนวณทุกค่าจาก staff_data ทั้งหมดให้ตรงกับผลรวม
       const calculatedTotalComplaints = nextStaff.reduce((sum, staff) => sum + staff.received, 0);
+      const calculatedClosedCases = nextStaff.reduce((sum, staff) => sum + staff.done, 0);
+      const calculatedInProgressCases = nextStaff.reduce((sum, staff) => sum + staff.backlog, 0);
 
       // 🔍 Debug log
-      console.log('=== Total Complaints Calculation ===');
-      console.log('- Total from API summary:', Number(apiSummary.total_complaints ?? 0));
-      console.log('- Total calculated from staff:', calculatedTotalComplaints);
-      console.log('- Difference:', calculatedTotalComplaints - Number(apiSummary.total_complaints ?? 0));
+      console.log('=== Total Calculation from Staff Data ===');
+      console.log('- Total (รับงาน):', calculatedTotalComplaints);
+      console.log('- Closed (สำเร็จ):', calculatedClosedCases);
+      console.log('- In Progress (คงค้าง):', calculatedInProgressCases);
+      console.log('- API total_complaints:', Number(apiSummary.total_complaints ?? 0));
 
       // ✅ อัปเดต summaryState ด้วยค่าที่คำนวณใหม่
       setSummaryState({
         total_staff: Number(apiSummary.total_staff ?? 0),
         total_complaints: calculatedTotalComplaints, // ใช้ค่าที่คำนวณจาก staff_data
-        in_progress_cases: inProgressSum,
-        closed_cases: closedSum,
+        in_progress_cases: calculatedInProgressCases, // คงค้างจาก staff_data
+        closed_cases: calculatedClosedCases, // สำเร็จจาก staff_data
       });
 
       setStaffStats(nextStaff);

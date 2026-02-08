@@ -51,16 +51,14 @@ const Filteromplaints = () => {
   ]);
 
   const formatDate = (isoString) => {
-    if (!isoString) return "";
-    try {
-      const date = new Date(isoString);
-      const day = date.getDate().toString().padStart(2, "0");
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const year = date.getFullYear() + 543;
-      return `${day}.${month}.${year}`;
-    } catch {
+    if (!isoString || isoString === null || isoString === undefined || isoString === "") {
       return "";
     }
+    const date = dayjs(isoString);
+    if (!date.isValid()) {
+      return "";
+    }
+    return `${date.format("DD.MM.")}${date.year() + 543}`;
   };
 
   // ---------- helpers สำหรับ is_assigned + subjectWithDot ----------

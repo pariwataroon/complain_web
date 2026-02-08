@@ -42,13 +42,17 @@ const getStatusColor = (en) => statusColors[en] ?? "#9E9E9E";
 
 /* ---------- วันเวลา: รองรับทั้ง ISO และ "16 Aug 2025" ---------- */
 const formatThaiDateFlexible = (dateStr) => {
-  if (!dateStr) return "-";
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "-";
+  if (!dateStr || dateStr === null || dateStr === undefined || dateStr === "") {
+    return "-";
+  }
+  const d = dayjs(dateStr);
+  if (!d.isValid()) {
+    return "-";
+  }
   const thaiMonths = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
-  const day = d.getDate();
-  const month = thaiMonths[d.getMonth()];
-  const year = d.getFullYear() + 543;
+  const day = d.date();
+  const month = thaiMonths[d.month()];
+  const year = d.year() + 543;
   return `${day} ${month} ${year}`;
 };
 
