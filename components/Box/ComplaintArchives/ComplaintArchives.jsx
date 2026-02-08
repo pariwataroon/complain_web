@@ -67,7 +67,7 @@ const formatThaiDateFlexible = (dateStr) => {
   ];
   const day = d.date();
   const month = thaiMonths[d.month()];
-  const year = d.year() + 543;
+  const year = d.$y + 543;
   return `${day} ${month} ${year}`;
 };
 

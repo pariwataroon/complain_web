@@ -28,6 +28,10 @@ import { getDocumentStorageByComplaintId } from "@pages/api/document/document";
 import { GetPositionByID } from "@pages/api/positions/positions"; // ใช้สำหรับ map position_id -> position_name เมื่อ backend ไม่ส่งชื่อมา
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
+import dayjs from "dayjs";
+import "dayjs/locale/th";
+
+dayjs.locale("th");
 import ImageIcon from "@mui/icons-material/Image";
 import AudioFileIcon from "@mui/icons-material/AudioFile";
 import MovieIcon from "@mui/icons-material/Movie";
@@ -209,13 +213,13 @@ const formatDate = (date) => {
     if (dateStr.match(/^\d{4}-\d{2}-\d{2}/) || dateStr.includes('T')) {
       const parsedDate = dayjs(date);
       if (!parsedDate.isValid()) return "-";
-      return parsedDate.format("DD/MM/") + String(parsedDate.year() + 543).slice(-2);
+      return parsedDate.format("DD/MM/") + String(parsedDate.$y + 543).slice(-2);
     }
 
     // กรณีที่ 3: ลองใช้ dayjs โดยตรง
     const parsedDate = dayjs(date);
     if (!parsedDate.isValid()) return "-";
-    return parsedDate.format("DD/MM/") + String(parsedDate.year() + 543).slice(-2);
+    return parsedDate.format("DD/MM/") + String(parsedDate.$y + 543).slice(-2);
   } catch (e) {
     console.error("Date parsing error:", date, e);
     return "-";
@@ -300,7 +304,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
         } catch {
           return "-";
         }
@@ -355,7 +359,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
         } catch {
           return "-";
         }
@@ -424,7 +428,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
         } catch {
           return "-";
         }
@@ -474,7 +478,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
         } catch {
           return "-";
         }
@@ -534,7 +538,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.year() + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
         } catch {
           return "-";
         }
