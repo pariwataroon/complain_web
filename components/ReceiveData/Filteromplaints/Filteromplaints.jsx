@@ -23,8 +23,8 @@ const breadcrumbItems = [
   { label: "คัดกรองเรื่องร้องเรียน" },
 ];
 
+// ช่องทางสำหรับสร้างตาราง (ไม่รวม "ทุกช่องทาง")
 const ALL_CHANNELS = [
-  { key: "", name: "ทุกช่องทาง" },
   { key: "website", name: "เว็บไซต์ (https://complain.mof.go.th)" },
   { key: "opm1111", name: "ร้องเรียนผ่านระบบ OPM 1111 (สำนักงานปลัดสำนักนายกรัฐมนตรี)" },
   { key: "central_service", name: "ศูนย์บริการร่วมกระทรวงการคลัง" },
@@ -32,7 +32,7 @@ const ALL_CHANNELS = [
   { key: "email", name: "ร้องเรียนผ่านอีเมล" },
 ];
 
-// Channel options สำหรับ dropdown
+// Channel options สำหรับ dropdown filter (รวม "ทุกช่องทาง")
 const CHANNEL_OPTIONS = [
   { value: "", label: "ทุกช่องทาง" },
   { value: "website", label: "เว็บไซต์ (https://complain.mof.go.th)" },
