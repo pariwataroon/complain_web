@@ -70,11 +70,14 @@ const SelectFieldAPI = ({
                 }
 
                 if (Array.isArray(response)) {
+                    // API ส่งมาเป็น { value, label } อยู่แล้ว แต่อาจมี zip_code สำหรับ districts
                     const mapped = response.map(item => ({
-                        value: item.code || item.id || item.zip_code,
-                        label: item.name_th || item.name || item.zip_code,
+                        value: item.value || item.code || item.id,
+                        label: item.label || item.name_th || item.name || String(item.zip_code || ""),
                     }));
                     setOptions(mapped);
+                } else {
+                    setOptions([]);
                 }
             } catch (error) {
                 console.error(`Error fetching ${label}:`, error);

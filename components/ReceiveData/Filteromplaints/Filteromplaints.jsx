@@ -198,7 +198,6 @@ const Filteromplaints = () => {
           });
           setComplaintTypesMap(typesMap);
           setTypesLoaded(true);
-          console.log('✅ Loaded complaint types map:', typesMap.size, 'types');
         }
       } catch (error) {
         console.error('Failed to load complaint types:', error);

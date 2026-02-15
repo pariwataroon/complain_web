@@ -83,9 +83,10 @@ const GetProvincesSelect = async () => {
         label: item.name_th,
       }));
     }
+    return [];
   } catch (error) {
     console.error("Error fetching all select provinces:", error);
-    throw error;
+    return [];
   }
 };
 //  All Amphures
