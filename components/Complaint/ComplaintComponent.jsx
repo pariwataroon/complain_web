@@ -139,11 +139,25 @@ export default function ComplaintComponent() {
     if (activeStep === 0) {
       const currentTab = tabStates.step1 || 0;
       if (currentTab === 0) {
+        // Validate เลขบัตรประชาชน
+        const generalIdCardValue = data?.general?.idCard;
+        if (!hasValue(generalIdCardValue)) {
+          errors[`general.idCard`] = "กรุณากรอก เลขบัตรประจำตัวประชาชน ของผู้ร้องทุกข์";
+        } else if (generalIdCardValue.length !== 13) {
+          errors[`general.idCard`] = "กรุณากรอกเลขบัตรประจำตัวประชาชนให้ครบ 13 หลัก ของผู้ร้องทุกข์";
+        } else if (!/^\d{13}$/.test(generalIdCardValue)) {
+          errors[`general.idCard`] = "เลขบัตรประจำตัวประชาชนต้องเป็นตัวเลขเท่านั้น ของผู้ร้องทุกข์";
+        }
+
         const generalFields = [
+          { key: "name", label: "ชื่อ - นามสกุล" },
+          { key: "address", label: "ที่อยู่ที่สามารถติดต่อได้" },
+          { key: "phone", label: "หมายเลขโทรศัพท์" },
           { key: "province", label: "จังหวัด" },
           { key: "districts", label: "อำเภอ/เขต" },
           { key: "subdistricts", label: "ตำบล/แขวง" },
           { key: "zipcode", label: "รหัสไปรษณีย์" },
+          { key: "email", label: "อีเมล" },
         ];
         generalFields.forEach((field) => {
           const value = data?.general?.[field.key];
@@ -158,6 +172,8 @@ export default function ComplaintComponent() {
           if (emailErrors.length > 0) {
             errors[`general.email`] = emailErrors[0];
           }
+        } else {
+          errors[`general.email`] = "กรุณากรอกอีเมล ของผู้ร้องทุกข์";
         }
       } else if (currentTab === 1) {
         const corpIdCardValue = data?.corporate?.idCard;

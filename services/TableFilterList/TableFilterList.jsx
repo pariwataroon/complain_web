@@ -30,6 +30,7 @@ const TableFilterList = ({
   navigateTo = "",
   issueTypeOptions = [],
   respondentOptions = [],
+  channelOptions = [],
   onSearch = () => {},
 }) => {
   const router = useRouter();
@@ -39,6 +40,7 @@ const TableFilterList = ({
     subject: "",
     issueType: "",
     respondentName: "",
+    channel: "",
     startDate: null,
     endDate: null,
   });
@@ -116,6 +118,7 @@ const TableFilterList = ({
       subject: "",
       issueType: "",
       respondentName: "",
+      channel: "",
       startDate: null,
       endDate: null,
     };
@@ -253,6 +256,15 @@ const TableFilterList = ({
               gap={1}
               sx={{ flexWrap: "nowrap" }}
             >
+              <SelectField
+                label="ช่องทางการรับเรื่อง"
+                inputLabel="เลือกช่องทาง"
+                options={channelOptions}
+                value={String(filters.channel || "")}
+                onChange={handleSelectChange("channel")}
+                name="channel"
+              />
+
               <InputText
                 label="ชื่อผู้ร้อง"
                 inputLabel="กรอกชื่อผู้ร้อง"

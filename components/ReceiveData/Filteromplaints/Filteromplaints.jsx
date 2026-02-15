@@ -24,11 +24,22 @@ const breadcrumbItems = [
 ];
 
 const ALL_CHANNELS = [
+  { key: "", name: "ทุกช่องทาง" },
   { key: "website", name: "เว็บไซต์ (https://complain.mof.go.th)" },
   { key: "opm1111", name: "ร้องเรียนผ่านระบบ OPM 1111 (สำนักงานปลัดสำนักนายกรัฐมนตรี)" },
   { key: "central_service", name: "ศูนย์บริการร่วมกระทรวงการคลัง" },
   { key: "letter", name: "ร้องเรียนผ่านจดหมาย" },
   { key: "email", name: "ร้องเรียนผ่านอีเมล" },
+];
+
+// Channel options สำหรับ dropdown
+const CHANNEL_OPTIONS = [
+  { value: "", label: "ทุกช่องทาง" },
+  { value: "website", label: "เว็บไซต์ (https://complain.mof.go.th)" },
+  { value: "opm1111", label: "ร้องเรียนผ่านระบบ OPM 1111" },
+  { value: "central_service", label: "ศูนย์บริการร่วมกระทรวงการคลัง" },
+  { value: "letter", label: "ร้องเรียนผ่านจดหมาย" },
+  { value: "email", label: "ร้องเรียนผ่านอีเมล" },
 ];
 
 const Filteromplaints = () => {
@@ -344,13 +355,14 @@ const Filteromplaints = () => {
 
   const handleSearch = useCallback(
     (filters) => {
-      const { claimantName, subject, issueType, respondentName, startDate, endDate } = filters;
+      const { claimantName, subject, issueType, respondentName, channel, startDate, endDate } = filters;
 
       const hasFilters =
         !isEmpty(claimantName) ||
         !isEmpty(subject) ||
         !isEmpty(issueType) ||
         !isEmpty(respondentName) ||
+        !isEmpty(channel) ||
         startDate ||
         endDate;
 
@@ -359,7 +371,27 @@ const Filteromplaints = () => {
         return;
       }
 
-      const filteredData = allGroups.map((group) => ({
+      // ✅ กรองกลุ่มตาม channel ก่อน แล้วค่อยกรองข้อมูลภายใน
+      let filteredData = allGroups;
+
+      // ถ้าเลือก channel ให้แสดงเฉพาะกลุ่มที่ตรงกับ channel นั้น
+      if (!isEmpty(channel)) {
+        const channelInfo = ALL_CHANNELS.find(ch => ch.key === channel);
+        if (channelInfo) {
+          filteredData = allGroups.filter((group) => {
+            const groupTitle = group.title?.toLowerCase() || "";
+            const channelName = channelInfo.name?.toLowerCase() || "";
+            const channelKey = channelInfo.key?.toLowerCase() || "";
+            // ตรวจสอบว่า title ของ group มีชื่อหรือ key ของ channel ที่เลือก
+            return groupTitle.includes(channelName) ||
+                   groupTitle.includes(channelKey) ||
+                   group.complaint_channel_id?.toLowerCase() === channelKey;
+          });
+        }
+      }
+
+      // กรองข้อมูลภายในแต่ละกลุ่ม
+      filteredData = filteredData.map((group) => ({
         ...group,
         data: group.data.filter((item) => {
           if (!isEmpty(claimantName) && !safeIncludes(item.name, claimantName)) return false;
@@ -466,6 +498,7 @@ const Filteromplaints = () => {
           groups={filteredGroups}
           issueTypeOptions={issueTypeOptions}
           respondentOptions={respondentOptions}
+          channelOptions={CHANNEL_OPTIONS}
           onSearch={handleSearch}
           loading={loading}
           totalCount={apiData?.pagination?.total || 0}

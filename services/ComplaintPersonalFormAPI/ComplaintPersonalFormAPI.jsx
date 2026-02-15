@@ -187,7 +187,10 @@ const ComplaintPersonalFormAPI = ({
             render={({ field }) => (
               <SelectFieldAPI
                 label="จังหวัด"
+                inputLabel="เลือกจังหวัด"
                 value={field.value}
+                onChange={field.onChange}
+                name={field.name}
                 disabled={dis}
               />
             )}
@@ -201,7 +204,11 @@ const ComplaintPersonalFormAPI = ({
             render={({ field }) => (
               <SelectFieldAPI
                 label="อำเภอ/เขต"
+                inputLabel="เลือกอำเภอ/เขต"
                 value={field.value}
+                onChange={field.onChange}
+                name={field.name}
+                provinceCode={methods.watch("province")?.code || methods.watch("province")?.value}
                 disabled={dis}
               />
             )}
@@ -231,7 +238,11 @@ const ComplaintPersonalFormAPI = ({
             render={({ field }) => (
               <SelectFieldAPI
                 label="ตำบล/แขวง"
+                inputLabel="เลือกตำบล/แขวง"
                 value={field.value}
+                onChange={field.onChange}
+                name={field.name}
+                amphureCode={methods.watch("districts")?.code || methods.watch("districts")?.value}
                 disabled={dis}
               />
             )}
@@ -245,7 +256,11 @@ const ComplaintPersonalFormAPI = ({
             render={({ field }) => (
               <SelectFieldAPI
                 label="รหัสไปรษณีย์"
+                inputLabel="เลือกรหัสไปรษณีย์"
                 value={field.value}
+                onChange={field.onChange}
+                name={field.name}
+                amphureCode={methods.watch("districts")?.code || methods.watch("districts")?.value}
                 disabled={dis}
               />
             )}

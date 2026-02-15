@@ -484,11 +484,20 @@ const sectionConfigs = [
         }
       };
 
+      // Debug: แสดงข้อมูลที่ได้รับจาก API
+      // console.log('AGENCY_REPORT row data:', {
+      //   internal_register_date: row.internal_register_date,
+      //   document_date: row.document_date,
+      //   present_to_director_date: row.present_to_director_date,
+      //   document_number: row.document_number,
+      // });
+
       return {
         ลำดับ: idx + 1,
         หน่วยงาน: filterDepartmentName(row.agency) || filterDepartmentName(row.department?.name) || "-",
-        เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-        // ลงวันที่: ใช้ internal_register_date (ตามหน้า Detail/Edit)
+        เลขที่หนังสือ: row.document_number || row.internal_register_number || row.reference_number || "-",
+        // ลงวันที่: ใช้ internal_register_date (วันที่หนังสือ)
+        // fallback เป็น document_date ถ้าไม่มี internal_register_date (สำหรับข้อมูลเก่า)
         ลงวันที่: formatDate(row.internal_register_date || row.document_date),
         เรื่อง: row.issue || row.subject || "-",
         // วันรับงาน: ใช้ document_date (ตามหน้า Detail/Edit)

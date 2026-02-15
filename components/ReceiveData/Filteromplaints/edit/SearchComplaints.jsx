@@ -118,21 +118,21 @@ const SearchComplaints = () => {
 
             <FormProvider {...generalMethods}>
               <div className={styles.formContainer}>
-                <ComplaintPersonalFormAPI title="ข้อมูลผู้ร้องทุกข์" />
+                <ComplaintPersonalFormAPI title="ข้อมูลผู้ร้องทุกข์" dis={false} />
               </div>
             </FormProvider>
             {/* ถ้าไม่ต้องการให้แสดงในกรณีที่ไม่มีข้อมูลให้เปิด Tab ส่วนนี้ */}
             {/* {defaultDelegateRef.current && (
               <FormProvider {...delegateMethods}>
                 <div className={styles.formContainer2}>
-                  <ComplaintPersonalFormAPI title="ข้อมูลผู้รับมอบอำนาจร้องทุกข์" />
+                  <ComplaintPersonalFormAPI title="ข้อมูลผู้รับมอบอำนาจร้องทุกข์" dis={false} />
                 </div>
               </FormProvider>
             )} */}
 
             <FormProvider {...delegateMethods}>
               <div className={styles.formContainer2}>
-                <ComplaintPersonalFormAPI title="ข้อมูลผู้รับมอบอำนาจร้องทุกข์" />
+                <ComplaintPersonalFormAPI title="ข้อมูลผู้รับมอบอำนาจร้องทุกข์" dis={false} />
               </div>
             </FormProvider>
 
