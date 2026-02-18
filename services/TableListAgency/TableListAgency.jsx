@@ -108,7 +108,7 @@ const TableListAgency = ({
           names = [
             ...new Set(
               res.res_data.items
-                .map((it) => it?.complaint?.assigned_to)
+                .map((it) => it?.complaint?.assigned_officer_full_name || it?.complaint?.assigned_to)
                 .filter((x) => x && x !== "-")
             ),
           ].sort();

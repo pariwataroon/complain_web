@@ -144,9 +144,25 @@ const AgencyComplaintSummary = () => {
       );
 
       console.log("[AgencyComplaintSummary] API Response:", res);
-      const items = res?.res_data?.items || [];
+      const rawItems = res?.res_data?.items || [];
+
+      // API /reports/agency-complaint/list ส่งข้อมูลแบบ flat object แล้ว
+      // fields: claimantName, receiptNumber, receiveDate, agency, issue, issueType, note, responsibleOfficer, status
+      const items = rawItems.map((item) => ({
+        id: item.id,
+        claimantName: item.claimantName || "-",
+        receiptNumber: item.receiptNumber || "-",
+        receiveDate: item.receiveDate || "-",
+        agency: item.agency || "-",
+        issue: item.issue || "-",
+        issueType: item.issueType || "-",
+        note: item.note || "-",
+        responsibleOfficer: item.responsibleOfficer || "-",
+        status: item.status || "-",
+      }));
 
       console.log("[AgencyComplaintSummary] Items count:", items.length);
+      console.log("[AgencyComplaintSummary] First item sample:", items[0]);
       setAllComplaints(items);
       setFilteredComplaints(items);
     } catch (error) {
