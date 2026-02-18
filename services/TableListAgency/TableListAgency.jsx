@@ -27,7 +27,6 @@ import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
 import {
   GetDepartments,
-  GetMyRelatedComplaints,
 } from "@pages/api/complaint/complaint";
 
 const HEADER_COLOR = "#1120A3";
@@ -98,33 +97,13 @@ const TableListAgency = ({
   }, [data]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await GetMyRelatedComplaints({ skip: 0, limit: 200 }).catch(
-          () => null
-        );
-        let names = [];
-        if (res?.res_data?.items?.length) {
-          names = [
-            ...new Set(
-              res.res_data.items
-                .map((it) => it?.complaint?.assigned_officer_full_name || it?.complaint?.assigned_to)
-                .filter((x) => x && x !== "-")
-            ),
-          ].sort();
-        } else {
-          names = [
-            ...new Set(
-              data.map((d) => d.responsibleOfficer).filter((x) => x && x !== "-")
-            ),
-          ].sort();
-        }
-        setOfficerOptions(names.map((n) => ({ value: n, label: n })));
-      } catch (e) {
-        console.error("Load officers failed:", e);
-        setOfficerOptions([]);
-      }
-    })();
+    // ใช้ข้อมูลจาก data prop โดยตรง เพราะมีคำนำหน้าแล้ว
+    const names = [
+      ...new Set(
+        data.map((d) => d.responsibleOfficer).filter((x) => x && x !== "-")
+      ),
+    ].sort();
+    setOfficerOptions(names.map((n) => ({ value: n, label: n })));
   }, [data]);
 
   // -------------------- ตาราง --------------------
