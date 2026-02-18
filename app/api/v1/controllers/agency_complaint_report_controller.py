@@ -4,7 +4,7 @@ import json
 import logging
 
 from sqlalchemy import func, cast, or_
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy.dialects.mssql import DATETIME2
 
 from models.outgoing_reports import OutgoingReport
@@ -12,6 +12,7 @@ from models.outgoing_reports4 import OutgoingReport4
 from models.departments import Department
 from models.comp_complaint import Complaint, ComplaintStatus
 from models.user import User as UserModel
+from models.title import Title
 from sqlalchemy.orm import aliased
 
 logger = logging.getLogger(__name__)
@@ -98,6 +99,9 @@ def get_agency_complaint_report(
             .outerjoin(
                 SignatureUser,
                 OutgoingReport.signature_authority_user_id == SignatureUser.id,
+            )
+            .options(
+                joinedload(AssignedOfficer.title)
             )
             .filter(
                 date_expr >= date_from,
@@ -259,7 +263,13 @@ def get_agency_complaint_report(
             # Get responsible officer - ดึงจาก Complaint.assigned_officer (เจ้าหน้าที่ผู้รับผิดชอบเรื่อง)
             officer_val = "-"
             if assigned_officer:
-                officer_val = f"{assigned_officer.first_name} {assigned_officer.last_name}"
+                # ดึงคำนำหน้าจาก title.short_name หรือ prefix_other
+                prefix = ""
+                if assigned_officer.title and hasattr(assigned_officer.title, 'short_name'):
+                    prefix = assigned_officer.title.short_name or ""
+                elif assigned_officer.prefix_other:
+                    prefix = assigned_officer.prefix_other
+                officer_val = f"{prefix} {assigned_officer.first_name} {assigned_officer.last_name}".strip()
 
             # Get note/remarks - แสดงเลขที่หนังสือ + วันที่ที่ส่งหน่วยงาน (จาก OutgoingReport)
             letter_number = outgoing.document_number or "-"

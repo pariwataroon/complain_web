@@ -49,6 +49,7 @@ def _attachment_dict(att):
 def _get_officer_full_name(user: User) -> Optional[str]:
     """ดึงชื่อเจ้าหน้าที่พร้อมคำนำหน้า"""
     if not user:
+        logger.debug(f"_get_officer_full_name: user is None")
         return None
 
     try:
@@ -56,17 +57,22 @@ def _get_officer_full_name(user: User) -> Optional[str]:
         # ใช้ title.short_name ถ้ามี
         if hasattr(user, 'title') and user.title and hasattr(user.title, 'short_name'):
             prefix = user.title.short_name or ""
+            logger.debug(f"_get_officer_full_name: using title.short_name = {prefix}")
         # ถ้าไม่มี title แต่มี prefix_other (กรณีเลือก "อื่นๆ")
         elif hasattr(user, 'prefix_other') and user.prefix_other:
             prefix = user.prefix_other
+            logger.debug(f"_get_officer_full_name: using prefix_other = {prefix}")
+        else:
+            logger.debug(f"_get_officer_full_name: no prefix found, user.title={user.title if hasattr(user, 'title') else 'N/A'}")
 
         first_name = getattr(user, 'first_name', '') or ''
         last_name = getattr(user, 'last_name', '') or ''
 
         full_name = f"{prefix} {first_name} {last_name}".strip()
+        logger.debug(f"_get_officer_full_name: result = {full_name}")
         return full_name if full_name else None
     except Exception as e:
-        logger.debug(f"Error getting officer full name: {e}")
+        logger.error(f"Error getting officer full name: {e}")
         return None
 
 
