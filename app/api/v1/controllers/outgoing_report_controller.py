@@ -46,6 +46,30 @@ def _attachment_dict(att):
     }
 
 
+def _get_officer_full_name(user: User) -> Optional[str]:
+    """ดึงชื่อเจ้าหน้าที่พร้อมคำนำหน้า"""
+    if not user:
+        return None
+
+    try:
+        prefix = ""
+        # ใช้ title.short_name ถ้ามี
+        if hasattr(user, 'title') and user.title and hasattr(user.title, 'short_name'):
+            prefix = user.title.short_name or ""
+        # ถ้าไม่มี title แต่มี prefix_other (กรณีเลือก "อื่นๆ")
+        elif hasattr(user, 'prefix_other') and user.prefix_other:
+            prefix = user.prefix_other
+
+        first_name = getattr(user, 'first_name', '') or ''
+        last_name = getattr(user, 'last_name', '') or ''
+
+        full_name = f"{prefix} {first_name} {last_name}".strip()
+        return full_name if full_name else None
+    except Exception as e:
+        logger.debug(f"Error getting officer full name: {e}")
+        return None
+
+
 # =========================
 # Complaint status/history helpers
 # =========================
@@ -913,7 +937,10 @@ def get_user_related_complaints_with_tracking(
         "sent_to_external": "ส่งหน่วยงานที่เกี่ยวข้องแล้ว",
     }
 
-    q = db.query(Complaint).options(joinedload(Complaint.status_history)).filter(
+    q = db.query(Complaint).options(
+        joinedload(Complaint.status_history),
+        joinedload(Complaint.assigned_officer).joinedload(User.title)
+    ).filter(
         or_(
             Complaint.assigned_officer_id == current_user_id,
             Complaint.created_by == current_user_id
@@ -1120,6 +1147,7 @@ def get_user_related_complaints_with_tracking(
                 "updated_at": _iso(getattr(c, "updated_at", None)),
                 "assigned_officer_id": _safe_str(getattr(c, "assigned_officer_id", None)),
                 "assigned_to": getattr(c, "assigned_to", None),
+                "assigned_officer_full_name": _get_officer_full_name(getattr(c, "assigned_officer", None)),
                 "assigned_date": _iso(getattr(c, "assigned_date", None)),
             },
             "counts": {

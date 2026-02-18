@@ -230,9 +230,17 @@ def get_agency_complaint_report(
                             claimant_name_val = f"{first_name} {last_name}".strip() or "-"
                     except:
                         pass
-                # ถ้าไม่มใน complainant_data ใช้ subject แทน
+                # ถ้าไม่มีใน complainant_data ให้ extract ชื่อจาก subject
                 if claimant_name_val == "-" or claimant_name_val == "":
-                    claimant_name_val = complaint.subject or "-"
+                    subject = complaint.subject or ""
+                    # Pattern: มักจะจบด้วย "รายXXX" หรือ "รายนายXXX" หรือ "รายนางXXX"
+                    import re
+                    # หา pattern "ราย" ตามด้วยข้อความ (ชื่อผู้ร้อง)
+                    match = re.search(r'ราย(.+)$', subject)
+                    if match:
+                        claimant_name_val = match.group(1).strip()
+                    else:
+                        claimant_name_val = "-"
 
             # Get agency name - ดึงจาก Department.name (หน่วยงานที่ส่งหนังสือไป) เป็นหลัก
             agency_val = dept.name if dept else (complaint.assigned_to if complaint else "-")
