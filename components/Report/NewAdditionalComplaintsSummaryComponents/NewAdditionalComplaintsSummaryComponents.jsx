@@ -56,6 +56,13 @@ function formatApiDateThai(dateString) {
   return `${day} ${THAI_MONTH_ABBREV[month]} ${year}`;
 }
 
+// แปลง filing_type เป็นภาษาไทย
+const FILING_TYPE_LABELS = {
+  new: "เรื่องร้องเรียนใหม่",
+  additional: "เรื่องร้องเรียนเพิ่มเติม",
+  committee: "คณะกรรมการ",
+};
+
 const NewAdditionalComplaintsSummaryComponents = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
@@ -86,10 +93,12 @@ const NewAdditionalComplaintsSummaryComponents = () => {
           receiptNumber: item.complaint_number || "-",
           claimantName: item.complainant_name || "-",
           responsibleOfficer: item.assigned_officer_name || "-",
-          agency: item.department_name || "-",
-          issueType: item.complaint_type || "-",
+          // แปลง department_name จาก UUID เป็นชื่อหน่วยงาน (ถ้าเป็น UUID ให้แสดงชื่อหน่วยงานภายในจาก assigned_department_name)
+          agency: item.assigned_department_name || item.department_name || "-",
+          // แปลง filing_type เป็นภาษาไทย
+          issueType: FILING_TYPE_LABELS[item.filing_type] || item.filing_type || "-",
           note: item.remark || "",
-          filingType: item.filing_type || "-",
+          filingType: FILING_TYPE_LABELS[item.filing_type] || item.filing_type || "-",
         }));
         setAllComplaints(transformed);
         setFilteredComplaints(transformed);

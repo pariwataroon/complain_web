@@ -314,18 +314,26 @@ const handleExportExcel = () => {
     day: "2-digit",
   });
 
-  // ตรวจสอบประเภทรายงานจาก filters
-  const reportType = filters.dataType || "";
+  // หา dataType จาก filters - ค้นหาจาก filterFields
+  const getFieldValue = (name) => {
+    const field = filterFields.find(f => f.name.includes(name));
+    return field ? filters[field.name] : filters[name];
+  };
+
+  const reportType = getFieldValue("dataType") || "";
 
   // กำหนดชื่อไฟล์และชื่อรายงานตามประเภท
   let reportName = "ทั้งหมด";
   let reportTitle = "การติดตามงานค้าง";
   if (reportType === "new_complaint") {
     reportName = "เรื่องร้องเรียนใหม่";
+    reportTitle = "รายงานติดตามงานค้าง (ประเภท เรื่องร้องเรียนใหม่)";
   } else if (reportType === "additional_complaint") {
     reportName = "เรื่องร้องเรียนเพิ่มเติม";
+    reportTitle = "รายงานติดตามงานค้าง (ประเภท เรื่องร้องเรียนเพิ่มเติม)";
   } else if (reportType === "department_decision") {
     reportName = "ผลการพิจารณาจากหน่วยงาน";
+    reportTitle = "รายงานติดตามงานค้าง (ประเภท ผลการพิจารณาจากหน่วยงาน)";
   }
 
   const filename = `${reportName}_${today}.xlsx`;
@@ -340,8 +348,10 @@ const handleExportExcel = () => {
   const wb = XLSX.utils.book_new();
 
   // กำหนดข้อมูลวันที่
-  const fromText = receiveDateFromVal ? formatThaiDate(receiveDateFromVal) : "-";
-  const toText = receiveDateToVal ? formatThaiDate(receiveDateToVal) : "-";
+  const dateFromVal = getFieldValue("receiveDateFrom");
+  const dateToVal = getFieldValue("receiveDateTo");
+  const fromText = dateFromVal ? formatThaiDate(dateFromVal) : "-";
+  const toText = dateToVal ? formatThaiDate(dateToVal) : "-";
 
   // จำนวนคอลัมน์
   const numCols = exportResult.columns.length;

@@ -206,20 +206,20 @@ const formatDate = (date) => {
       // ใช้ dayjs สร้างและตรวจสอบความถูกต้อง
       const parsedDate = dayjs(`${fullYear - 543}-${month}-${day}`);
       if (!parsedDate.isValid()) return "-";
-      return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${String(fullYear).slice(-2)}`;
+      return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${String(fullYear)}`;
     }
 
     // กรณีที่ 2: Format YYYY-MM-DD หรือ ISO string
     if (dateStr.match(/^\d{4}-\d{2}-\d{2}/) || dateStr.includes('T')) {
       const parsedDate = dayjs(date);
       if (!parsedDate.isValid()) return "-";
-      return parsedDate.format("DD/MM/") + String(parsedDate.$y + 543).slice(-2);
+      return parsedDate.format("DD/MM/") + String(parsedDate.$y + 543);
     }
 
     // กรณีที่ 3: ลองใช้ dayjs โดยตรง
     const parsedDate = dayjs(date);
     if (!parsedDate.isValid()) return "-";
-    return parsedDate.format("DD/MM/") + String(parsedDate.$y + 543).slice(-2);
+    return parsedDate.format("DD/MM/") + String(parsedDate.$y + 543);
   } catch (e) {
     console.error("Date parsing error:", date, e);
     return "-";
@@ -304,7 +304,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543);
         } catch {
           return "-";
         }
@@ -359,7 +359,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543);
         } catch {
           return "-";
         }
@@ -428,7 +428,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543);
         } catch {
           return "-";
         }
@@ -478,7 +478,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543);
         } catch {
           return "-";
         }
@@ -500,8 +500,8 @@ const sectionConfigs = [
         // fallback เป็น document_date ถ้าไม่มี internal_register_date (สำหรับข้อมูลเก่า)
         ลงวันที่: formatDate(row.internal_register_date || row.document_date),
         เรื่อง: row.issue || row.subject || "-",
-        // วันรับงาน: ใช้ document_date (ตามหน้า Detail/Edit)
-        วันรับงาน: formatDate(row.document_date),
+        // วันรับงาน: ใช้ _original_document_date (ค่าต้นฉบับก่อนถูกทับ) หรือ document_date
+        วันรับงาน: formatDate(row._original_document_date || row.document_date),
         // วันที่เสนองาน: ใช้ present_to_director_date (ตามหน้า Detail/Edit)
         วันที่เสนองาน: formatDate(row.present_to_director_date),
         เอกสารแนบ:
@@ -547,7 +547,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543).slice(-2);
+          return d.format("DD/MM/") + String(d.$y + 543);
         } catch {
           return "-";
         }
@@ -1455,8 +1455,8 @@ const agencyReportRows = outgoingType5.map((item) => ({
   document_number: item.document_number || item.reference_number || "-",
   // ลงวันที่: ใช้ internal_register_date (หรือ fallback เป็น document_date)
   document_date: formatDate(item.internal_register_date || item.document_date),
-  // วันรับงาน: ใช้ document_date
-  reference_date: formatDate(item.document_date),
+  // วันรับงาน: ใช้ค่า document_date ต้นฉบับ (เก็บไว้ก่อนจะถูกทับ)
+  _original_document_date: item.document_date,
   issue: item.subject || "-",
   // วันที่เสนองาน: ใช้ present_to_director_date
   created_at: formatDate(item.present_to_director_date),

@@ -121,10 +121,12 @@ const PendingWorkfollowupComponents = () => {
       department_name: item.department_name || "-",
       document_number: item.document_number || "-",
       status: STATUS_LABELS[item.status] || item.status || "-",
+      status_original: item.status, // เก็บ status เดิมไว้ใช้ในการกรอง
       days_in_progress: item.days_in_progress || 0,
       source: "pending_tasks",
       complainant_name: item.complainant_name || "-",
       filing_type: item.filing_type || "-",
+      filing_type_original: item.filing_type, // เก็บ filing_type เดิมไว้ใช้ในการกรอง
       remark: item.assigned_remark || item.remark || ""
     }));
   };
@@ -277,26 +279,32 @@ const PendingWorkfollowupComponents = () => {
       result = result.filter((item) => matchDepartment(item, selectedDepartmentLabel));
     }
 
-    // filter ประเภทเรื่อง
+    // filter ประเภทเรื่อง - แก้ไขให้ตรงกับค่าที่ API ส่งมา
     if (filterData.dataType && filterData.dataType !== "") {
+      console.log('Filtering by dataType:', filterData.dataType);
+      console.log('Sample filing_type values:', result.slice(0, 5).map(item => item.filing_type_original));
+
       if (filterData.dataType === "new_complaint") {
-        // เรื่องร้องเรียนใหม่ - กรองด้วย filing_type เท่านั้น
-        result = result.filter((item) =>
-          item.filing_type === "new" || item.filing_type === "ใหม่" || item.filing_type === "เรื่องร้องเรียนใหม่"
-        );
+        // เรื่องร้องเรียนใหม่ - API ส่งมาเป็น "new" (เป็น string ธรรมดา)
+        result = result.filter((item) => {
+          const ft = (item.filing_type_original || "").toString().toLowerCase();
+          return ft === "new";
+        });
       } else if (filterData.dataType === "additional_complaint") {
-        // เรื่องร้องเรียนเพิ่มเติม - กรองด้วย filing_type เท่านั้น
-        result = result.filter((item) =>
-          item.filing_type === "additional" || item.filing_type === "เพิ่มเติม" || item.filing_type === "เรื่องร้องเรียนเพิ่มเติม"
-        );
+        // เรื่องร้องเรียนเพิ่มเติม - API ส่งมาเป็น "additional"
+        result = result.filter((item) => {
+          const ft = (item.filing_type_original || "").toString().toLowerCase();
+          return ft === "additional";
+        });
       } else if (filterData.dataType === "department_decision") {
-        // ผลการพิจารณาจากหน่วยงาน - กรองด้วย status
-        result = result.filter((item) =>
-          item.status === "in_review" || item.status === "อยู่ระหว่างการพิจารณา" ||
-          item.status === "tracking" || item.status === "ติดตามผลการพิจารณา" ||
-          item.status === "reviewed" || item.status === "แจ้งผลการพิจารณา"
-        );
+        // ผลการพิจารณาจากหน่วยงาน - กรองด้วย status (tracking = ติดตามผลการพิจารณา)
+        result = result.filter((item) => {
+          const st = (item.status_original || "").toString().toLowerCase();
+          // tracking = ติดตามผลการพิจารณา, reviewed = แจ้งผลการพิจารณา
+          return st === "tracking" || st === "reviewed";
+        });
       }
+      console.log('Filtered result count:', result.length);
     }
 
     setFilteredComplaints(result);
