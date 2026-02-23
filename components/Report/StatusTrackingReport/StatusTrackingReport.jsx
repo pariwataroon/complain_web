@@ -163,14 +163,16 @@ const StatusTrackingReport = () => {
       let date_from = "";
       let date_to = "";
 
+      // หมายเหตุ: เนื่องจากใช้ dayjs.locale("th") อยู่ fromDate.year() จะเป็นปี พ.ศ. แล้ว
+      // แต่ filters.startDate ที่รับเข้ามาเป็น JavaScript Date object ปกติ (ไม่ใช่ dayjs)
+      // ดังนั้นจึงต้องตรวจสอบปีจาก Date object โดยตรง
       if (filters.startDate) {
         const fromDate = dayjs(filters.startDate).tz("Asia/Bangkok");
         if (fromDate.isValid()) {
-          let fromYear = fromDate.year();
+          // ตรวจสอบปีจาก JavaScript Date object ต้นฉบับ
+          const jsYear = new Date(filters.startDate).getFullYear();
           // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
-          if (fromYear > 2500) {
-            fromYear -= 543;
-          }
+          const fromYear = jsYear > 2500 ? jsYear - 543 : jsYear;
           date_from = `${fromYear}-${String(fromDate.month() + 1).padStart(2, '0')}-${String(fromDate.date()).padStart(2, '0')}`;
         }
       }
@@ -178,11 +180,10 @@ const StatusTrackingReport = () => {
       if (filters.endDate) {
         const toDate = dayjs(filters.endDate).tz("Asia/Bangkok");
         if (toDate.isValid()) {
-          let toYear = toDate.year();
+          // ตรวจสอบปีจาก JavaScript Date object ต้นฉบับ
+          const jsYear = new Date(filters.endDate).getFullYear();
           // แปลงเป็น ค.ศ. ถ้าเป็น พ.ศ.
-          if (toYear > 2500) {
-            toYear -= 543;
-          }
+          const toYear = jsYear > 2500 ? jsYear - 543 : jsYear;
           date_to = `${toYear}-${String(toDate.month() + 1).padStart(2, '0')}-${String(toDate.date()).padStart(2, '0')}`;
         }
       }

@@ -102,8 +102,9 @@ const PendingWorkfollowupComponents = () => {
       reference_number: item.reference_number || "-",
       director_submission_date: item.director_submission_date,
       subject: item.subject || "-",
-      outside_department_name: item.outside_department_name || "-",
-      department_name: item.department_name || "-",
+      // เก็บค่าไว้เป็น null ถ้าไม่มีข้อมูล เพื่อให้การ fallback ทำงานถูกต้อง
+      outside_department_name: item.outside_department_name || null,
+      department_name: item.department_name || null,
       document_number: item.document_number || "-",
       status: STATUS_LABELS[item.status] || item.status || "-",
       status_original: item.status, // เก็บ status เดิมไว้ใช้ในการกรอง

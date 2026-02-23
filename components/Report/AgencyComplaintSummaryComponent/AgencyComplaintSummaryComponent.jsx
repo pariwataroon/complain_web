@@ -152,7 +152,8 @@ const AgencyComplaintSummary = () => {
         id: item.id,
         claimantName: item.claimantName || "-",
         receiptNumber: item.receiptNumber || "-",
-        receiveDate: item.receiveDate || "-",
+        // แปลงวันที่เป็นรูปแบบไทย ถ้ามีข้อมูล
+        receiveDate: item.receiveDate ? formatToThaiDate(new Date(item.receiveDate)) : "-",
         agency: item.agency || "-",
         issue: item.issue || "-",
         issueType: item.issueType || "-",

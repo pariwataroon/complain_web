@@ -70,6 +70,13 @@ const FILING_TYPE_LABELS = {
   committee: "คณะกรรมการ",
 };
 
+// Helper: ตรวจสอบว่าเป็น UUID หรือไม่
+function isUUID(str) {
+  if (!str || typeof str !== "string") return false;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
 const Summaryresults = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
@@ -110,16 +117,32 @@ const Summaryresults = () => {
           Array.isArray(response.res_data.items)
         ) {
           // แปลงข้อมูลให้อยู่ในโครงสร้างที่ตารางใช้
-          const transformed = response.res_data.items.map((item) => ({
-            id: item.id,
-            claimantName: item.complainant_name || "-",
-            // แปลง complaint_type ถ้าเป็น UUID หรือค่าที่ไม่ต้องการ ให้แสดงเป็นชื่อที่อ่านง่าย
-            issue: item.complaint_type_name || item.complaint_type || "-",
-            // แปลง filing_type เป็นภาษาไทย
-            subIssueType: FILING_TYPE_LABELS[item.filing_type] || item.filing_type || "-",
-            note: item.remark || "",
-            receiveDate: formatApiDateThai(item.received_date),
-          }));
+          const transformed = response.res_data.items.map((item) => {
+            // ตรวจสอบค่า complaint_type จากหลาย field ที่เป็นไปได้
+            let issueValue = "-";
+            // ลำดับความสำคัญ: complaint_type_data.name > complaint_type_name > complaint_type
+            const possibleNames = [
+              item.complaint_type_data?.name,
+              item.complaint_type_name,
+              item.complaint_type
+            ];
+            for (const name of possibleNames) {
+              if (name && !isUUID(name)) {
+                issueValue = name;
+                break;
+              }
+            }
+
+            return {
+              id: item.id,
+              claimantName: item.complainant_name || "-",
+              issue: issueValue,
+              // แปลง filing_type เป็นภาษาไทย
+              subIssueType: FILING_TYPE_LABELS[item.filing_type] || item.filing_type || "-",
+              note: item.remark || "",
+              receiveDate: formatApiDateThai(item.received_date),
+            };
+          });
 
           setAllComplaints(transformed);
           setFilteredComplaints(transformed);

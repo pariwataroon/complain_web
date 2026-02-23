@@ -507,10 +507,7 @@ const handleExportExcel = () => {
 
       if (!ws[cellAddress].s) ws[cellAddress].s = {};
 
-      // ใส่เส้นตารางทุกเซลล์
-      ws[cellAddress].s.border = borderStyle;
-
-      // จัดรูปแบบแถวที่ 1-3 (หัวข้อรายงาน)
+      // จัดรูปแบบแถวที่ 0-2 (หัวข้อรายงาน) - ไม่ใส่เส้นตาราง
       if (R >= 0 && R <= 2) {
         ws[cellAddress].s.alignment = {
           horizontal: "center",
@@ -523,7 +520,7 @@ const handleExportExcel = () => {
           sz: 16
         };
       }
-      // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์)
+      // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์) - ไม่ใส่เส้นตาราง
       else if (R === 3) {
         ws[cellAddress].s.alignment = {
           horizontal: "center",
@@ -536,8 +533,11 @@ const handleExportExcel = () => {
           sz: 11
         };
       }
-      // จัดรูปแบบแถวข้อมูล
+      // แถวข้อมูล - ใส่เส้นตาราง
       else {
+        // ใส่เส้นตารางเฉพาะแถวข้อมูล
+        ws[cellAddress].s.border = borderStyle;
+
         if (officerRows.has(R)) {
           // แถวเจ้าหน้าที่
           ws[cellAddress].s.font = {
