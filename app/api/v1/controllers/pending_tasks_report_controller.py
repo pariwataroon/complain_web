@@ -35,6 +35,7 @@ def get_pending_tasks_report(
     search: Optional[str] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
+    filing_type: Optional[str] = None,  # เพิ่ม parameter filing_type
 ):
     """
     รายการงานค้าง (pending-tasks)
@@ -198,6 +199,16 @@ def get_pending_tasks_report(
         # ช่องนี้ยังคง filter จาก assigned_to ถ้าต้องการให้ filter ตาม department_name ใหม่
         # ให้เปลี่ยนไป filter ที่ Department/OutgoingReport ตาม business rule ของคุณ
         ordered_subq = ordered_subq.filter(Complaint.assigned_to == department)
+
+    # เพิ่มการกรองตาม filing_type (new, additional)
+    if filing_type:
+        from models.comp_complaint import ComplaintFilingType
+        try:
+            ft_enum = ComplaintFilingType(filing_type.lower())
+            ordered_subq = ordered_subq.filter(Complaint.complaint_filing_type == ft_enum)
+        except Exception:
+            # ถ้าไม่ใช่ค่าที่ถูกต้อง ให้เพิกเฉย
+            pass
 
     if officer_id:
         # แปลง officer_id จาก string เป็น UUID
