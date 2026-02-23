@@ -50,32 +50,26 @@ const PendingWorkfollowupComponents = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // ดึงข้อมูลการติดตามงานค้าง
-        const response = await getPendingTasksReport();
+        // ดึงข้อมูลการติดตามงานค้าง - ส่ง all_officers=true เพื่อดึงข้อมูลทุกเจ้าหน้าที่
+        const response = await getPendingTasksReport({ all_officers: true });
         const complaintsData = response || [];
 
         setAllComplaints(complaintsData);
 
-        // ตรวจสอบว่ามีข้อมูลที่อัปเดตใน localStorage หรือไม่
-        const updatedData = localStorage.getItem("updatedComplaints");
-        if (updatedData) {
-          try {
-            const parsedData = JSON.parse(updatedData);
-            // อัปเดตข้อมูลเฉพาะหมายเหตุ (remark) จากข้อมูลที่อัพเดทแล้ว
-            const updatedComplaintsData = complaintsData.map((complaint) => {
-              const updatedComplaint = parsedData.find(
-                (item) => item.id === complaint.id
-              );
-              return updatedComplaint
-                ? { ...complaint, remark: updatedComplaint.note }
-                : complaint;
-            });
-            setAllComplaints(updatedComplaintsData);
-            localStorage.removeItem("updatedComplaints");
-          } catch (e) {
-            console.error("เกิดข้อผิดพลาดในการอ่านข้อมูลที่อัปเดต:", e);
-          }
-        }
+        // Debug: แสดงข้อมูล filing_type ที่มี
+        const uniqueFilingTypes = [...new Set(
+          complaintsData.map(item => item.filing_type).filter(Boolean)
+        )];
+        console.log('Filing types in data:', uniqueFilingTypes);
+
+        // Debug: แสดงข้อมูล status ที่มี
+        const uniqueStatuses = [...new Set(
+          complaintsData.map(item => item.status).filter(Boolean)
+        )];
+        console.log('Statuses in data:', uniqueStatuses);
+
+        // Debug: แสดงจำนวนข้อมูลทั้งหมด
+        console.log('Total complaints loaded:', complaintsData.length);
 
         // แปลงข้อมูลให้ตรงกับรูปแบบตาราง
         const transformedData = transformComplaintsData(complaintsData);
@@ -86,15 +80,6 @@ const PendingWorkfollowupComponents = () => {
           complaintsData.map(item => item.outside_department_name).filter(Boolean)
         )];
         console.log('Outside Departments in Data:', uniqueDepartments);
-
-        // Debug: แสดงข้อมูลตัวอย่าง agency field
-        if (complaintsData.length > 0) {
-          console.log('Sample data agency mapping:', {
-            outside_department_name: complaintsData[0].outside_department_name,
-            department_name: complaintsData[0].department_name,
-            agency: complaintsData[0].outside_department_name || complaintsData[0].department_name || "-"
-          });
-        }
       } catch (error) {
         console.error('Error fetching data:', error);
         setAllComplaints([]);

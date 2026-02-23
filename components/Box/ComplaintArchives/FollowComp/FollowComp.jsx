@@ -192,6 +192,8 @@ const handleManage = (
 
 // ฟังก์ชันแปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกันทั่วทั้งไฟล์
 // รองรับ format: DD/MM/YY, DD/MM/YYYY, YYYY-MM-DD, และ ISO string
+// หมายเหตุ: เนื่องจากใช้ dayjs.locale("th") อยู่ parsedDate.$y จะเป็นปี พ.ศ. แล้ว
+// จึงไม่ต้องบวก 543 อีก (ถ้าบวกซ้ำจะได้ปีผิด เช่น 2569 + 543 = 3112)
 const formatDate = (date) => {
   if (!date || date === null || date === undefined || date === "") return "-";
   try {
@@ -213,13 +215,15 @@ const formatDate = (date) => {
     if (dateStr.match(/^\d{4}-\d{2}-\d{2}/) || dateStr.includes('T')) {
       const parsedDate = dayjs(date);
       if (!parsedDate.isValid()) return "-";
-      return parsedDate.format("DD/MM/") + String(parsedDate.$y + 543);
+      // เนื่องจาก locale เป็น "th" parsedDate.$y จะเป็นปี พ.ศ. แล้ว ไม่ต้องบวก 543
+      return parsedDate.format("DD/MM/") + String(parsedDate.$y);
     }
 
     // กรณีที่ 3: ลองใช้ dayjs โดยตรง
     const parsedDate = dayjs(date);
     if (!parsedDate.isValid()) return "-";
-    return parsedDate.format("DD/MM/") + String(parsedDate.$y + 543);
+    // เนื่องจาก locale เป็น "th" parsedDate.$y จะเป็นปี พ.ศ. แล้ว ไม่ต้องบวก 543
+    return parsedDate.format("DD/MM/") + String(parsedDate.$y);
   } catch (e) {
     console.error("Date parsing error:", date, e);
     return "-";
@@ -304,7 +308,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543);
+          return d.format("DD/MM/") + String(d.$y);
         } catch {
           return "-";
         }
@@ -359,7 +363,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543);
+          return d.format("DD/MM/") + String(d.$y);
         } catch {
           return "-";
         }
@@ -428,7 +432,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543);
+          return d.format("DD/MM/") + String(d.$y);
         } catch {
           return "-";
         }
@@ -478,7 +482,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543);
+          return d.format("DD/MM/") + String(d.$y);
         } catch {
           return "-";
         }
@@ -547,7 +551,7 @@ const sectionConfigs = [
         try {
           const d = dayjs(date);
           if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y + 543);
+          return d.format("DD/MM/") + String(d.$y);
         } catch {
           return "-";
         }

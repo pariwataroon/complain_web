@@ -18,9 +18,11 @@ function filterParams(params) {
 
 const getPendingTasksReport = async (params = {}) => {
   try {
+    // ตั้งค่า default limit เป็น 10000 เพื่อดึงข้อมูลทั้งหมด
+    const defaultParams = { limit: 10000, ...params };
     const response = await axiosInstance.get(
       `/reports/pending-tasks`,
-      { params: filterParams(params) }
+      { params: filterParams(defaultParams) }
     );
     // คืนเฉพาะ array items
     // (ถ้า API เปลี่ยนโครงสร้างให้ return response.data.res_data.items)

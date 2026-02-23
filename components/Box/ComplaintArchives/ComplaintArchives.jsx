@@ -43,6 +43,8 @@ const getEnglishStatus = (th) => statusMapThToEn[th] ?? (th || "-");
 const getStatusColor = (en) => statusColors[en] ?? "#9E9E9E";
 
 /* ---------- วันเวลา: รองรับทั้ง ISO และ "16 Aug 2025" ---------- */
+// หมายเหตุ: เนื่องจากใช้ dayjs.locale("th") อยู่ d.$y จะเป็นปี พ.ศ. แล้ว
+// จึงไม่ต้องบวก 543 อีก (ถ้าบวกซ้ำจะได้ปีผิด เช่น 2569 + 543 = 3112)
 const formatThaiDateFlexible = (dateStr) => {
   if (!dateStr || dateStr === null || dateStr === undefined || dateStr === "") {
     return "-";
@@ -67,7 +69,7 @@ const formatThaiDateFlexible = (dateStr) => {
   ];
   const day = d.date();
   const month = thaiMonths[d.month()];
-  const year = d.$y + 543;
+  const year = d.$y;
   return `${day} ${month} ${year}`;
 };
 
