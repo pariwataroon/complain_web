@@ -190,7 +190,7 @@ const handleManage = (
   }
 };
 
-// ฟังก์ชันแปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกันทั่วทั้งไฟล์
+// ฟังก์ชันแปลงวันที่ให้เป็นรูปแบบ ว/ด/ป (DD/MM/YYYY ปี พ.ศ.)
 // รองรับ format: DD/MM/YY, DD/MM/YYYY, YYYY-MM-DD, และ ISO string
 // หมายเหตุ: เนื่องจากใช้ dayjs.locale("th") อยู่ parsedDate.$y จะเป็นปี พ.ศ. แล้ว
 // จึงไม่ต้องบวก 543 อีก (ถ้าบวกซ้ำจะได้ปีผิด เช่น 2569 + 543 = 3112)
@@ -228,6 +228,18 @@ const formatDate = (date) => {
     console.error("Date parsing error:", date, e);
     return "-";
   }
+};
+
+// Helper function สำหรับดึงวันที่ลงวันที่ พร้อม fallback
+// ลำดับความสำคัญ: document_date > created_at
+// หมายเหตุ: API ไม่ส่ง updated_at มา จึงใช้ created_at เป็น fallback
+const getSignedDate = (row) => {
+  // สำหรับ AGENCY_REPORT: ใช้ internal_register_date ก่อน
+  if (row.status === "agency_report") {
+    return row.internal_register_date || row.document_date || row.created_at;
+  }
+  // สำหรับรายงานอื่นๆ: ใช้ document_date ก่อน
+  return row.document_date || row.created_at;
 };
 
 const sectionConfigs = [
@@ -302,24 +314,12 @@ const sectionConfigs = [
         ? (prefix + (other || deptName || "-"))
         : (deptName || "-");
 
-      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
-      const formatDate = (date) => {
-        if (!date || date === null || date === undefined || date === "") return "-";
-        try {
-          const d = dayjs(date);
-          if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y);
-        } catch {
-          return "-";
-        }
-      };
-
       return {
         ลำดับ: idx + 1,
         "หน่วยงาน(ครั้งที่ส่ง)": departmentDisplay,
         เรื่อง: row.issue || row.subject || "-",
         เลขที่หนังสือ: row.document_number || "-",
-        ลงวันที่: formatDate(row.document_date),
+        ลงวันที่: formatDate(getSignedDate(row)),
         ผู้ลงนาม:
           row.signer ||
           (row.signature_authority_user && row.signature_authority_user.name) ||
@@ -357,23 +357,11 @@ const sectionConfigs = [
         positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
       }
 
-      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
-      const formatDate = (date) => {
-        if (!date || date === null || date === undefined || date === "") return "-";
-        try {
-          const d = dayjs(date);
-          if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y);
-        } catch {
-          return "-";
-        }
-      };
-
       return {
         ลำดับ: idx + 1,
         "หน่วยงานหรือผู้ร้อง(ครั้งที่ส่ง)": positionDisplay,
         เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-        ลงวันที่: formatDate(row.document_date),
+        ลงวันที่: formatDate(getSignedDate(row)),
         เรื่อง: row.issue || row.subject || "-",
         ผู้ลงนาม:
           row.signer ||
@@ -426,24 +414,12 @@ const sectionConfigs = [
         ? (prefix + (other || deptName || "-"))
         : (deptName || "-");
 
-      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
-      const formatDate = (date) => {
-        if (!date || date === null || date === undefined || date === "") return "-";
-        try {
-          const d = dayjs(date);
-          if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y);
-        } catch {
-          return "-";
-        }
-      };
-
       return {
         ลำดับ: idx + 1,
         "ส่งหน่วยงาน(ครั้งที่ส่ง)": departmentDisplay,
         เรื่อง: row.issue || row.subject || "-",
         เลขที่หนังสือ: row.document_number || row.document_number || "-",
-        ลงวันที่: formatDate(row.document_date),
+        ลงวันที่: formatDate(getSignedDate(row)),
         ผู้ลงนาม:
           row.signer ||
           (row.signature_authority_user && row.signature_authority_user.name) ||
@@ -476,38 +452,19 @@ const sectionConfigs = [
       "การจัดการ",
     ],
     rowMapper: (row, idx) => {
-      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
-      const formatDate = (date) => {
-        if (!date || date === null || date === undefined || date === "") return "-";
-        try {
-          const d = dayjs(date);
-          if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y);
-        } catch {
-          return "-";
-        }
-      };
-
-      // Debug: แสดงข้อมูลที่ได้รับจาก API
-      // console.log('AGENCY_REPORT row data:', {
-      //   internal_register_date: row.internal_register_date,
-      //   document_date: row.document_date,
-      //   present_to_director_date: row.present_to_director_date,
-      //   document_number: row.document_number,
-      // });
+      // ใช้ global formatDate และ getSignedDate function
 
       return {
         ลำดับ: idx + 1,
         หน่วยงาน: filterDepartmentName(row.agency) || filterDepartmentName(row.department?.name) || "-",
         เลขที่หนังสือ: row.document_number || row.internal_register_number || row.reference_number || "-",
-        // ลงวันที่: ใช้ internal_register_date (วันที่หนังสือ)
-        // fallback เป็น document_date ถ้าไม่มี internal_register_date (สำหรับข้อมูลเก่า)
-        ลงวันที่: formatDate(row.internal_register_date || row.document_date),
+        // ลงวันที่: ใช้ getSignedDate ที่มี fallback ที่ดีขึ้น
+        ลงวันที่: formatDate(getSignedDate(row)),
         เรื่อง: row.issue || row.subject || "-",
         // วันรับงาน: ใช้ _original_document_date (ค่าต้นฉบับก่อนถูกทับ) หรือ document_date
-        วันรับงาน: formatDate(row._original_document_date || row.document_date),
+        วันรับงาน: formatDate(row._original_document_date || row.document_date || row.updated_at || row.created_at),
         // วันที่เสนองาน: ใช้ present_to_director_date (ตามหน้า Detail/Edit)
-        วันที่เสนองาน: formatDate(row.present_to_director_date),
+        วันที่เสนองาน: formatDate(row.present_to_director_date || row.updated_at || row.created_at),
         เอกสารแนบ:
           row.attachment_name ||
           (row.attachments && row.attachments.length > 0
@@ -545,27 +502,17 @@ const sectionConfigs = [
       } else if (posName === "อื่นๆ") {
         positionDisplay = positionDisplay.replace(/^อื่นๆ/, "(อื่นๆ)");
       }
-      // แปลงวันที่ให้เป็นรูปแบบไทยที่สอดคล้องกัน
-      const formatDate = (date) => {
-        if (!date || date === null || date === undefined || date === "") return "-";
-        try {
-          const d = dayjs(date);
-          if (!d.isValid()) return "-";
-          return d.format("DD/MM/") + String(d.$y);
-        } catch {
-          return "-";
-        }
-      };
+      // ใช้ global formatDate และ getSignedDate function
 
       return {
       ลำดับ: idx + 1,
       // "เลขคำร้อง (complaint_id)": row.complaint_id || row.complaint?.id || "-",
       "ผู้ตรวจฯ / ผู้ร้อง / หน่วยงานอื่น":positionDisplay,
       เลขที่หนังสือ: row.document_number || row.reference_number || "-",
-      ลงวันที่: formatDate(row.document_date),
+      ลงวันที่: formatDate(getSignedDate(row)),
       เรื่อง: row.issue || row.subject || "-",
-      "วันที่รับ": row.receiveDate || formatDate(row.receive_date || row.document_date || row.reference_date),
-      "วันที่ส่งกลับ": formatDate(row.return_date) || "-",
+      "วันที่รับ": row.receiveDate || formatDate(row.receive_date || row.document_date || row.reference_date || row.updated_at || row.created_at),
+      "วันที่ส่งกลับ": formatDate(row.return_date || row.updated_at || row.created_at),
       เอกสารแนบ:
         row.attachment_name ||
         (row.attachments && row.attachments.length > 0

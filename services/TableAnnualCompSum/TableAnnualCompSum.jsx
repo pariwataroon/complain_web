@@ -60,6 +60,8 @@ const TableAnnualCompSum = ({
   filterFields = [],
   onSearch = () => {},
   navigateTo = "",
+  dateFrom = null,
+  dateTo = null,
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
@@ -147,11 +149,16 @@ const TableAnnualCompSum = ({
 
 const formatThaiDate = (date) => {
   if (!date) return "-";
-  return new Date(date).toLocaleDateString("th-TH", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  try {
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "-";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear() + 543; // แปลงเป็น พ.ศ.
+    return `${day}/${month}/${year}`;
+  } catch (error) {
+    return "-";
+  }
 };
 
 const handleExportExcel = () => {
@@ -708,7 +715,15 @@ const handleExportExcel = () => {
       >
         รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ
         <br />
-        ตั้งแต่วันที่ 1 ตุลาคม 2567 ถึงวันที่ 25 พฤศจิกายน 2567
+        {dateFrom || dateTo ? (
+          <>
+            ตั้งแต่วันที่ {dateFrom ? formatThaiDate(dateFrom) : "-"} ถึงวันที่ {dateTo ? formatThaiDate(dateTo) : "-"}
+          </>
+        ) : (
+          <>
+            ตั้งแต่วันที่ 1 ตุลาคม 2567 ถึงวันที่ {new Date().toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })}
+          </>
+        )}
       </Box>
 
       {/* Summary Table */}
@@ -822,7 +837,19 @@ const handleExportExcel = () => {
                     }}
                     onClick={() => {
                       if (row.isParent && navigateTo) {
-                        router.push(`${navigateTo}`);
+                        // ส่ง department_id ไปด้วยถ้ามี
+                        const query = {};
+                        if (row.department_id || row.id) {
+                          query.department_id = row.department_id || row.id;
+                        }
+                        if (dateFrom) query.dateFrom = dateFrom;
+                        if (dateTo) query.dateTo = dateTo;
+
+                        const queryString = Object.keys(query).length > 0
+                          ? `?${new URLSearchParams(query).toString()}`
+                          : '';
+
+                        router.push(`${navigateTo}${queryString}`);
                       }
                     }}
                   >
@@ -1010,6 +1037,8 @@ TableAnnualCompSum.propTypes = {
   filterFields: PropTypes.array,
   onSearch: PropTypes.func,
   navigateTo: PropTypes.string,
+  dateFrom: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
+  dateTo: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
 };
 
 export default TableAnnualCompSum;

@@ -28,12 +28,28 @@ const TableAnnualResults = ({
   data = [],
   filterFields = [],
   onSearch = () => {},
+  dateFrom = null,
+  dateTo = null,
 }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const isExtraSmall = useMediaQuery("(max-width:640px)");
-  const isSmallScreen = useMediaQuery("(max-width:1400px)"); // สำหรับ table scroll
+
+  // ฟังก์ชันสำหรับแปลงวันที่เป็นรูปแบบ dd/mm/yyyy (พ.ศ.)
+  const formatThaiDate = (date) => {
+    if (!date) return "-";
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return "-";
+      const day = String(d.getDate()).padStart(2, "0");
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const year = d.getFullYear() + 543; // แปลงเป็น พ.ศ.
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      return "-";
+    }
+  };
 
   // Filters state
   const initialFilters = filterFields.reduce(
@@ -42,91 +58,75 @@ const TableAnnualResults = ({
   );
   const [filters, setFilters] = useState(initialFilters);
   const [searchFilters, setSearchFilters] = useState(initialFilters); // เก็บค่าที่ใช้ในการค้นหาจริง
-  const [hasSearched, setHasSearched] = useState(false); // ตรวจสอบว่าได้กดค้นหาแล้วหรือยัง
 
   const handleChange = (name) => (e) =>
     setFilters({ ...filters, [name]: e?.target?.value ?? e });
 
   const handleSearchClick = () => {
     setSearchFilters(filters); // อัพเดทค่าที่ใช้ในการค้นหา
-    setHasSearched(true); // ทำเครื่องหมายว่าได้ค้นหาแล้ว
     onSearch(filters);
   };
 
   const handleClearClick = () => {
     setFilters(initialFilters);
     setSearchFilters(initialFilters); // ล้างค่าการค้นหาด้วย
-    setHasSearched(false); // รีเซ็ตสถานะการค้นหา
     onSearch(initialFilters);
   };
 
   // ฟังก์ชันสำหรับกรองข้อมูลภายใน component (ใช้ searchFilters แทน filters)
   const getFilteredData = () => {
-    // ถ้ายังไม่ได้กดค้นหา ให้แสดงข้อมูลทั้งหมด
-    if (!hasSearched) {
-      return data;
-    }
-
+    // แสดงข้อมูลทั้งหมดที่ได้จาก API (API กรองให้แล้ว)
+    // กรองเพิ่มเติมเฉพาะ fields ที่ API ไม่รองรับ
     let result = data;
 
-    // กรองตาม agency
+    // กรองตาม agency (client-side)
     if (searchFilters.agency) {
-      result = result.filter((item) => item.agency === searchFilters.agency);
-    }
-
-    // กรองตาม responsibleOfficer
-    if (searchFilters.responsibleOfficer) {
-      result = result.filter(
-        (item) => item.responsibleOfficer === searchFilters.responsibleOfficer
+      result = result.filter((item) =>
+        (item.agency || item.department_name) === searchFilters.agency
       );
     }
 
-    // กรองตาม status
-    if (searchFilters.status) {
-      result = result.filter((item) => item.status === searchFilters.status);
+    // กรองตาม responsibleOfficer (client-side)
+    if (searchFilters.responsibleOfficer) {
+      result = result.filter(
+        (item) => (item.responsibleOfficer || item.responsible_officer) === searchFilters.responsibleOfficer
+      );
     }
 
-    // กรองตาม receiptNumber (เลข สรร.)
+    // กรองตาม receiptNumber (เลข สรร.) - ค้นหาแบบ contains
     if (searchFilters.receiptNumber) {
       result = result.filter((item) =>
-        item.receiptNumber
+        (item.receiptNumber || item.receipt_number)
           ?.toLowerCase()
           .includes(searchFilters.receiptNumber.toLowerCase())
       );
     }
 
-    // กรองตาม complainant (ชื่อผู้ร้อง)
+    // กรองตาม complainant (ชื่อผู้ร้อง) - ค้นหาแบบ contains
     if (searchFilters.complainant) {
       result = result.filter((item) =>
-        item.complainant
+        (item.complainant || item.claimant_name)
           ?.toLowerCase()
           .includes(searchFilters.complainant.toLowerCase())
       );
     }
 
-    // กรองตาม complaint (ชื่อเรื่อง)
+    // กรองตาม complaint (ชื่อเรื่อง) - ค้นหาแบบ contains
     if (searchFilters.complaint) {
       result = result.filter((item) =>
-        item.complaint
+        (item.complaint || item.complaint_title)
           ?.toLowerCase()
           .includes(searchFilters.complaint.toLowerCase())
       );
     }
 
-    // กรองตาม issueType (ประเภทเรื่อง)
+    // กรองตาม issueType (ประเภทเรื่อง) - ค้นหาแบบ contains
     if (searchFilters.issueType) {
       result = result.filter((item) =>
-        item.issueType
+        (item.issueType || item.issue_type)
           ?.toLowerCase()
           .includes(searchFilters.issueType.toLowerCase())
       );
-    }
-
-    // สำหรับ date fields - ถ้ามีการส่งค่ามาสามารถเพิ่มการกรองได้
-    // ขณะนี้ข้อมูล mock ใช้รูปแบบ "30 ม.ค. 2568" ซึ่งอาจต้องแปลงก่อนเปรียบเทียบ
-    if (searchFilters.receiveDateFrom || searchFilters.receiveDateTo) {
-      // สามารถเพิ่มการกรองตามวันที่ได้ที่นี่
-      // ต้องแปลงรูปแบบวันที่ให้ตรงกันก่อน
     }
 
     return result;
@@ -139,34 +139,42 @@ const TableAnnualResults = ({
   const dateFields = filterFields.filter((f) => f.type === "date");
   const nonDateFields = filterFields.filter((f) => f.type !== "date");
 
-  // Columns config
+  // Columns config - รองรับทั้ง camelCase และ snake_case
   const columns = [
     { label: "ลำดับ", width: 80, align: "center" },
-    { label: "เลข สรร.", field: "receiptNumber", width: 120 },
-    { label: "ลงวันที่", field: "receiptDate", width: 120 },
-    { label: "ชื่อ-สกุล (ผู้ร้อง)", field: "complainant", width: 200 },
-    { label: "ชื่อเรื่อง", field: "complaint", width: 300 },
-    { label: "ประเภทเรื่อง", field: "issueType", width: 200 },
+    { label: "เลข สรร.", field: "receiptNumber", altField: "receipt_number", width: 120 },
+    {
+      label: "ลงวันที่",
+      field: "receiptDate",
+      altField: "receipt_date",
+      width: 120,
+      render: (row) => formatThaiDate(row.receiptDate || row.receipt_date),
+    },
+    { label: "ชื่อ-สกุล (ผู้ร้อง)", field: "complainant", altField: "claimant_name", width: 200 },
+    { label: "ชื่อเรื่อง", field: "complaint", altField: "complaint_title", width: 300 },
+    { label: "ประเภทเรื่อง", field: "issueType", altField: "issue_type", width: 200 },
     {
       label: "หนังสือส่งหน่วยงาน/ติดตามผล",
       width: 200,
       render: (row) => (
         <>
-          {row.letterRef}
+          {row.letterRef || row.letter_ref || "-"}
           <br />
-          <small>({row.letterDate})</small>
+          <small>({formatThaiDate(row.letterDate || row.letter_date)})</small>
         </>
       ),
     },
     {
       label: "เจ้าหน้าที่ผู้รับผิดชอบ",
       field: "responsibleOfficer",
+      altField: "responsible_officer",
       width: 200,
     },
     { label: "สถานะเรื่อง", field: "status", width: 140, align: "center" },
     {
       label: "ระยะเวลาในการดำเนินงาน",
       field: "elapsedTime",
+      altField: "elapsed_time",
       width: 160,
       align: "center",
     },
@@ -235,14 +243,12 @@ const TableAnnualResults = ({
                   fontSize: isMobile ? "12px" : "14px",
                 }}
               >
-                {hasSearched
-                  ? "ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา"
-                  : "กรุณากดปุ่มค้นหาเพื่อแสดงข้อมูล"}
+                ไม่พบข้อมูล
               </TableCell>
             </TableRow>
           ) : (
             dataset.map((row, idx) => (
-              <TableRow key={row.id} hover>
+              <TableRow key={row.id || idx} hover>
                 {columns.map((col, cIdx) => {
                   let content;
                   if (cIdx === 0) {
@@ -250,7 +256,8 @@ const TableAnnualResults = ({
                   } else if (col.render) {
                     content = col.render(row);
                   } else {
-                    content = row[col.field] ?? "-";
+                    // รองรับทั้ง camelCase และ snake_case
+                    content = row[col.field] ?? row[col.altField] ?? "-";
                   }
                   return (
                     <TableCell
@@ -328,15 +335,15 @@ const handleExportExcel = () => {
 
   const mapRow = (row, index) => [
     index + 1,
-    row.receiptNumber || "-",
-    row.receiptDate || "-",
-    row.complainant || "-",
-    row.complaint || "-",
-    row.issueType || "-",
-    row.letterRef ? `${row.letterRef} (${row.letterDate || "-"})` : "-",
-    row.responsibleOfficer || "-",
+    row.receiptNumber || row.receipt_number || "-",
+    formatThaiDate(row.receiptDate || row.receipt_date),
+    row.complainant || row.claimant_name || "-",
+    row.complaint || row.complaint_title || "-",
+    row.issueType || row.issue_type || "-",
+    (row.letterRef || row.letter_ref) ? `${row.letterRef || row.letter_ref} (${formatThaiDate(row.letterDate || row.letter_date)})` : "-",
+    row.responsibleOfficer || row.responsible_officer || "-",
     row.status || "-",
-    row.elapsedTime || "-",
+    row.elapsedTime || row.elapsed_time || "-",
   ];
 
   const completedRows = completed.map(mapRow);
@@ -893,7 +900,15 @@ const handleExportExcel = () => {
       >
         รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี
         <br />
-        ประจำปีงบประมาณ 2568 ตั้งแต่วันที่ 1 ตุลาคม 2567 - 31 ธันวาคม 2567
+        {dateFrom && dateTo ? (
+          <>
+            ตั้งแต่วันที่ {formatThaiDate(dateFrom)} ถึงวันที่ {formatThaiDate(dateTo)}
+          </>
+        ) : (
+          <>
+            ประจำปีงบประมาณ 2568 ตั้งแต่วันที่ 1 ตุลาคม 2567 - 31 ธันวาคม 2567
+          </>
+        )}
         <br />
         สถานะ ยุติแล้ว ({closedData.length} รายการ)
       </Box>
@@ -913,20 +928,29 @@ const handleExportExcel = () => {
       >
         รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี
         <br />
-        ประจำปีงบประมาณ 2568 ตั้งแต่วันที่ 1 ตุลาคม 2567 - 31 ธันวาคม 2567
+        {dateFrom && dateTo ? (
+          <>
+            ตั้งแต่วันที่ {formatThaiDate(dateFrom)} ถึงวันที่ {formatThaiDate(dateTo)}
+          </>
+        ) : (
+          <>
+            ประจำปีงบประมาณ 2568 ตั้งแต่วันที่ 1 ตุลาคม 2567 - 31 ธันวาคม 2567
+          </>
+        )}
         <br />
         สถานะ อยู่ระหว่างดำเนินการ ({ongoingData.length} รายการ)
       </Box>
       <Box sx={{ px: isMobile ? 1 : 2, pb: 4 }}>{renderTable(ongoingData)}</Box>
     </Box>
     </Container>
-  );
-};
+  );};
 
 TableAnnualResults.propTypes = {
   data: PropTypes.array.isRequired,
   filterFields: PropTypes.array,
   onSearch: PropTypes.func,
+  dateFrom: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
+  dateTo: PropTypes.oneOfType([PropTypes.string, PropTypes.instanceOf(Date)]),
 };
 
 export default TableAnnualResults;
