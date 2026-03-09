@@ -33,7 +33,7 @@ const Opm1111Components = () => {
 
           await new Promise(resolve => setTimeout(resolve, 500));
           // เปลี่ยนจาก rowsPerPage เป็นค่าคงที่ที่ใหญ่พอ เช่น 1000
-          await fetchTimelineHeader(1000, timelineType);
+          await fetchTimelineHeader(10000, timelineType);
 
           closeAlert();
           setIsDataLoaded(true);
@@ -61,7 +61,25 @@ const Opm1111Components = () => {
   const fetchTimelineHeader = async (take, timeline_type = "I") => {
     try {
       const timelineData = await GetTimelineHeader(take, timeline_type);
-      const parsedData = Array.isArray(timelineData) ? timelineData : timelineData;
+      console.log('=== timelineData from API ===', timelineData);
+
+      // แปลงเป็น array เสมอ
+      let parsedData = [];
+      if (Array.isArray(timelineData)) {
+        parsedData = timelineData;
+      } else if (timelineData && typeof timelineData === 'object') {
+        // ถ้าเป็น object เดี่ยว ให้หา array ข้างใน หรือแปลงเป็น array
+        if (timelineData.data && Array.isArray(timelineData.data)) {
+          parsedData = timelineData.data;
+        } else if (timelineData.items && Array.isArray(timelineData.items)) {
+          parsedData = timelineData.items;
+        } else if (timelineData.result && Array.isArray(timelineData.result)) {
+          parsedData = timelineData.result;
+        } else {
+          parsedData = [timelineData];
+        }
+      }
+      console.log('=== parsedData after convert ===', parsedData);
 
       const mappedComplaints = parsedData.map((item) => ({
         case_id: item.case_id,
@@ -70,8 +88,10 @@ const Opm1111Components = () => {
         type_text: item.type_text,
         status_text: item.status_text,
         main_status_text: item.main_status_text,
-        ShowDateTime: item.operating_date,
+        ShowDateTime: item.date_opened,
+        date_operating: item.operating_date,
       }));
+      console.log('=== mappedComplaints ===', mappedComplaints);
 
       setComplaints(mappedComplaints);
       setFilteredComplaints(mappedComplaints);
@@ -116,7 +136,7 @@ const Opm1111Components = () => {
       const fetchData = async () => {
         try {
           // ใช้ 1000 แทนที่จะใช้ rowsPerPage เพื่อให้ได้ข้อมูลครบ
-          await fetchTimelineHeader(1000, timelineType);
+          await fetchTimelineHeader(10000, timelineType);
         } finally {
           closeAlert();
         }
@@ -142,7 +162,7 @@ const Opm1111Components = () => {
     showLoading("กำลังรีเฟรชข้อมูลและตรวจสอบสถานะ reopen...");
     try {
       // ใช้ 1000 แทนที่จะใช้ rowsPerPage
-      await fetchTimelineHeader(1000, timelineType);
+      await fetchTimelineHeader(10000, timelineType);
       alertSuccess("รีเฟรชข้อมูลเรียบร้อย", "ข้อมูลได้รับการอัปเดตล่าสุดแล้ว รวมถึงการตรวจสอบสถานะ reopen");
     } catch (error) {
       alertError("เกิดข้อผิดพลาด", "ไม่สามารถรีเฟรชข้อมูลได้");

@@ -122,6 +122,17 @@ const GetTimelineHeader = async (take = 1, timeline_type = "I") => {
 
     const parsedResult = JSON.parse(timelineResult);
 
+    // DEBUG: Log ข้อมูลที่ได้จาก API
+    console.log('=== GetTimelineHeader DEBUG ===');
+    console.log('timeline_type:', timeline_type);
+    console.log('take:', take);
+    console.log('จำนวนข้อมูลที่ได้:', Array.isArray(parsedResult) ? parsedResult.length : 'not array');
+    if (Array.isArray(parsedResult) && parsedResult.length > 0) {
+      console.log('ข้อมูลล่าสุด:', parsedResult[0]);
+      console.log('ข้อมูลเก่าสุด:', parsedResult[parsedResult.length - 1]);
+    }
+    console.log('==============================');
+
     return parsedResult;
   } catch (error) {
     console.error("Error fetching timeline header:", error);
