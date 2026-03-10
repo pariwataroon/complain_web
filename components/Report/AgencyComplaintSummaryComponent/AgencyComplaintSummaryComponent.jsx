@@ -146,17 +146,17 @@ const AgencyComplaintSummary = () => {
       const rawItems = res?.res_data?.items || [];
 
       // Debug: แสดง raw item แรกเพื่อตรวจสอบ field names
-      if (rawItems.length > 0) {
-        console.log("[AgencyComplaintSummary] Raw first item:", rawItems[0]);
-        console.log("[AgencyComplaintSummary] Raw first item keys:", Object.keys(rawItems[0]));
-      }
-
       // API /reports/agency-complaint/list ส่งข้อมูลแบบ flat object แล้ว
       // fields: claimantName, receiptNumber, receiveDate, agency, issue, issueType, note, responsibleOfficer, status
-      // รองรับหลายรูปแบบ field name: receiveDate, receivedDate, received_date, receive_date
+      // receiveDate จาก API เป็น format ไทยอยู่แล้ว เช่น "30 ต.ค. 2568"
       const getReceiveDate = (item) => {
         const dateValue = item.receiveDate || item.receivedDate || item.received_date || item.receive_date;
         if (!dateValue) return "-";
+        // ถ้าเป็น format ไทยอยู่แล้ว (มี ม.ค., "ก.พ.", ฯลฯ) ให้ใช้ค่าเดิม
+        const thaiMonths = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        const isThaiFormat = thaiMonths.some(m => dateValue.includes(m));
+        if (isThaiFormat) return dateValue;
+        // ถ้าเป็น ISO format ให้แปลงเป็นไทย
         const date = new Date(dateValue);
         return formatToThaiDate(date);
       };
