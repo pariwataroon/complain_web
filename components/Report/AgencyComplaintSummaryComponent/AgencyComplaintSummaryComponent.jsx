@@ -49,7 +49,7 @@ const parseThaiDate = (thaiDateStr) => {
 
 // ─── ฟังก์ชันแปลง Date object เป็นวันที่ไทย ─────────────────────────────────
 const formatToThaiDate = (date) => {
-  if (!date) return "";
+  if (!date || isNaN(date.getTime())) return "-";
 
   const thaiMonths = [
     "ม.ค.",
@@ -143,27 +143,40 @@ const AgencyComplaintSummary = () => {
         filters.claimantName || ""
       );
 
-      console.log("[AgencyComplaintSummary] API Response:", res);
       const rawItems = res?.res_data?.items || [];
+
+      // Debug: แสดง raw item แรกเพื่อตรวจสอบ field names
+      if (rawItems.length > 0) {
+        console.log("[AgencyComplaintSummary] Raw first item:", rawItems[0]);
+        console.log("[AgencyComplaintSummary] Raw first item keys:", Object.keys(rawItems[0]));
+      }
 
       // API /reports/agency-complaint/list ส่งข้อมูลแบบ flat object แล้ว
       // fields: claimantName, receiptNumber, receiveDate, agency, issue, issueType, note, responsibleOfficer, status
+      // รองรับหลายรูปแบบ field name: receiveDate, receivedDate, received_date, receive_date
+      const getReceiveDate = (item) => {
+        const dateValue = item.receiveDate || item.receivedDate || item.received_date || item.receive_date;
+        if (!dateValue) return "-";
+        const date = new Date(dateValue);
+        return formatToThaiDate(date);
+      };
+
       const items = rawItems.map((item) => ({
         id: item.id,
-        claimantName: item.claimantName || "-",
-        receiptNumber: item.receiptNumber || "-",
+        claimantName: item.claimantName || item.claimant_name || "-",
+        receiptNumber: item.receiptNumber || item.receipt_number || "-",
         // แปลงวันที่เป็นรูปแบบไทย ถ้ามีข้อมูล
-        receiveDate: item.receiveDate ? formatToThaiDate(new Date(item.receiveDate)) : "-",
+        receiveDate: getReceiveDate(item),
         agency: item.agency || "-",
         issue: item.issue || "-",
-        issueType: item.issueType || "-",
+        issueType: item.issueType || item.issue_type || "-",
         note: item.note || "-",
-        responsibleOfficer: item.responsibleOfficer || "-",
+        // รองรับหลายรูปแบบ field name: responsibleOfficer, responsible_officer
+        responsibleOfficer: item.responsibleOfficer || item.responsible_officer || "-",
         status: item.status || "-",
       }));
 
       console.log("[AgencyComplaintSummary] Items count:", items.length);
-      console.log("[AgencyComplaintSummary] First item sample:", items[0]);
       setAllComplaints(items);
       setFilteredComplaints(items);
     } catch (error) {
