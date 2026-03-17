@@ -109,6 +109,12 @@ const TableListAgency = ({
   // -------------------- ตาราง --------------------
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // รีเซ็ต page เมื่อ data เปลี่ยน (แก้ปัญหาเลขลำดับผิดเมื่อกรอง)
+  useEffect(() => {
+    setPage(0);
+  }, [data]);
+
   const pagedData = useMemo(
     () => data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
     [data, page, rowsPerPage]

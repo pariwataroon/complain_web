@@ -498,16 +498,26 @@ const ReceiveReportsAgencies = () => {
           normalizedProcessStep = processStepMap[key] || processStepRaw;
         }
         // ✅ ตอนนี้ใช้ document_date เป็น "วันที่รับงานของเจ้าหน้าที่" แล้ว
-        const receiveWorkDateRaw = d.document_date;
+        // รองรับหลายรูปแบบ field name: document_date, receive_work_date, work_receive_date
+        const receiveWorkDateRaw = d.document_date || d.receive_work_date || d.work_receive_date || d.receiveWorkDate;
         const embedded = extractEmbedded(d.remarks || '');
+        // รองรับหลายรูปแบบ field name: present_to_director_date, submit_work_date, director_submit_date
+        const submitWorkDateRaw = d.present_to_director_date || d.submit_work_date || d.director_submit_date || d.submitWorkDate;
 
         console.log('🔍 === LOADING DATA (ID:', d.id, ') ===');
+        console.log('Full API response:', d);
         console.log('remarks:', d.remarks);
         console.log('Embedded data:', embedded);
         console.log('processStepRaw:', processStepRaw, '→ normalized:', normalizedProcessStep);
         console.log('receiveWorkDateRaw:', receiveWorkDateRaw);
+        console.log('submitWorkDateRaw:', submitWorkDateRaw);
+        console.log('d.document_date:', d.document_date);
+        console.log('d.present_to_director_date:', d.present_to_director_date);
 
         const receiveWorkDateParsed = parseDate(receiveWorkDateRaw || embedded.receiveWorkDate);
+        const submitWorkDateParsed = parseDate(submitWorkDateRaw);
+        console.log('receiveWorkDateParsed:', receiveWorkDateParsed);
+        console.log('submitWorkDateParsed:', submitWorkDateParsed);
         setForm((prev) => ({
           ...prev,
           referenceNo: d.receive_number || d.reference_number || d.receive_no || prev.referenceNo,
@@ -521,8 +531,10 @@ const ReceiveReportsAgencies = () => {
           documentNo: d.internal_register_number || d.document_number || prev.documentNo,
           // ✅ วันที่หนังสือ (ใช้เฉพาะ internal_register_date เท่านั้น!)
           documentDate: parseDate(d.internal_register_date) || prev.documentDate,
-          receiveWorkDate: receiveWorkDateParsed || prev.receiveWorkDate,
-          submitWorkDate: parseDate(d.present_to_director_date) || prev.submitWorkDate,
+          // ✅ วันที่รับงานของเจ้าหน้าที่ - ถ้า API ไม่ส่งค่ามา ให้เว้นว่างไว้ (ไม่ใช้ prev เพราะ prev เป็น null)
+          receiveWorkDate: receiveWorkDateParsed || null,
+          // ✅ วันที่เสนองาน ผอ.สรร. - ถ้า API ไม่ส่งค่ามา ให้เว้นว่างไว้ (ไม่ใช้ prev เพราะ prev เป็น null)
+          submitWorkDate: submitWorkDateParsed || null,
           subject: d.subject || prev.subject,
           remarks: stripEmbeddedTags(d.remarks || prev.remarks || ''),
         }));
@@ -810,93 +822,6 @@ const handleSave = useCallback(async () => {
     alertWarning("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้");
   }
 }, [form, uploadedFiles, complaintId, router, isEditing, existingAttachments, outgoingReport5Id, existingData, handleClear]);
-  // load existing record (prefill)
- useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!outgoingReport5Id) return;
-      try {
-        const res = await GetOutgoingReport5ById(outgoingReport5Id);
-        const d = res?.res_data || res?.data || res;
-        if (!d || cancelled) return;
-        setIsEditing(true);
-        setExistingData(d);
-        const parseDate = (iso) => {
-          if (!iso) return null;
-          try {
-            // ✅ Parse วันที่โดยตรงจาก ISO string เพื่อหลีกเลี่ยงปัญหา timezone
-            const dateStr = String(iso).split('T')[0]; // เอาแค่ส่วน YYYY-MM-DD
-            const [year, month, day] = dateStr.split('-').map(Number);
-            if (!year || !month || !day) return null;
-            return {
-              day: day,
-              month: month,
-              year: year,
-              buddhistYear: year + 543
-            };
-          } catch (e) {
-            return null;
-          }
-        };
-        const processStepRaw = (
-          d.process_step || d.processStatus || d.process_status || d.step ||
-          d.status_step || d.workflow_step || d.current_step || d.phase || d.stage
-        );
-        const processStepMap = {
-          receive: 'รับเรื่อง',
-          received: 'รับเรื่อง',
-          review: 'ตรวจสอบเอกสาร',
-          verifying: 'ตรวจสอบเอกสาร',
-          forward: 'ส่งต่อหน่วยงาน',
-          forwarded: 'ส่งต่อหน่วยงาน',
-          investigate: 'ดำเนินการสอบสวน',
-          investigation: 'ดำเนินการสอบสวน',
-          report: 'รายงานผล',
-          reporting: 'รายงานผล',
-          followup: 'ติดตามผล',
-          follow_up: 'ติดตามผล',
-          close: 'ปิดเรื่อง',
-          closed: 'ปิดเรื่อง'
-        };
-        let normalizedProcessStep = processStepRaw;
-        if (processStepRaw && !PROCESS_STEP_OPTIONS.some(o => o.value === processStepRaw)) {
-          const key = String(processStepRaw).toLowerCase();
-          normalizedProcessStep = processStepMap[key] || processStepRaw;
-        }
-        // ✅ ตอนนี้ใช้ document_date เป็น "วันที่รับงานของเจ้าหน้าที่" แล้ว
-        const receiveWorkDateRaw = d.document_date;
-        const embedded = extractEmbedded(d.remarks || '');
-
-        console.log('🔍 === LOADING DATA (ID:', d.id, ') ===');
-        console.log('remarks:', d.remarks);
-        console.log('Embedded data:', embedded);
-        console.log('processStepRaw:', processStepRaw, '→ normalized:', normalizedProcessStep);
-        console.log('receiveWorkDateRaw:', receiveWorkDateRaw);
-
-        const receiveWorkDateParsed = parseDate(receiveWorkDateRaw || embedded.receiveWorkDate);
-        setForm((prev) => ({
-          ...prev,
-          referenceNo: d.receive_number || d.reference_number || d.receive_no || prev.referenceNo,
-          date: parseDate(d.receive_date || d.reference_date) || prev.date,
-          processStep: normalizedProcessStep || embedded.processStep || prev.processStep,
-          confidentiality: d.confidentiality_level || d.confidentiality || prev.confidentiality,
-          urgency: d.urgency_level || d.urgency || prev.urgency,
-          departmentId: d.department_id || d.department?.id || prev.departmentId,
-          investigateGk: d.agency_reference_number || d.complaint_number || prev.investigateGk,
-          investigateDate: parseDate(d.agency_reference_date || d.complaint_number_date) || prev.investigateDate,
-          documentNo: d.internal_register_number || d.document_number || prev.documentNo,
-          // ✅ วันที่หนังสือ (ใช้เฉพาะ internal_register_date เท่านั้น!)
-          documentDate: parseDate(d.internal_register_date) || prev.documentDate,
-          receiveWorkDate: receiveWorkDateParsed || prev.receiveWorkDate,
-          submitWorkDate: parseDate(d.present_to_director_date) || prev.submitWorkDate,
-          subject: d.subject || prev.subject,
-          remarks: stripEmbeddedTags(d.remarks || prev.remarks || ''),
-        }));
-        setExistingAttachments(Array.isArray(d.attachments) ? d.attachments : []);
-      } catch (e) {}
-    })();
-    return () => { cancelled = true; };
-  }, [outgoingReport5Id]);
 
 
   return (
@@ -932,61 +857,40 @@ const handleSave = useCallback(async () => {
           overflow: "hidden",
         }}
       >
-        {/* top gradient */}
         <Box
           sx={{
-            background: "linear-gradient(to right, #1223a5, #2499ff)",
-            height: 50,
-            borderTopRightRadius: 12,
-          }}
-        />
-
-        {/* subtitle */}
-        <Box sx={{ textAlign: "center", py: 2 }}>
-          <Typography variant="h5" fontWeight="bold" color="#1120A3">
-            แบบรับเรื่องรายงานผลการพิจารณาจากหน่วยงาน
-          </Typography>
-        </Box>
-
-        <Box sx={{ px: { xs: 2, sm: 3, md: 5 }, pb: 2 }}>
-          <Typography variant="h6" fontWeight="bold" color="#1120A3">
-            ข้อมูลเรื่องร้องทุกข์
-          </Typography>
-        </Box>
-
-        <Box
-          component="form"
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            px: { xs: 2, sm: 3, md: 5 },
+            backgroundColor: "#2499FF",
+            padding: "10px 20px",
+            color: "white",
+            fontWeight: "bold",
           }}
         >
-          {/* แถวที่ 1: เลขที่อ้างอิง (เลข สรร.) | วันที่ | ขั้นตอนการดำเนินการ */}
-          <Box
+          แบบรับเรื่องรายงานผลการพิจารณาจากหน่วยงาน
+        </Box>
+
+        <Box
+          sx={{
+            padding: { xs: 2, sm: 3, md: 4 },
+            display: "flex",
+            flexDirection: "column",
+            gap: 3,
+          }}
+        >
+          {/* แถวที่ 1: เลขรับเรื่อง | วันที่ */}
+          {/* <Box
             sx={{
               display: "grid",
               columnGap: 2,
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "1fr 1fr",
-                md: "4fr 3fr 4fr",
-              },
-              width: "100%",
+              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
             }}
           >
-            {/* <InputText
-              label={
-                <span>
-                  เลขที่อ้างอิง (เลข สรร.)
-                  <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                </span>
-              }
-              inputLabel="กรอกเลขที่อ้างอิง"
+            <InputText
+              label="เลขรับเรื่อง"
+              inputLabel="เลขรับเรื่อง"
               name="referenceNo"
               value={form.referenceNo}
               onChange={handleChange}
-              sx={{ width: { xs: "80%", sm: "auto" } }}
+              dis
             />
             <Box
               sx={{

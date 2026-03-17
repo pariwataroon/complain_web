@@ -9,6 +9,7 @@ import DashBoardCard from "@services/DashBoardCard/DashBoardCard";
 import TopStatsSwiper from "@services/TopStatsSwiper/TopStatsSwiper";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { GetDepartmentRanking } from "@pages/api/dashboard/dashboard";
+import { GetAgencyComplaintReport } from "@pages/api/report/report";
 import {
   formatDateForAPI,
   formatThaiDateMonths,
@@ -54,7 +55,7 @@ const DashboardComponents_Main = () => {
   const [startDate, setStartDate] = useState(startOfYear(getCurrentADYear()));
   const [endDate, setEndDate] = useState(endOfYear(getCurrentADYear()));
   const pdfRef = useRef();
-  // Function to handle department ranking data
+  // Function to handle department ranking data - ใช้ Report API เพื่อให้ตรงกับรายงาน
  const handleGetDepartmentRanking = async () => {
   if (!startDate || !endDate) return;
 
@@ -63,41 +64,81 @@ const DashboardComponents_Main = () => {
     const dateFrom = formatDateForAPI(startDate);
     const dateTo = formatDateForAPI(endDate);
 
-    const response = await GetDepartmentRanking(
+    // ใช้ปี ค.ศ. จาก endDate (ensure it's a valid number)
+    const year = Number(endDate?.year) || new Date().getFullYear();
+    console.log('[DEBUG] GetAgencyComplaintReport params:', { year, dateFrom, dateTo });
+
+    // 1. ดึงข้อมูลจาก Report API (เหมือนกับรายงานหน่วยงาน)
+    const reportResponse = await GetAgencyComplaintReport(
+      0,        // skip
+      1000,     // limit - สูงสุดที่ API รับได้
+      year,     // year
+      dateFrom, // date_from
+      dateTo,   // date_to
+      "",       // department_id
+      "",       // status
+      "",       // agency
+      "",       // responsible_officer
+      ""        // claimant_name
+    );
+
+    const rawItems = reportResponse?.res_data?.items || [];
+
+    // 2. กรองข้อมูลซ้ำโดยใช้ id เป็นหลัก
+    const uniqueItems = rawItems.filter((item, index, self) =>
+      index === self.findIndex((t) => t.id === item.id)
+    );
+
+    // 3. กรองเรื่องร้องเพิ่มเติมออก (filing_type = "additional")
+    const mainComplaints = uniqueItems.filter(
+      (item) => item.filing_type !== "additional" && item.complaint_filing_type !== "additional"
+    );
+
+    // 4. Aggregate ข้อมูลตาม agency (หน่วยงาน)
+    const agencyCount = {};
+    mainComplaints.forEach((item) => {
+      const agency = item.agency || "ไม่ระบุ";
+      // กรอง "ไม่ระบุ" และ "ทดสอบ" ออก
+      if (agency !== "ไม่ระบุ" && agency !== "ทดสอบ" && agency !== "-") {
+        agencyCount[agency] = (agencyCount[agency] || 0) + 1;
+      }
+    });
+
+    // 5. แปลงเป็น array และเรียงลำดับ
+    const sortedAgencies = Object.entries(agencyCount)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    // 6. เอา Top 5
+    const topDepts = sortedAgencies.slice(0, 5);
+
+    // 7. ดึงข้อมูลจังหวัดจาก Dashboard API (ยังใช้เดิม)
+    const dashboardResponse = await GetDepartmentRanking(
       dateFrom,
       dateTo,
       5, // limit_top
       5 // limit_bottom
     );
 
-    if (response?.filters && response?.departments) {
-      // แยกข้อมูลเป็น top departments และกรอง "ไม่ระบุ" และ "ทดสอบ" ออก
-      const sortedDepartments = [...response.departments]
-        .filter((dept) => dept.departmentName !== "ไม่ระบุ" && dept.departmentName !== "ทดสอบ")
-        .sort((a, b) => b.complaintCount - a.complaintCount);
-
-      const topDepts = sortedDepartments.slice(0, 5).map((dept) => ({
-        name: dept.departmentName,
-        count: dept.complaintCount,
+    const topProvinces = (dashboardResponse?.provinces || [])
+      .filter((prov) => prov.provinceName !== "ไม่ระบุ" && prov.provinceName !== "ทดสอบ")
+      .map((prov) => ({
+        name: prov.provinceName,
+        count: prov.complaintCount,
       }));
 
-      const topProvinces = (response.provinces || [])
-        .filter((prov) => prov.provinceName !== "ไม่ระบุ" && prov.provinceName !== "ทดสอบ")
-        .map((prov) => ({
-          name: prov.provinceName,
-          count: prov.complaintCount,
-        }));
+    console.log('[Dashboard] Using Report API - Total unique complaints:', mainComplaints.length);
+    console.log('[Dashboard] Top 5 agencies from Report API:', topDepts);
 
-      setDepartmentRanking({
-        topDepartments: topDepts,
-        topProvinces: topProvinces,
-      });
-    }
+    setDepartmentRanking({
+      topDepartments: topDepts,
+      topProvinces: topProvinces,
+    });
   } catch (error) {
     console.error("Error fetching department ranking:", error);
     setDepartmentRanking({
       topDepartments: [{ name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }],
-      topProvinces: [{ name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }], // เปลี่ยน
+      topProvinces: [{ name: "ไม่สามารถโหลดข้อมูลได้", count: 0 }],
     });
   } finally {
     setLoading(false);

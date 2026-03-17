@@ -89,12 +89,15 @@ const AgencyComplaintSummary = () => {
 
   const fetchData = async (filters = {}) => {
     setLoading(true);
+    // เคลียร์ข้อมูลเก่าก่อนโหลดใหม่ เพื่อไม่ให้แสดงข้อมูลค้างจากหน่วยงานก่อนหน้า
+    setFilteredComplaints([]);
     console.log("[AgencyComplaintSummary] Starting fetch with filters:", filters);
     try {
-      const year = filters.year || 2025; // ใช้ 2025 เป็น default
+      const year = filters.year || new Date().getFullYear(); // ใช้ปีปัจจุบันเป็น default
       console.log("[AgencyComplaintSummary] Year:", year);
 
       // แปลงวันที่เป็น ISO format (YYYY-MM-DD) สำหรับ API
+      // ถ้าไม่เลือกวันที่ ให้ใช้ default เป็นต้นปีถึงสิ้นปีของปีที่เลือก
       let date_from = "";
       let date_to = "";
 
@@ -106,6 +109,9 @@ const AgencyComplaintSummary = () => {
           fromYear -= 543;
         }
         date_from = `${fromYear}-${String(fromDate.getMonth() + 1).padStart(2, '0')}-${String(fromDate.getDate()).padStart(2, '0')}`;
+      } else {
+        // Default: 1 ม.ค. ของปีที่เลือก
+        date_from = `${year}-01-01`;
       }
 
       if (filters.endDate) {
@@ -116,6 +122,9 @@ const AgencyComplaintSummary = () => {
           toYear -= 543;
         }
         date_to = `${toYear}-${String(toDate.getMonth() + 1).padStart(2, '0')}-${String(toDate.getDate()).padStart(2, '0')}`;
+      } else {
+        // Default: 31 ธ.ค. ของปีที่เลือก
+        date_to = `${year}-12-31`;
       }
 
       console.log("[AgencyComplaintSummary] Calling API with params:", {
@@ -174,11 +183,21 @@ const AgencyComplaintSummary = () => {
         // รองรับหลายรูปแบบ field name: responsibleOfficer, responsible_officer
         responsibleOfficer: item.responsibleOfficer || item.responsible_officer || "-",
         status: item.status || "-",
+        filing_type: item.filing_type || item.complaint_filing_type || null,
       }));
 
-      console.log("[AgencyComplaintSummary] Items count:", items.length);
-      setAllComplaints(items);
-      setFilteredComplaints(items);
+      // กรองข้อมูลซ้ำโดยใช้ id เป็นหลัก (เก็บ item แรกที่พบ)
+      // และกรองเรื่องร้องเพิ่มเติมออก (เฉพาะเรื่องร้องเรียนหลัก)
+      const uniqueItems = items.filter((item, index, self) => {
+        // กรองเรื่องร้องเพิ่มเติมออก (filing_type = "additional")
+        if (item.filing_type === "additional") return false;
+        // กรองข้อมูลซ้ำโดยใช้ id เป็นหลัก
+        return index === self.findIndex((t) => t.id === item.id);
+      });
+
+      console.log("[AgencyComplaintSummary] Raw items:", items.length, "Unique items:", uniqueItems.length);
+      setAllComplaints(uniqueItems);
+      setFilteredComplaints(uniqueItems);
     } catch (error) {
       console.error("[AgencyComplaintSummary] Error fetching agency complaint report:", error);
       setAllComplaints([]);

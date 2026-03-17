@@ -196,6 +196,9 @@ const GetComplaintSummary = async (filterParams = null) => {
         toCE(resd?.compare_year) ??
         (baseToYearCE - 1);
 
+      // ยุติ คือ completed + cancelled (ต้องรวมทั้งสองสถานะ)
+      const closedCount = Number(summary?.completed ?? 0) + Number(summary?.cancelled ?? 0);
+
       const cards = [
         {
           id: "total",
@@ -214,7 +217,7 @@ const GetComplaintSummary = async (filterParams = null) => {
         {
           id: "completed",
           title: "เรื่องราวร้องทุกข์ยุติ",
-          count: Number(summary?.completed ?? 0),
+          count: closedCount,
           unit: "เรื่อง",
           gradient: "cardBlue",
           trend: summary?.yoy?.completed?.pct_change_label || "0%",
@@ -223,8 +226,7 @@ const GetComplaintSummary = async (filterParams = null) => {
           compareYearCE: compareCE,
           isPositive: (summary?.yoy?.completed?.diff ?? 0) >= 0,
           previousValue: summary?.yoy?.completed?.previous ?? 0,
-          currentValue:
-            summary?.yoy?.completed?.current ?? Number(summary?.completed ?? 0),
+          currentValue: closedCount,
         },
         {
           id: "in_progress",

@@ -91,49 +91,75 @@ const GetTimelineHeader = async (take = 1, timeline_type = "I") => {
       throw new Error("Token not found in cookies. Please authenticate first.");
     }
 
-    const response = await soapInstance.post(
-      process.env.NEXT_PUBLIC_OPM_API_OFFICER,
-      `<?xml version="1.0" encoding="utf-8"?>
-            <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
-            <soap:Body>
-                <GetTimelineHeader xmlns="http://tempuri.org/">
-                <token_id>${token_id}</token_id>
-                <last_get_date_time></last_get_date_time>
-                <timeline_type>${timeline_type}</timeline_type>
-                <skip>0</skip>
-                <take>${take}</take>
-                </GetTimelineHeader>
-            </soap:Body>
-            </soap:Envelope>`,
-      {
-        soapActionSuffix: "GetTimelineHeader",
+    // ใช้ batch size ที่เหมาะสม (API อาจจะมี limit)
+    const batchSize = 500;
+    let allData = [];
+    let skip = 0;
+    let hasMoreData = true;
+
+    // Loop fetch จนกว่าจะได้ข้อมูลครบ
+    while (hasMoreData) {
+      const response = await soapInstance.post(
+        process.env.NEXT_PUBLIC_OPM_API_OFFICER,
+        `<?xml version="1.0" encoding="utf-8"?>
+              <soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+              <soap:Body>
+                  <GetTimelineHeader xmlns="http://tempuri.org/">
+                  <token_id>${token_id}</token_id>
+                  <last_get_date_time></last_get_date_time>
+                  <timeline_type>${timeline_type}</timeline_type>
+                  <skip>${skip}</skip>
+                  <take>${batchSize}</take>
+                  </GetTimelineHeader>
+              </soap:Body>
+              </soap:Envelope>`,
+        {
+          soapActionSuffix: "GetTimelineHeader",
+        }
+      );
+
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(response.data, "text/xml");
+      const timelineResult = xmlDoc.getElementsByTagName(
+        "GetTimelineHeaderResult"
+      )[0]?.textContent;
+
+      if (!timelineResult) {
+        throw new Error("No GetTimelineHeaderResult found in the response.");
       }
-    );
 
-    const parser = new DOMParser();
-    const xmlDoc = parser.parseFromString(response.data, "text/xml");
-    const timelineResult = xmlDoc.getElementsByTagName(
-      "GetTimelineHeaderResult"
-    )[0]?.textContent;
+      const parsedResult = JSON.parse(timelineResult);
+      const batchData = Array.isArray(parsedResult) ? parsedResult : [];
 
-    if (!timelineResult) {
-      throw new Error("No GetTimelineHeaderResult found in the response.");
+      // เพิ่มข้อมูลเข้าไปใน array รวม
+      allData = [...allData, ...batchData];
+
+      console.log(`📦 Fetched batch: skip=${skip}, got=${batchData.length}, total=${allData.length}`);
+
+      // ถ้าได้ข้อมูลน้อยกว่า batchSize แสดงว่าหมดแล้ว
+      if (batchData.length < batchSize) {
+        hasMoreData = false;
+      } else {
+        skip += batchSize;
+      }
+
+      // กันไม่ให้วนลูป infinity (ถ้าข้อมูลเยอะมาก)
+      if (allData.length >= take) {
+        hasMoreData = false;
+      }
     }
-
-    const parsedResult = JSON.parse(timelineResult);
 
     // DEBUG: Log ข้อมูลที่ได้จาก API
     console.log('=== GetTimelineHeader DEBUG ===');
     console.log('timeline_type:', timeline_type);
-    console.log('take:', take);
-    console.log('จำนวนข้อมูลที่ได้:', Array.isArray(parsedResult) ? parsedResult.length : 'not array');
-    if (Array.isArray(parsedResult) && parsedResult.length > 0) {
-      console.log('ข้อมูลล่าสุด:', parsedResult[0]);
-      console.log('ข้อมูลเก่าสุด:', parsedResult[parsedResult.length - 1]);
+    console.log('จำนวนข้อมูลที่ได้ทั้งหมด:', allData.length);
+    if (allData.length > 0) {
+      console.log('ข้อมูลล่าสุด:', allData[0]);
+      console.log('ข้อมูลเก่าสุด:', allData[allData.length - 1]);
     }
     console.log('==============================');
 
-    return parsedResult;
+    return allData;
   } catch (error) {
     console.error("Error fetching timeline header:", error);
     throw error;

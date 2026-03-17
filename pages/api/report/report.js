@@ -1,7 +1,7 @@
 import axiosInstance from "@pages/api/axiosInstance";
 
-// ใช้ API_BASE_URL จาก .env
-const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+// ใช้ API_BASE_URL จาก .env - ตัด trailing slash ออก
+const API = (process.env.NEXT_PUBLIC_API_BASE_URL || "").replace(/\/+$/, "");
 const PREFIX = "";
 
 // ฟังก์ชันดึงรายงานผู้ตรวจสอบ (inspector) ตามปี, แผนก, ผู้ตรวจ, สถานะ, วันที่
