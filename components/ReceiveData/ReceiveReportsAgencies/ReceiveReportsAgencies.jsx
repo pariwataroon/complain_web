@@ -932,7 +932,6 @@ const handleSave = useCallback(async () => {
                 options={PROCESS_STEP_OPTIONS}
               />
             </Box>
-          </Box>
 
           {/* แถวที่ 2: ชั้นความลับ | ชั้นความเร่งด่วน */}
           <Box
