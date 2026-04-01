@@ -473,6 +473,68 @@ const GetAllOutsideDepartments = async ({
   }
 };
 
+// ดึงข้อมูลหน่วยงานทั้งหมด (ทั้งภายในและภายนอกกระทรวง) สำหรับรายงานการติดตามงานค้าง
+const GetAllAgenciesForReport = async ({
+  skip = 0,
+  limit = 10000,
+  active_only = true,
+} = {}) => {
+  try {
+    // เรียกข้อมูลหน่วยงานภายนอก
+    const outsideResponse = await axiosInstance.get("/outside-departments", {
+      params: { skip, limit, active_only },
+    });
+
+    // เรียกข้อมูลหน่วยงานภายใน (จาก outgoing-reports/options)
+    const internalResponse = await axiosInstance.get("/outgoing-reports/options");
+
+    const outsideData = outsideResponse?.data?.res_data || [];
+    const internalData = internalResponse?.data?.res_data?.departments || [];
+
+    // รวมข้อมูลหน่วยงานภายนอก
+    const outsideDepartments = Array.isArray(outsideData)
+      ? outsideData
+          .filter((item) => item.is_active)
+          .map((item) => ({
+            value: item.id,
+            label: item.name,
+            type: "external", // ภายนอกกระทรวง
+            description: item.description,
+            orderIndex: item.order_index,
+            raw: item,
+          }))
+      : [];
+
+    // รวมข้อมูลหน่วยงานภายใน
+    const internalDepartments = Array.isArray(internalData)
+      ? internalData.map((item) => ({
+          value: `internal_${item.id}`, // เติม prefix เพื่อไม่ให้ซ้ำกับภายนอก
+          label: item.name,
+          type: "internal", // ภายในกระทรวง
+          code: item.code,
+          shortName: item.short_name,
+          raw: item,
+        }))
+      : [];
+
+    // รวมทั้งสองรายการและเรียงตามชื่อ
+    const allAgencies = [...outsideDepartments, ...internalDepartments].sort((a, b) =>
+      a.label.localeCompare(b.label, "th")
+    );
+
+    console.log('All agencies loaded:', {
+      external: outsideDepartments.length,
+      internal: internalDepartments.length,
+      total: allAgencies.length
+    });
+
+    return allAgencies;
+  } catch (error) {
+    console.error("Error fetching all agencies:", error);
+    return [];
+  }
+};
+
 export {
   GetAllSelect,
   getSubComplaintTypeById,
@@ -489,4 +551,5 @@ export {
   GetAllSelectYears,
   GetAllSelectPositionOptions,
   GetAllOutsideDepartments,
+  GetAllAgenciesForReport,
 };

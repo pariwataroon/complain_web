@@ -8,7 +8,7 @@ import {
     Autocomplete,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
-import { GetAllOutsideDepartments } from "@pages/api/allselect/allselect";
+import { GetAllOutsideDepartments, GetAllAgenciesForReport } from "@pages/api/allselect/allselect";
 
 const SelectFieldDepartment = ({
     label = "หน่วยงาน",
@@ -66,16 +66,17 @@ const SelectFieldDepartment = ({
         try {
             setLoading(true);
             setApiError(null);
-            const outsideDepartments = await GetAllOutsideDepartments();
-            if (outsideDepartments && outsideDepartments.length > 0) {
-                // Mapping already returns {value,label,raw,...}
-                setOptions(outsideDepartments);
+            // ใช้ API ใหม่ที่ดึงทั้งหน่วยงานภายในและภายนอก
+            const allAgencies = await GetAllAgenciesForReport();
+            if (allAgencies && allAgencies.length > 0) {
+                setOptions(allAgencies);
+                console.log(`✅ SelectFieldDepartment: Loaded ${allAgencies.length} agencies (internal + external)`);
             } else {
-                console.warn("⚠️ SelectFieldDepartmentOutside: No outside departments data found");
+                console.warn("⚠️ SelectFieldDepartment: No agencies data found");
                 setOptions([]);
             }
         } catch (error) {
-            console.error("❌ SelectFieldDepartmentOutside: Error fetching outside departments data", error);
+            console.error("❌ SelectFieldDepartment: Error fetching agencies data", error);
             setApiError("ไม่สามารถโหลดข้อมูลหน่วยงานได้");
             setOptions([]);
         } finally {
@@ -202,7 +203,7 @@ const SelectFieldDepartment = ({
                 options={filteredOptions}
                 getOptionLabel={(opt) => (typeof opt === 'string' ? opt : (opt?.label || ""))}
                 isOptionEqualToValue={(o, v) => String(o.value) === String(v?.value)}
-                noOptionsText={loading ? 'กำลังโหลด...' : (apiError || 'ไม่พบหน่วยงานภายนอก')}
+                noOptionsText={loading ? 'กำลังโหลด...' : (apiError || 'ไม่พบหน่วยงาน')}
                 clearOnBlur={false}
                 popupIcon={null}
                 forcePopupIcon
@@ -278,11 +279,11 @@ const SelectFieldDepartment = ({
                     ) : loading ? (
                         "กำลังโหลดรายการหน่วยงาน..."
                     ) : validOptions.length === 0 ? (
-                        "ไม่พบบัญชีหน่วยงาน"
+                        "ไม่พบหน่วยงาน"
                     ) : helperText ? (
                         helperText
                     ) : (
-                        `พบหน่วยงาน ${validOptions.length} หน่วยงาน`
+                        `พบหน่วยงานทั้งหมด ${validOptions.length} หน่วยงาน (ภายใน + ภายนอก)`
                     )}
                 </Typography>
             )}

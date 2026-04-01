@@ -63,9 +63,24 @@ const WebsiteComplaints = () => {
     try {
       const res = await GetAllComplaints({ skip, limit });
 
-      setAllComplaints(res?.res_data?.items || []);
-      setFilteredComplaints(res?.res_data?.items || []);
-      setTotalCount(res?.res_data?.pagination?.total || 0);
+      // กรองเฉพาะช่องทางเว็บไซต์ (ตามชื่อเมนู "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์")
+      const allItems = res?.res_data?.items || [];
+      const websiteOnly = allItems.filter((item) => {
+        const channelName = (item.complaint_channel_name || "").toLowerCase();
+        const channelId = (item.complaint_channel_id || "").toLowerCase();
+        // กรองเฉพาะ channel ที่เป็นเว็บไซต์
+        return (
+          channelName.includes("เว็บไซต์") ||
+          channelName.includes("website") ||
+          channelName.includes("complain.mof.go.th") ||
+          channelId === "website" ||
+          channelId.includes("เว็บไซต์")
+        );
+      });
+
+      setAllComplaints(websiteOnly);
+      setFilteredComplaints(websiteOnly);
+      setTotalCount(websiteOnly.length);
 
       const types = res?.res_data?.filters?.available_types || [];
 

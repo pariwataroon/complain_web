@@ -80,6 +80,21 @@ const PendingWorkfollowupComponents = () => {
           complaintsData.map(item => item.outside_department_name).filter(Boolean)
         )];
         console.log('Outside Departments in Data:', uniqueDepartments);
+
+        // Debug: แสดงฟิลด์ทั้งหมดของข้อมูลชิ้นแรก เพื่อตรวจสอบชื่อฟิลด์
+        if (complaintsData.length > 0) {
+          console.log('Sample API item keys:', Object.keys(complaintsData[0]));
+          console.log('Sample API item (first):', complaintsData[0]);
+          // ตรวจสอบฟิลด์ที่เกี่ยวกับหน่วยงานทั้งหมด
+          const deptRelatedFields = Object.entries(complaintsData[0]).filter(
+            ([key]) => key.toLowerCase().includes('department') ||
+                       key.toLowerCase().includes('agency') ||
+                       key.toLowerCase().includes('outside') ||
+                       key.toLowerCase().includes('external') ||
+                       key.toLowerCase().includes('outagency')
+          );
+          console.log('Department-related fields in first item:', deptRelatedFields);
+        }
       } catch (error) {
         console.error('Error fetching data:', error);
         setAllComplaints([]);
@@ -102,9 +117,30 @@ const PendingWorkfollowupComponents = () => {
       reference_number: item.reference_number || "-",
       director_submission_date: item.director_submission_date,
       subject: item.subject || "-",
-      // เก็บค่าไว้เป็น null ถ้าไม่มีข้อมูล เพื่อให้การ fallback ทำงานถูกต้อง
-      outside_department_name: item.outside_department_name || null,
-      department_name: item.department_name || null,
+      // เก็บค่าหน่วยงานภายนอก - ลองหลายฟิลด์ที่เป็นไปได้
+      outside_department_name:
+        item.outside_department_name ||
+        item.outside_agency ||
+        item.external_agency ||
+        item.outagency ||
+        item.agency_name ||
+        item.assigned_department_name ||
+        null,
+      department_name:
+        item.department_name ||
+        item.agency ||
+        null,
+      // เก็บ raw item สำหรับการ fallback หน่วยงานใน tableData
+      _rawAgency:
+        item.outside_department_name ||
+        item.outside_agency ||
+        item.external_agency ||
+        item.outagency ||
+        item.agency_name ||
+        item.assigned_department_name ||
+        item.department_name ||
+        item.agency ||
+        null,
       document_number: item.document_number || "-",
       status: STATUS_LABELS[item.status] || item.status || "-",
       status_original: item.status, // เก็บ status เดิมไว้ใช้ในการกรอง
@@ -200,15 +236,9 @@ const PendingWorkfollowupComponents = () => {
       console.log('Reset filter - showing all data:', transformedData.length, 'items');
     } else {
       // กรองข้อมูลทันทีเมื่อเลือกหน่วยงาน
-      const transformedData = transformComplaintsData(allComplaints);
-      const filteredData = transformedData.filter((item) => matchDepartment(item, label));
-      setFilteredComplaints(filteredData);
-      console.log('Filtered data by department:', {
-        searchValue: value,
-        departmentLabel: label,
-        totalData: transformedData.length,
-        filteredResult: filteredData.length,
-        sampleAgencies: transformedData.slice(0, 3).map(item => item.agency)
+      handleSearch({
+        ...filters,
+        agency: label
       });
     }
   };
@@ -468,7 +498,7 @@ const PendingWorkfollowupComponents = () => {
       receiveDateObj: item.assigned_date
         ? new Date(item.assigned_date)
         : undefined,
-      agency: item.outside_department_name || item.department_name || "-",
+      agency: item._rawAgency || item.outside_department_name || item.department_name || "-",
       letterNumber: item.document_number || "-",
       status: STATUS_LABELS[item.status] || item.status || "-",
       elapsedDays: item.days_in_progress,

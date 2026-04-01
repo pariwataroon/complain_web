@@ -437,7 +437,8 @@ const ReceiveReportsAgencies = () => {
     const base = [
       f.processStep, f.confidentiality, f.urgency,
       f.departmentId, f.investigateGk?.trim(), f.investigateDate, f.documentNo?.trim(),
-      f.documentDate, f.receiveWorkDate, f.submitWorkDate, f.subject?.trim()
+      f.documentDate, f.receiveWorkDate, f.subject?.trim()
+      // ✅ submitWorkDate (วันที่เสนองาน ผอ.สรร.) ไม่บังคับกรอก - backend เป็น optional
     ];
     if (!base.every(Boolean)) return false;
     if (isEditing) return true;
@@ -573,7 +574,7 @@ const handleSave = useCallback(async () => {
   if (!form.documentNo?.trim()) missingFields.push("เลขที่หนังสือ");
   if (!form.documentDate) missingFields.push("วันที่ (เลขที่หนังสือ)");
   if (!form.receiveWorkDate) missingFields.push("วันที่รับงานของเจ้าหน้าที่");
-  if (!form.submitWorkDate) missingFields.push("วันที่เสนองาน ผอ.สรร.");
+  // ✅ วันที่เสนองาน ผอ.สรร. ไม่บังคับกรอก - เป็น optional field
   if (!form.subject?.trim()) missingFields.push("เรื่อง");
   if (uploadedFiles.length === 0 && !(isEditing && existingAttachments.length > 0)) missingFields.push("เอกสารแนบ");
   if (missingFields.length > 0) {
@@ -1548,12 +1549,7 @@ const handleSave = useCallback(async () => {
               }}
             >
               <DateThaiPickerService
-                label={
-                  <span>
-                    วันที่เสนองาน ผอ.สรร.
-                    <span style={{ color: "red", marginLeft: 4 }}>*</span>
-                  </span>
-                }
+                label="วันที่เสนองาน ผอ.สรร. (ถ้ามี)"
                 value={form.submitWorkDate}
                 onChange={handleDateChange("submitWorkDate")}
                 placeholder="เลือกวันที่"

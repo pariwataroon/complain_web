@@ -14,7 +14,7 @@ const Opm1111Components = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [readComplaints, setReadComplaints] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [timelineType, setTimelineType] = useState("I");
+  const [timelineType, setTimelineType] = useState("A");  // "A" = ทั้งหมด, "I" = งานใหม่, "P" = กำลังดำเนินการ
   const router = useRouter();
 
   useEffect(() => {
