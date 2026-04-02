@@ -185,7 +185,7 @@ const TableWorkFollow = ({
   const baseColumns = [
     { label: "ลำดับ", width: 80, field: "no" },
     {
-      label: "เลข สรร.",
+      label: "เลข สรน.",
       width: 120,
       field: "receiptNumber",
       render: (item) => (
@@ -197,16 +197,15 @@ const TableWorkFollow = ({
     },
     { label: "เรื่อง", width: 300, field: "complaint" },
     { label: "วันที่รับงาน", width: 140, field: "receiveDate" },
-    { label: "วันที่เสนอ ผอ.สรร.", width: 160, field: "proposeDate" },
+    { label: "วันที่เสนอ ผอ.สรน.", width: 160, field: "proposeDate" },
     { label: "หน่วยงาน", width: 200, field: "agency" },
     { label: "เลขที่หนังสือจากส่วนราชการ", width: 160, field: "letterNumber" },
     { label: "สถานะเรื่อง", width: 140, field: "status" },
     { label: "ดำเนินการมาแล้ว (วัน)", width: 180, field: "elapsedDays" },
-    // {
-    //   label: "เจ้าหน้าที่ผู้รับผิดชอบ",
-    //   width: 200,
-    //   field: "responsibleOfficer",
-    // },
+    { label: "ประเภทรายงาน", width: 160, field: "outgoingReportTypeDisplay" },
+    { label: "อยู่ที่หน่วยงาน", width: 200, field: "outgoingDepartment" },
+    { label: "เสร็จสิ้น", width: 100, field: "completionStatus" },
+    { label: "เสร็จแล้ว (วัน)", width: 120, field: "completedDays" },
   ];
 
   // เพิ่มคอลัมน์หมายเหตุให้ทุกแถว
@@ -232,10 +231,14 @@ const TableWorkFollow = ({
 
   // กำหนดคอลัมน์ตามประเภทรายงาน - ตาม Template ที่ให้มา
   const getColumnHeaders = (type) => {
+    // คอลัมน์พื้นฐานที่ทุกประเภทมี
+    const baseCols = ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร."];
+    // คอลัมน์ใหม่จาก outgoing reports
+    const outgoingCols = ["ประเภทรายงาน", "อยู่ที่หน่วยงาน", "เสร็จสิ้น", "เสร็จแล้ว (วัน)"];
+
     if (type === "new_complaint") {
-      // เรื่องร้องเรียนใหม่ - 8 คอลัมน์ (ตาม template)
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
+        columns: [...baseCols, "สถานะ", "จำนวน (วัน)", ...outgoingCols],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
           "เลขรับ สรร.": item.receiptNumber ?? "",
@@ -244,13 +247,16 @@ const TableWorkFollow = ({
           "วันที่รับงาน": item.receiveDate ?? "",
           "วันที่เสนองาน ผอ.สรร.": item.proposeDate ?? "",
           "สถานะ": item.status ?? "",
-          "จำนวน (วัน)": item.elapsedDays ?? ""
+          "จำนวน (วัน)": item.elapsedDays ?? "",
+          "ประเภทรายงาน": (item.outgoingReportTypes && item.outgoingReportTypes.length > 0) ? item.outgoingReportTypes.join(", ") : "-",
+          "อยู่ที่หน่วยงาน": item.outgoingDepartment || "-",
+          "เสร็จสิ้น": item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
+          "เสร็จแล้ว (วัน)": item.completedDays !== null && item.completedDays !== undefined ? item.completedDays : "-",
         })
       };
     } else if (type === "additional_complaint") {
-      // เรื่องร้องเรียนเพิ่มเติม - 9 คอลัมน์ (ตาม template - มีเลขที่ข้อมือ)
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "เลขที่ข้อมือ", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
+        columns: ["ลำดับ", "เลขรับ สรร.", "เลขที่ข้อมือ", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)", ...outgoingCols],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
           "เลขรับ สรร.": item.receiptNumber ?? "",
@@ -260,13 +266,16 @@ const TableWorkFollow = ({
           "วันที่รับงาน": item.receiveDate ?? "",
           "วันที่เสนองาน ผอ.สรร.": item.proposeDate ?? "",
           "สถานะ": item.status ?? "",
-          "จำนวน (วัน)": item.elapsedDays ?? ""
+          "จำนวน (วัน)": item.elapsedDays ?? "",
+          "ประเภทรายงาน": (item.outgoingReportTypes && item.outgoingReportTypes.length > 0) ? item.outgoingReportTypes.join(", ") : "-",
+          "อยู่ที่หน่วยงาน": item.outgoingDepartment || "-",
+          "เสร็จสิ้น": item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
+          "เสร็จแล้ว (วัน)": item.completedDays !== null && item.completedDays !== undefined ? item.completedDays : "-",
         })
       };
     } else if (type === "department_decision") {
-      // ผลการพิจารณาจากหน่วยงาน - 8 คอลัมน์ (ตาม template - มีหน่วยงาน ไม่มีสถานะ)
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "หน่วยงาน", "จำนวน (วัน)"],
+        columns: [...baseCols, "หน่วยงาน", "จำนวน (วัน)", ...outgoingCols],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
           "เลขรับ สรร.": item.receiptNumber ?? "",
@@ -275,13 +284,16 @@ const TableWorkFollow = ({
           "วันที่รับงาน": item.receiveDate ?? "",
           "วันที่เสนองาน ผอ.สรร.": item.proposeDate ?? "",
           "หน่วยงาน": item.agency ?? "",
-          "จำนวน (วัน)": item.elapsedDays ?? ""
+          "จำนวน (วัน)": item.elapsedDays ?? "",
+          "ประเภทรายงาน": (item.outgoingReportTypes && item.outgoingReportTypes.length > 0) ? item.outgoingReportTypes.join(", ") : "-",
+          "อยู่ที่หน่วยงาน": item.outgoingDepartment || "-",
+          "เสร็จสิ้น": item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
+          "เสร็จแล้ว (วัน)": item.completedDays !== null && item.completedDays !== undefined ? item.completedDays : "-",
         })
       };
     } else {
-      // รูปแบบเริ่มต้น (ทั้งหมด) - 8 คอลัมน์
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
+        columns: [...baseCols, "สถานะ", "จำนวน (วัน)", ...outgoingCols],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
           "เลขรับ สรร.": item.receiptNumber ?? "",
@@ -290,7 +302,11 @@ const TableWorkFollow = ({
           "วันที่รับงาน": item.receiveDate ?? "",
           "วันที่เสนองาน ผอ.สรร.": item.proposeDate ?? "",
           "สถานะ": item.status ?? "",
-          "จำนวน (วัน)": item.elapsedDays ?? ""
+          "จำนวน (วัน)": item.elapsedDays ?? "",
+          "ประเภทรายงาน": (item.outgoingReportTypes && item.outgoingReportTypes.length > 0) ? item.outgoingReportTypes.join(", ") : "-",
+          "อยู่ที่หน่วยงาน": item.outgoingDepartment || "-",
+          "เสร็จสิ้น": item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
+          "เสร็จแล้ว (วัน)": item.completedDays !== null && item.completedDays !== undefined ? item.completedDays : "-",
         })
       };
     }
@@ -423,10 +439,15 @@ const handleExportExcel = () => {
     currentRow++;
   });
 
-  // กำหนดความกว้างคอลัมน์ - แก้ไขตาม Template
+  // กำหนดความกว้างคอลัมน์ - เพิ่ม columns ใหม่จาก outgoing reports
   const colWidths = [];
+  const outgoingWidths = [
+    { wch: 18 }, // ประเภทรายงาน
+    { wch: 30 }, // อยู่ที่หน่วยงาน
+    { wch: 14 }, // เสร็จสิ้น
+    { wch: 14 }, // เสร็จแล้ว (วัน)
+  ];
   if (reportType === "new_complaint") {
-    // เรื่องร้องเรียนใหม่ - 8 คอลัมน์
     colWidths.push(
       { wch: 8 },  // ลำดับ
       { wch: 12 }, // เลขรับ สรร.
@@ -435,10 +456,10 @@ const handleExportExcel = () => {
       { wch: 15 }, // วันที่รับงาน
       { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
       { wch: 20 }, // สถานะ
-      { wch: 12 }  // จำนวน (วัน)
+      { wch: 12 }, // จำนวน (วัน)
+      ...outgoingWidths
     );
   } else if (reportType === "additional_complaint") {
-    // เรื่องร้องเรียนเพิ่มเติม - 9 คอลัมน์
     colWidths.push(
       { wch: 8 },  // ลำดับ
       { wch: 12 }, // เลขรับ สรร.
@@ -448,10 +469,10 @@ const handleExportExcel = () => {
       { wch: 15 }, // วันที่รับงาน
       { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
       { wch: 20 }, // สถานะ
-      { wch: 12 }  // จำนวน (วัน)
+      { wch: 12 }, // จำนวน (วัน)
+      ...outgoingWidths
     );
   } else if (reportType === "department_decision") {
-    // ผลการพิจารณาจากหน่วยงาน - 8 คอลัมน์
     colWidths.push(
       { wch: 8 },  // ลำดับ
       { wch: 12 }, // เลขรับ สรร.
@@ -460,10 +481,10 @@ const handleExportExcel = () => {
       { wch: 15 }, // วันที่รับงาน
       { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
       { wch: 30 }, // หน่วยงาน
-      { wch: 12 }  // จำนวน (วัน)
+      { wch: 12 }, // จำนวน (วัน)
+      ...outgoingWidths
     );
   } else {
-    // รูปแบบเริ่มต้น - 8 คอลัมน์
     colWidths.push(
       { wch: 8 },  // ลำดับ
       { wch: 12 }, // เลขรับ สรร.
@@ -472,7 +493,8 @@ const handleExportExcel = () => {
       { wch: 15 }, // วันที่รับงาน
       { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
       { wch: 20 }, // สถานะ
-      { wch: 12 }  // จำนวน (วัน)
+      { wch: 12 }, // จำนวน (วัน)
+      ...outgoingWidths
     );
   }
   ws['!cols'] = colWidths;
@@ -1035,7 +1057,7 @@ const handleExportExcel = () => {
         >
           <Table
             sx={{
-              minWidth: 1400,
+              minWidth: 2100,
               position: "relative",
               zIndex: 1,
             }}
@@ -1199,6 +1221,18 @@ const handleExportExcel = () => {
                                             ? STATUS_TRANSLATION[item.status] ||
                                               item.status ||
                                               "-"
+                                            : col.field === "outgoingReportTypeDisplay"
+                                              ? (item.outgoingReportTypes && item.outgoingReportTypes.length > 0
+                                                  ? item.outgoingReportTypes.join(", ")
+                                                  : "-")
+                                            : col.field === "outgoingDepartment"
+                                              ? (item.outgoingDepartment || "-")
+                                            : col.field === "completionStatus"
+                                              ? (item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ")
+                                            : col.field === "completedDays"
+                                              ? (item.completedDays !== null && item.completedDays !== undefined
+                                                  ? item.completedDays
+                                                  : "-")
                                             : col.render
                                               ? col.render(item)
                                               : item[col.field] || "-"}

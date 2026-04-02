@@ -453,4 +453,133 @@ const DeleteOutgoingReport5Attachment = async ({ outgoing_report_id, attachment_
 };
 
 
-export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById, GetOutgoingReport3ById, UploadOutgoingReport5Attachments, DeleteOutgoingReportAttachment, DeleteOutgoingReport4Attachment, GetOutgoingReport4ById, UpdateOutgoingReport4, GetOutgoingReport5ById, UpdateOutgoingReport5, DeleteOutgoingReport5Attachment, UploadOutgoingReport3Attachments, UpdateOutgoingReport3, DeleteOutgoingReport3Attachment, DeleteOutgoingReport2Attachment, UpdateOutgoingReport2, UpdateOutgoingReport, GetOutgoingReportsList };
+// --- LIST endpoints for types 2-5 ---
+const GetOutgoingReports2List = async (params = {}) => {
+  try {
+    const {
+      skip = 0,
+      limit = 10000,
+      search = null,
+      position_id = null,
+      outside_department_id = null,
+      signature_authority_user_id = null,
+      urgency_level = null,
+      date_from = null,
+      date_to = null,
+    } = params;
+
+    const queryParams = new URLSearchParams();
+    if (skip !== undefined) queryParams.append("skip", skip);
+    if (limit !== undefined) queryParams.append("limit", limit);
+    if (search) queryParams.append("search", search);
+    if (position_id) queryParams.append("position_id", position_id);
+    if (outside_department_id) queryParams.append("outside_department_id", outside_department_id);
+    if (signature_authority_user_id) queryParams.append("signature_authority_user_id", signature_authority_user_id);
+    if (urgency_level) queryParams.append("urgency_level", urgency_level);
+    if (date_from) queryParams.append("date_from", date_from);
+    if (date_to) queryParams.append("date_to", date_to);
+
+    const response = await axiosInstance.get(`/outgoing-reports2?${queryParams.toString()}`);
+    return response?.data?.res_data?.items || response?.data?.data?.items || [];
+  } catch (error) {
+    console.error("Error fetching outgoing reports2 list:", error?.response?.data || error.message);
+    return [];
+  }
+};
+
+const GetOutgoingReports3List = async (params = {}) => {
+  try {
+    const {
+      skip = 0,
+      limit = 10000,
+      search = null,
+      position_id = null,
+      department_id = null,
+      signature_authority_user_id = null,
+      urgency_level = null,
+      date_from = null,
+      date_to = null,
+    } = params;
+
+    const queryParams = new URLSearchParams();
+    if (skip !== undefined) queryParams.append("skip", skip);
+    if (limit !== undefined) queryParams.append("limit", limit);
+    if (search) queryParams.append("search", search);
+    if (position_id) queryParams.append("position_id", position_id);
+    if (department_id) queryParams.append("department_id", department_id);
+    if (signature_authority_user_id) queryParams.append("signature_authority_user_id", signature_authority_user_id);
+    if (urgency_level) queryParams.append("urgency_level", urgency_level);
+    if (date_from) queryParams.append("date_from", date_from);
+    if (date_to) queryParams.append("date_to", date_to);
+
+    const response = await axiosInstance.get(`/outgoing-reports3?${queryParams.toString()}`);
+    return response?.data?.res_data?.items || response?.data?.data?.items || [];
+  } catch (error) {
+    console.error("Error fetching outgoing reports3 list:", error?.response?.data || error.message);
+    return [];
+  }
+};
+
+const GetOutgoingReports4List = async (params = {}) => {
+  try {
+    const {
+      skip = 0,
+      limit = 10000,
+      search = null,
+      outside_department_id = null,
+      signature_authority_user_id = null,
+      urgency_level = null,
+      date_from = null,
+      date_to = null,
+    } = params;
+
+    const queryParams = new URLSearchParams();
+    if (skip !== undefined) queryParams.append("skip", skip);
+    if (limit !== undefined) queryParams.append("limit", limit);
+    if (search) queryParams.append("search", search);
+    if (outside_department_id) queryParams.append("outside_department_id", outside_department_id);
+    if (signature_authority_user_id) queryParams.append("signature_authority_user_id", signature_authority_user_id);
+    if (urgency_level) queryParams.append("urgency_level", urgency_level);
+    if (date_from) queryParams.append("date_from", date_from);
+    if (date_to) queryParams.append("date_to", date_to);
+
+    const response = await axiosInstance.get(`/outgoing-reports4?${queryParams.toString()}`);
+    return response?.data?.res_data?.items || response?.data?.data?.items || [];
+  } catch (error) {
+    console.error("Error fetching outgoing reports4 list:", error?.response?.data || error.message);
+    return [];
+  }
+};
+
+const GetOutgoingReports5List = async (params = {}) => {
+  try {
+    const {
+      skip = 0,
+      limit = 10000,
+      search = null,
+      department_id = null,
+      signature_authority_user_id = null,
+      urgency_level = null,
+      date_from = null,
+      date_to = null,
+    } = params;
+
+    const queryParams = new URLSearchParams();
+    if (skip !== undefined) queryParams.append("skip", skip);
+    if (limit !== undefined) queryParams.append("limit", limit);
+    if (search) queryParams.append("search", search);
+    if (department_id) queryParams.append("department_id", department_id);
+    if (signature_authority_user_id) queryParams.append("signature_authority_user_id", signature_authority_user_id);
+    if (urgency_level) queryParams.append("urgency_level", urgency_level);
+    if (date_from) queryParams.append("date_from", date_from);
+    if (date_to) queryParams.append("date_to", date_to);
+
+    const response = await axiosInstance.get(`/outgoing-reports5?${queryParams.toString()}`);
+    return response?.data?.res_data?.items || response?.data?.data?.items || [];
+  } catch (error) {
+    console.error("Error fetching outgoing reports5 list:", error?.response?.data || error.message);
+    return [];
+  }
+};
+
+export { CreateOutgoingReport, UploadOutgoingReportAttachments, CreateOutgoingReport2, CreateOutgoingReport3, CreateOutgoingReport4, CreateOutgoingReport5, getDepartmentsPrefix, GetOutgoingReportById, GetOutgoingReport2ById, GetOutgoingReport3ById, UploadOutgoingReport5Attachments, DeleteOutgoingReportAttachment, DeleteOutgoingReport4Attachment, GetOutgoingReport4ById, UpdateOutgoingReport4, GetOutgoingReport5ById, UpdateOutgoingReport5, DeleteOutgoingReport5Attachment, UploadOutgoingReport3Attachments, UpdateOutgoingReport3, DeleteOutgoingReport3Attachment, DeleteOutgoingReport2Attachment, UpdateOutgoingReport2, UpdateOutgoingReport, GetOutgoingReportsList, GetOutgoingReports2List, GetOutgoingReports3List, GetOutgoingReports4List, GetOutgoingReports5List };

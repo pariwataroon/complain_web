@@ -6,6 +6,13 @@ import SelectFieldDepartmentoutside from "@services/SelectFieldDepartmentoutside
 import { getPendingTasksReport } from "@pages/api/complaintreports/reports";
 import { UpdateAssignedRemark } from "@pages/api/complaint/complaint";
 import {
+  GetOutgoingReportsList,
+  GetOutgoingReports2List,
+  GetOutgoingReports3List,
+  GetOutgoingReports4List,
+  GetOutgoingReports5List,
+} from "@pages/api/outgoinreports/outgoinreports";
+import {
   Box,
   Button,
   Modal,
@@ -34,6 +41,7 @@ const PendingWorkfollowupComponents = () => {
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [outgoingReportsMap, setOutgoingReportsMap] = useState({}); // complaint_id -> outgoing reports data
   const router = useRouter();
 
   // สำหรับจัดการหมายเหตุ
@@ -56,6 +64,57 @@ const PendingWorkfollowupComponents = () => {
 
         setAllComplaints(complaintsData);
 
+        // ดึงข้อมูล outgoing reports ทั้ง 5 ประเภท
+        const [reports1Raw, reports2, reports3, reports4, reports5] = await Promise.all([
+          GetOutgoingReportsList({ limit: 10000 }).catch(() => []),
+          GetOutgoingReports2List({ limit: 10000 }).catch(() => []),
+          GetOutgoingReports3List({ limit: 10000 }).catch(() => []),
+          GetOutgoingReports4List({ limit: 10000 }).catch(() => []),
+          GetOutgoingReports5List({ limit: 10000 }).catch(() => []),
+        ]);
+
+        // GetOutgoingReportsList คืน response.data (object) ต้อง extract items ออกมา
+        const reports1 = Array.isArray(reports1Raw)
+          ? reports1Raw
+          : reports1Raw?.res_data?.items || reports1Raw?.data?.items || [];
+
+        // สร้าง map: complaint_id -> outgoing reports (ทุก type)
+        const outMap = {};
+        const addToMap = (reports, reportType) => {
+          if (!Array.isArray(reports)) return;
+          reports.forEach((r) => {
+            const cid = r.complaint_id;
+            if (!cid) return;
+            if (!outMap[cid]) outMap[cid] = [];
+            outMap[cid].push({
+              reportType,
+              id: r.id,
+              complaintNumber: r.complaint_number,
+              subject: r.subject,
+              documentNumber: r.document_number,
+              documentDate: r.document_date,
+              departmentName:
+                r.department_name ||
+                r.department?.name ||
+                r.outside_department_name ||
+                null,
+              positionName: r.position_name || r.position?.name || null,
+              signatureUserName: r.signature_user_name || r.signature_authority_user?.name || null,
+              createdAt: r.created_at,
+              updatedAt: r.updated_at,
+              reportTypeLabel: reportType,
+            });
+          });
+        };
+
+        addToMap(reports1, "รายงานประเภท 1");
+        addToMap(reports2, "รายงานประเภท 2");
+        addToMap(reports3, "รายงานประเภท 3");
+        addToMap(reports4, "รายงานประเภท 4");
+        addToMap(reports5, "รายงานประเภท 5");
+
+        setOutgoingReportsMap(outMap);
+
         // Debug: แสดงข้อมูล filing_type ที่มี
         const uniqueFilingTypes = [...new Set(
           complaintsData.map(item => item.filing_type).filter(Boolean)
@@ -70,9 +129,10 @@ const PendingWorkfollowupComponents = () => {
 
         // Debug: แสดงจำนวนข้อมูลทั้งหมด
         console.log('Total complaints loaded:', complaintsData.length);
+        console.log('Outgoing reports map entries:', Object.keys(outMap).length);
 
         // แปลงข้อมูลให้ตรงกับรูปแบบตาราง
-        const transformedData = transformComplaintsData(complaintsData);
+        const transformedData = transformComplaintsData(complaintsData, outMap);
         setFilteredComplaints(transformedData);
 
         // Debug: แสดงรายชื่อหน่วยงานที่มีในข้อมูล
@@ -85,15 +145,6 @@ const PendingWorkfollowupComponents = () => {
         if (complaintsData.length > 0) {
           console.log('Sample API item keys:', Object.keys(complaintsData[0]));
           console.log('Sample API item (first):', complaintsData[0]);
-          // ตรวจสอบฟิลด์ที่เกี่ยวกับหน่วยงานทั้งหมด
-          const deptRelatedFields = Object.entries(complaintsData[0]).filter(
-            ([key]) => key.toLowerCase().includes('department') ||
-                       key.toLowerCase().includes('agency') ||
-                       key.toLowerCase().includes('outside') ||
-                       key.toLowerCase().includes('external') ||
-                       key.toLowerCase().includes('outagency')
-          );
-          console.log('Department-related fields in first item:', deptRelatedFields);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -108,49 +159,91 @@ const PendingWorkfollowupComponents = () => {
   }, []);
 
   // ฟังก์ชันแปลงข้อมูลจาก PendingTasks API ให้ตรงกับรูปแบบตาราง
-  const transformComplaintsData = (complaintsData) => {
-    return complaintsData.map((item) => ({
-      id: item.id,
-      assigned_officer_name: item.assigned_officer_name || "-",
-      receive_reference_number: item.receive_reference_number || "-",
-      assigned_date: item.assigned_date,
-      reference_number: item.reference_number || "-",
-      director_submission_date: item.director_submission_date,
-      subject: item.subject || "-",
-      // เก็บค่าหน่วยงานภายนอก - ลองหลายฟิลด์ที่เป็นไปได้
-      outside_department_name:
-        item.outside_department_name ||
-        item.outside_agency ||
-        item.external_agency ||
-        item.outagency ||
-        item.agency_name ||
-        item.assigned_department_name ||
-        null,
-      department_name:
-        item.department_name ||
-        item.agency ||
-        null,
-      // เก็บ raw item สำหรับการ fallback หน่วยงานใน tableData
-      _rawAgency:
-        item.outside_department_name ||
-        item.outside_agency ||
-        item.external_agency ||
-        item.outagency ||
-        item.agency_name ||
-        item.assigned_department_name ||
-        item.department_name ||
-        item.agency ||
-        null,
-      document_number: item.document_number || "-",
-      status: STATUS_LABELS[item.status] || item.status || "-",
-      status_original: item.status, // เก็บ status เดิมไว้ใช้ในการกรอง
-      days_in_progress: item.days_in_progress || 0,
-      source: "pending_tasks",
-      complainant_name: item.complainant_name || "-",
-      filing_type: item.filing_type || "-",
-      filing_type_original: item.filing_type, // เก็บ filing_type เดิมไว้ใช้ในการกรอง
-      remark: item.assigned_remark || item.remark || ""
-    }));
+  const transformComplaintsData = (complaintsData, outMap = {}) => {
+    return complaintsData.map((item) => {
+      // ดึง outgoing reports ที่เกี่ยวข้องกับ complaint นี้
+      const outReports = outMap[item.complaint_id] || [];
+
+      // หาหน่วยงานล่าสุดจาก outgoing reports
+      const latestReport = outReports.length > 0
+        ? outReports.reduce((latest, r) => {
+            const rDate = new Date(r.createdAt || r.documentDate || 0);
+            const lDate = new Date(latest.createdAt || latest.documentDate || 0);
+            return rDate > lDate ? r : latest;
+          }, outReports[0])
+        : null;
+
+      // รวมชื่อหน่วยงานจาก outgoing reports ทั้งหมด
+      const outDeptNames = outReports
+        .map(r => r.departmentName)
+        .filter(Boolean);
+      const uniqueOutDepts = [...new Set(outDeptNames)];
+
+      // ตรวจสอบว่างานเสร็จแล้วหรือยัง (จาก status)
+      const isCompleted = ["completed", "done", "reviewed", "cancelled"].includes(
+        (item.status || "").toLowerCase()
+      );
+
+      // คำนวณจำนวนวันตั้งแต่เสร็จ
+      let completedDays = null;
+      if (isCompleted && item.updated_at) {
+        const completedDate = new Date(item.updated_at);
+        const now = new Date();
+        completedDays = Math.floor((now - completedDate) / (1000 * 60 * 60 * 24));
+      }
+
+      return {
+        id: item.id,
+        complaint_id: item.complaint_id,
+        assigned_officer_name: item.assigned_officer_name || "-",
+        receive_reference_number: item.receive_reference_number || "-",
+        assigned_date: item.assigned_date,
+        reference_number: item.reference_number || "-",
+        director_submission_date: item.director_submission_date,
+        subject: item.subject || "-",
+        // เก็บค่าหน่วยงานภายนอก - ลองหลายฟิลด์ที่เป็นไปได้
+        outside_department_name:
+          item.outside_department_name ||
+          item.outside_agency ||
+          item.external_agency ||
+          item.outagency ||
+          item.agency_name ||
+          item.assigned_department_name ||
+          null,
+        department_name:
+          item.department_name ||
+          item.agency ||
+          null,
+        // เก็บ raw item สำหรับการ fallback หน่วยงานใน tableData
+        _rawAgency:
+          item.outside_department_name ||
+          item.outside_agency ||
+          item.external_agency ||
+          item.outagency ||
+          item.agency_name ||
+          item.assigned_department_name ||
+          item.department_name ||
+          item.agency ||
+          null,
+        document_number: item.document_number || "-",
+        status: STATUS_LABELS[item.status] || item.status || "-",
+        status_original: item.status, // เก็บ status เดิมไว้ใช้ในการกรอง
+        days_in_progress: item.days_in_progress || 0,
+        source: "pending_tasks",
+        complainant_name: item.complainant_name || "-",
+        filing_type: item.filing_type || "-",
+        filing_type_original: item.filing_type, // เก็บ filing_type เดิมไว้ใช้ในการกรอง
+        remark: item.assigned_remark || item.remark || "",
+        // --- ข้อมูลใหม่จาก Outgoing Reports ---
+        outgoingReportTypes: outReports.map(r => r.reportTypeLabel).filter(Boolean),
+        outgoingDepartment: latestReport?.departmentName || uniqueOutDepts.join(", ") || null,
+        outgoingAllDepartments: uniqueOutDepts,
+        outgoingLatestReport: latestReport?.reportTypeLabel || null,
+        isCompleted,
+        completedDays,
+        updated_at: item.updated_at,
+      };
+    });
   };
 
   // ตัวเลือกเจ้าหน้าที่
@@ -231,7 +324,7 @@ const PendingWorkfollowupComponents = () => {
 
     // ถ้าค่าว่าง ให้ clear ข้อมูลและรีเซ็ตการกรอง
     if (!value || value === "") {
-      const transformedData = transformComplaintsData(allComplaints);
+      const transformedData = transformComplaintsData(allComplaints, outgoingReportsMap);
       setFilteredComplaints(transformedData);
       console.log('Reset filter - showing all data:', transformedData.length, 'items');
     } else {
@@ -260,7 +353,7 @@ const PendingWorkfollowupComponents = () => {
   // ฟิลเตอร์ข้อมูลจาก filterData
   const handleSearch = (filterData) => {
     // แปลงข้อมูลและใช้เป็นฐานการกรอง
-    const transformedData = transformComplaintsData(allComplaints);
+    const transformedData = transformComplaintsData(allComplaints, outgoingReportsMap);
     let result = [...transformedData];
 
     // filter วันที่ (assigned_date หรือ received_date)
@@ -419,7 +512,7 @@ const PendingWorkfollowupComponents = () => {
             setAllComplaints(transformedPendingData);
 
             // อัปเดตตาราง
-            const transformedData = transformComplaintsData(transformedPendingData);
+            const transformedData = transformComplaintsData(transformedPendingData, outgoingReportsMap);
             setFilteredComplaints(transformedData);
           } catch (refreshError) {
             console.error('Error refreshing data:', refreshError);
@@ -466,7 +559,7 @@ const PendingWorkfollowupComponents = () => {
     setSelectedDepartment("");
     // Force re-render of department field
     setTimeout(() => {
-      const transformedData = transformComplaintsData(allComplaints);
+      const transformedData = transformComplaintsData(allComplaints, outgoingReportsMap);
       setFilteredComplaints(transformedData);
     }, 0);
   };
@@ -498,7 +591,7 @@ const PendingWorkfollowupComponents = () => {
       receiveDateObj: item.assigned_date
         ? new Date(item.assigned_date)
         : undefined,
-      agency: item._rawAgency || item.outside_department_name || item.department_name || "-",
+      agency: item.outgoingDepartment || item._rawAgency || item.outside_department_name || item.department_name || "-",
       letterNumber: item.document_number || "-",
       status: STATUS_LABELS[item.status] || item.status || "-",
       elapsedDays: item.days_in_progress,
@@ -512,6 +605,13 @@ const PendingWorkfollowupComponents = () => {
       isEditingNote: currentNoteRow === item.id,
       noteValue: currentNoteRow === item.id ? newNoteText : (item.remark || ""),
       canEditNote: true, // สามารถแก้ไขหมายเหตุได้ทุกแถว
+      // --- ข้อมูลใหม่จาก Outgoing Reports ---
+      outgoingReportTypes: item.outgoingReportTypes || [],
+      outgoingDepartment: item.outgoingDepartment || "-",
+      outgoingAllDepartments: item.outgoingAllDepartments || [],
+      outgoingLatestReport: item.outgoingLatestReport || "-",
+      isCompleted: item.isCompleted || false,
+      completedDays: item.completedDays ?? null,
     }));
   }, [filteredComplaints, selectedItems, currentNoteRow, newNoteText]);
 
