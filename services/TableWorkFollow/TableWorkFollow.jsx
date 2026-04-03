@@ -185,7 +185,7 @@ const TableWorkFollow = ({
   const baseColumns = [
     { label: "ลำดับ", width: 80, field: "no" },
     {
-      label: "เลข สรน.",
+      label: "เลข สรร.",
       width: 120,
       field: "receiptNumber",
       render: (item) => (
@@ -197,13 +197,12 @@ const TableWorkFollow = ({
     },
     { label: "เรื่อง", width: 300, field: "complaint" },
     { label: "วันที่รับงาน", width: 140, field: "receiveDate" },
-    { label: "วันที่เสนอ ผอ.สรน.", width: 160, field: "proposeDate" },
+    { label: "วันที่เสนอ ผอ.สรร.", width: 160, field: "proposeDate" },
     { label: "หน่วยงาน", width: 200, field: "agency" },
     { label: "เลขที่หนังสือจากส่วนราชการ", width: 160, field: "letterNumber" },
     { label: "สถานะเรื่อง", width: 140, field: "status" },
     { label: "ดำเนินการมาแล้ว (วัน)", width: 180, field: "elapsedDays" },
-    { label: "ประเภทรายงาน", width: 160, field: "outgoingReportTypeDisplay" },
-    { label: "อยู่ที่หน่วยงาน", width: 200, field: "outgoingDepartment" },
+    { label: "ขั้นตอนปัจจุบัน", width: 160, field: "statusStep" },
     { label: "เสร็จสิ้น", width: 100, field: "completionStatus" },
     { label: "เสร็จแล้ว (วัน)", width: 120, field: "completedDays" },
   ];
@@ -1221,12 +1220,8 @@ const handleExportExcel = () => {
                                             ? STATUS_TRANSLATION[item.status] ||
                                               item.status ||
                                               "-"
-                                            : col.field === "outgoingReportTypeDisplay"
-                                              ? (item.outgoingReportTypes && item.outgoingReportTypes.length > 0
-                                                  ? item.outgoingReportTypes.join(", ")
-                                                  : "-")
-                                            : col.field === "outgoingDepartment"
-                                              ? (item.outgoingDepartment || "-")
+                                            : col.field === "statusStep"
+                                              ? (item.statusStep || "-")
                                             : col.field === "completionStatus"
                                               ? (item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ")
                                             : col.field === "completedDays"
