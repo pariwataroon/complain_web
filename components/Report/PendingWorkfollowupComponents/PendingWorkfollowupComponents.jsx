@@ -266,7 +266,7 @@ const PendingWorkfollowupComponents = () => {
   // ฟิลเตอร์ข้อมูลจาก filterData
   const handleSearch = (filterData) => {
     // แปลงข้อมูลและใช้เป็นฐานการกรอง
-    const transformedData = transformComplaintsData(allComplaints, outgoingReportsMap);
+    const transformedData = transformComplaintsData(allComplaints);
     let result = [...transformedData];
 
     // filter วันที่ (assigned_date หรือ received_date)
@@ -425,7 +425,7 @@ const PendingWorkfollowupComponents = () => {
             setAllComplaints(transformedPendingData);
 
             // อัปเดตตาราง
-            const transformedData = transformComplaintsData(transformedPendingData, outgoingReportsMap);
+            const transformedData = transformComplaintsData(transformedPendingData);
             setFilteredComplaints(transformedData);
           } catch (refreshError) {
             console.error('Error refreshing data:', refreshError);
@@ -472,7 +472,7 @@ const PendingWorkfollowupComponents = () => {
     setSelectedDepartment("");
     // Force re-render of department field
     setTimeout(() => {
-      const transformedData = transformComplaintsData(allComplaints, outgoingReportsMap);
+      const transformedData = transformComplaintsData(allComplaints);
       setFilteredComplaints(transformedData);
     }, 0);
   };
