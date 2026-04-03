@@ -94,6 +94,21 @@ const PendingWorkfollowupComponents = () => {
       // ขั้นตอนปัจจุบัน จาก status ของ complaint
       const statusStep = STATUS_TRANSLATION[item.status] || item.status || "-";
 
+      // กำหนดค่า agency ตามประเภทเรื่อง
+      // ถ้าเป็น "ผลการพิจารณาจากหน่วยงาน" (status = tracking/reviewed) ให้ใช้หน่วยงานภายนอก (outside_department_name)
+      // ถ้าเป็น "เรื่องร้องเรียนใหม่/เพิ่มเติม" ให้ใช้หน่วยงานในสังกัด (department_name)
+      const statusLower = (item.status || "").toLowerCase();
+      const isDepartmentDecision = statusLower === "tracking" || statusLower === "reviewed";
+
+      let agency = "-";
+      if (isDepartmentDecision) {
+        // ผลการพิจารณาจากหน่วยงาน - ใช้หน่วยงานภายนอก
+        agency = item.outside_department_name || "-";
+      } else {
+        // เรื่องร้องเรียนใหม่/เพิ่มเติม - ใช้หน่วยงานในสังกัด
+        agency = item.department_name || "-";
+      }
+
       return {
         id: item.id,
         complaint_id: item.complaint_id,
@@ -103,29 +118,11 @@ const PendingWorkfollowupComponents = () => {
         reference_number: item.reference_number || "-",
         director_submission_date: item.director_submission_date,
         subject: item.subject || "-",
-        // หน่วยงานจาก complaint โดยตรง
-        outside_department_name:
-          item.outside_department_name ||
-          item.outside_agency ||
-          item.external_agency ||
-          item.outagency ||
-          item.agency_name ||
-          item.assigned_department_name ||
-          null,
-        department_name:
-          item.department_name ||
-          item.agency ||
-          null,
-        _rawAgency:
-          item.outside_department_name ||
-          item.outside_agency ||
-          item.external_agency ||
-          item.outagency ||
-          item.agency_name ||
-          item.assigned_department_name ||
-          item.department_name ||
-          item.agency ||
-          null,
+        // หน่วยงาน
+        outside_department_name: item.outside_department_name || null,
+        department_name: item.department_name || null,
+        agency,
+        _rawAgency: agency,
         document_number: item.document_number || "-",
         status: STATUS_LABELS[item.status] || item.status || "-",
         status_original: item.status,
