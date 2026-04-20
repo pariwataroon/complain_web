@@ -147,6 +147,7 @@ export const useForwardToAgencyForm = () => {
   const [fileInputKey, setFileInputKey] = useState(0);
   const originalDepartmentIdRef = useRef(null);
   const lastDepartmentIdRef = useRef(null);
+  const savingRef = useRef(false);
 
   // Current time and user from the input
   const currentTime = "2025-09-03 07:30:42";
@@ -364,6 +365,8 @@ export const useForwardToAgencyForm = () => {
 
   const handleSave = useCallback(
   async (data) => {
+    if (savingRef.current) return;
+    savingRef.current = true;
     try {
       showLoading("กำลังบันทึกข้อมูล...");
 
@@ -503,7 +506,7 @@ export const useForwardToAgencyForm = () => {
         let lastErrorMsg = '';
         try {
           const up1 = await UploadOutgoingReportAttachments(buildFormData(false), reportId);
-          uploadOk = !!(up1 && (up1.success === true || up1.res_code === '0001'));
+          uploadOk = !!(up1 && (up1.success === true || up1.res_code === '0001' || (up1.res_code && String(up1.res_code).startsWith('2')) || up1.status === 'success'));
           if (!uploadOk) {
             lastErrorMsg = up1?.res_data?.error || up1?.res_message || up1?.message || '';
           }
@@ -514,7 +517,7 @@ export const useForwardToAgencyForm = () => {
         if (!uploadOk && Array.isArray(fileData) && fileData.length === 1) {
           try {
             const up2 = await UploadOutgoingReportAttachments(buildFormData(true), reportId);
-            uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001'));
+            uploadOk = !!(up2 && (up2.success === true || up2.res_code === '0001' || (up2.res_code && String(up2.res_code).startsWith('2')) || up2.status === 'success'));
             if (!uploadOk) {
               lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
             }
@@ -622,9 +625,11 @@ export const useForwardToAgencyForm = () => {
       // --------- END REDIRECT LOGIC ----------
 
       // --------- END REFRESH PAGE ----------
+      savingRef.current = false;
 
       return { success: true, reportId };
     } catch (error) {
+      savingRef.current = false;
       closeAlert();
       console.error("❌ Save error:", error);
 

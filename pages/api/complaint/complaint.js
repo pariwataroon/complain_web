@@ -247,10 +247,11 @@ const GetComplaintsWithSearch = async ({
   }
 };
 
-const GetComplaintsSubjectOPM = async ({ skip = 0, limit = 10, case_code }) => {
+const GetComplaintsSubjectOPM = async ({ skip = 0, limit = 10, subject }) => {
   try {
     const response = await axiosInstance.get(
-      `/complaints?${skip}&${limit}&subject=${case_code}`
+      `/complaints`,
+      { params: { skip, limit, subject } }
     );
     return response?.data;
   } catch (error) {

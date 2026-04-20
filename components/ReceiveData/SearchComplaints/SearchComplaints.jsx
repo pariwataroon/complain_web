@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableList from "@services/TableList/TableList";
 import { useRouter } from "next/router";
-import { GetEnhancedComplaints, GetComplaintByID } from "@pages/api/complaint/complaint";
+import { getDocumentStorageForWebsite } from "@pages/api/document/document";
 import dayjs from "dayjs";
 
 const breadcrumbItems = [
@@ -123,21 +123,12 @@ const SearchComplaints = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const res = await GetEnhancedComplaints({ skip: 0, limit: 10000, });
-        // ป้องกัน res_data หรือ items เป็น undefined/null
+        // ใช้ document-storage API เหมือนกับหน้าคลังเรื่องราวร้องทุกข์ (ComplaintArchives)
+        // เพื่อให้แสดงข้อมูลผู้ร้องครบถ้วนเหมือนกัน
+        const res = await getDocumentStorageForWebsite({ skip: 0, limit: 10000 });
         const items = Array.isArray(res?.res_data?.items) ? res.res_data.items : [];
 
-        // ⚠️ ลบการเรียก GetComplaintByID loop เพื่อป้องกัน API ซ้ำซ้อน
-        // ข้อมูล complainant_name ถูกส่งมาจาก /complaints/enhanced endpoint แล้ว
-        // ถ้า complainant_name ว่าง ให้แสดง "-" แทน
         const mapped = items.map((item) => {
-
-          const status =
-            item?.body?.status ??
-            item?.status ??
-            item?.step4?.general?.status ??
-            item?.step3?.general?.status ??
-            "-";
 
           const isAssigned = getIsAssigned(item);
 
@@ -147,8 +138,7 @@ const SearchComplaints = () => {
             item?.isMaster,
             item?.body?.is_master,
             item?.body?.isMaster,
-            item?.step4?.general?.is_master,
-            item?.step3?.general?.is_master,
+            item?.master_complaint?.is_master,
           ];
           let isMaster = false;
           for (const c of isMasterCandidates) {
@@ -159,10 +149,11 @@ const SearchComplaints = () => {
 
           const textColor = isMaster ? "#1565c0" : "#94ccf9ff";
 
-          const docGovRaw = item?.reference_number4 ?? "-";
-          const subjectRaw = item?.subject ?? "-";
-          // case_code (เลข นร.) ถูกเก็บไว้ใน reference_number5 สำหรับเรื่องจาก OPM
-          const caseCodeRaw = item?.reference_number5 ?? "-";
+          // ดึงชื่อเรื่องจาก subject หรือ master_complaint (เหมือน AnonymousLetterRepository)
+          const subjectRaw =
+            item?.subject ??
+            item?.issue ??
+            item?.master_complaint?.subject ?? "-";
 
           const subjectWithDot = (
             <div
@@ -170,7 +161,7 @@ const SearchComplaints = () => {
                 position: "relative",
                 minWidth: 0,
                 paddingLeft: SUBJECT_LEFT_OFFSET,
-                marginLeft: -SUBJECT_LEFT_OFFSET,   
+                marginLeft: -SUBJECT_LEFT_OFFSET,
               }}
             >
               <span
@@ -201,11 +192,20 @@ const SearchComplaints = () => {
             </div>
           );
 
-          // ใช้ชื่อผู้ร้องที่ได้จากการดึงข้อมูลเต็ม (ถ้ามี)
-          const complainantName = item?.complainant_name || "-";
+          // ดึงชื่อผู้ร้องแบบเดียวกับ AnonymousLetterRepository
+          // เพื่อให้ค้นหาเจอข้อมูลครบถ้วนเหมือนหน้าคลังบัตรสนเท่ห์
+          const complainantName =
+            item?.complainant?.government?.fullName ??
+            item?.complainant?.name ??
+            item?.claimantName ??
+            item?.complainant_name ??
+            "-";
+
+          const docGovRaw = item?.reference_number4 ?? "-";
+          const caseCodeRaw = item?.reference_number5 ?? "-";
 
           return {
-            id: item?.id ?? "-",
+            id: item?.id ?? item?.complaint_id ?? "-",
             name: (
               <span style={{ color: textColor }}>
                 {complainantName}
@@ -220,9 +220,9 @@ const SearchComplaints = () => {
             docStp: item?.reference_number3 ?? "-",
             docGov: docGovRaw,
             docGovRaw,
-            caseCode: caseCodeRaw, // เพิ่ม case_code สำหรับแสดงในตาราง
-            agency: item?.incident_location ?? "-",
-            status: status ?? "-",
+            caseCode: caseCodeRaw,
+            agency: item?.incident_location ?? item?.agency ?? "-",
+            status: item?.status ?? "-",
             is_assigned: isAssigned,
             is_master: isMaster,
             created_at: item?.created_at ?? null,

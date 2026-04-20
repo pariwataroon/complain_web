@@ -36,7 +36,7 @@ import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPicke
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportExcel } from "@utils/exportExcel";
 import * as XLSX from "xlsx-js-style";
-// --- Thai Date formatter helper ---
+// --- Thai Date formatter helper (full month) ---
 function formatThaiDate(date) {
   if (!date) return "-";
   let d = date;
@@ -53,6 +53,68 @@ function formatThaiDate(date) {
   const month = d.toLocaleString("th-TH", { month: "long" });
   const year = d.getFullYear() + 543;
   return `${day} ${month} ${year}`;
+}
+
+// --- Thai Date formatter helper (abbreviated month for Excel) ---
+function formatThaiDateShort(date) {
+  if (!date) return "-";
+  let d = date;
+  if (typeof date === "string" && !/^\d+$/.test(date)) {
+    const parsed = new Date(date);
+    if (!isNaN(parsed)) d = parsed;
+    else return date;
+  }
+  if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}/.test(d)) {
+    d = new Date(d);
+  }
+  if (typeof d === "string" && /^\d+$/.test(d)) {
+    // timestamp number
+    d = new Date(Number(d));
+  }
+  if (!(d instanceof Date) || isNaN(d)) return "-";
+  const day = d.getDate();
+  const month = d.toLocaleString("th-TH", { month: "short" });
+  const year = d.getFullYear() + 543;
+  return `${day} ${month} ${year}`;
+}
+
+// --- Extract number from receipt number (remove "mof" prefix etc.) ---
+function extractReceiptNumber(val) {
+  if (!val || val === "-") return "";
+  // ถ้าเป็น string ให้เอาเฉพาะตัวเลขและ / และ -
+  const str = String(val);
+  const match = str.match(/(\d[\d\-\/]*)/);
+  return match ? match[1] : str;
+}
+
+// --- สถานะแปลภาษาไทยสำหรับ Excel ---
+const EXPORT_STATUS_TRANSLATION = {
+  submitted: "ส่งคำร้อง",
+  sent_to_agency: "มอบหมายเจ้าหน้าที่",
+  sent_to_external: "ส่งหน่วยงานภายนอก",
+  in_process: "อยู่ระหว่างดำเนินการ",
+  in_review: "อยู่ระหว่างดำเนินการ",
+  tracking: "รอติดตาม",
+  reviewed: "แจ้งผลการพิจารณา",
+  completed: "เสร็จสิ้น",
+  done: "เสร็จสิ้น",
+  cancelled: "ยกเลิก",
+  new: "เรื่องร้องเรียนใหม่",
+  additional: "เรื่องร้องเรียนเพิ่มเติม",
+  // Thai translations for already-translated statuses (pass through)
+  "อยู่ระหว่างดำเนินการ": "อยู่ระหว่างดำเนินการ",
+  "รอติดตาม": "รอติดตาม",
+  "เสร็จสิ้น": "เสร็จสิ้น",
+  "ส่งต่อหน่วยงานภายนอก": "ส่งต่อหน่วยงานภายนอก",
+  "แจ้งผลการพิจารณา": "แจ้งผลการพิจารณา",
+  "ยกเลิก": "ยกเลิก",
+  "ส่งคำร้อง": "ส่งคำร้อง",
+  "มอบหมายเจ้าหน้าที่": "มอบหมายเจ้าหน้าที่",
+};
+
+function translateStatusForExport(status) {
+  if (!status || status === "-") return "";
+  return EXPORT_STATUS_TRANSLATION[status] || EXPORT_STATUS_TRANSLATION[status?.toLowerCase()] || status;
 }
 
 // สถานะแปลภาษาไทย (ครอบคลุมทุกค่า)
@@ -230,82 +292,74 @@ const TableWorkFollow = ({
 
   // กำหนดคอลัมน์ตามประเภทรายงาน - ตาม Template ที่ให้มา
   const getColumnHeaders = (type) => {
-    // คอลัมน์พื้นฐานที่ทุกประเภทมี
-    const baseCols = ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร."];
-    // คอลัมน์ใหม่จาก outgoing reports
-    const outgoingCols = ["ประเภทรายงาน", "อยู่ที่หน่วยงาน", "เสร็จสิ้น", "เสร็จแล้ว (วัน)"];
+    // Helper: format date for Excel - convert Thai locale date string or raw date to abbreviated Thai format
+    const fmtDate = (val) => {
+      if (!val || val === "-") return "";
+      // ถ้าเป็น Thai locale format เช่น "15/3/2569" ให้แปลงเป็น Date ก่อน
+      if (typeof val === "string" && /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(val)) {
+        const parts = val.split("/");
+        const ceYear = Number(parts[2]) - 543;
+        const d = new Date(ceYear, Number(parts[1]) - 1, Number(parts[0]));
+        return formatThaiDateShort(d);
+      }
+      return formatThaiDateShort(val);
+    };
 
     if (type === "new_complaint") {
       return {
-        columns: [...baseCols, "สถานะ", "จำนวน (วัน)", ...outgoingCols],
+        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": item.receiptNumber ?? "",
-          "ลงวันที่": item.receiptDate ?? "",
+          "เลขรับ สรร.": extractReceiptNumber(item.receiptNumber),
+          "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
-          "วันที่รับงาน": item.receiveDate ?? "",
-          "วันที่เสนองาน ผอ.สรร.": item.proposeDate ?? "",
-          "สถานะ": item.status ?? "",
+          "วันที่รับงาน": fmtDate(item.receiveDate),
+          "วันที่เสนองาน ผอ.สรร.": fmtDate(item.proposeDate),
+          "สถานะ": translateStatusForExport(item.status),
           "จำนวน (วัน)": item.elapsedDays ?? "",
-          "ประเภทรายงาน": (item.outgoingReportTypes && item.outgoingReportTypes.length > 0) ? item.outgoingReportTypes.join(", ") : "-",
-          "อยู่ที่หน่วยงาน": item.outgoingDepartment || "-",
-          "เสร็จสิ้น": item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
-          "เสร็จแล้ว (วัน)": item.completedDays !== null && item.completedDays !== undefined ? item.completedDays : "-",
         })
       };
     } else if (type === "additional_complaint") {
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "เลขที่ข้อมือ", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)", ...outgoingCols],
+        columns: ["ลำดับ", "เลขรับ สรร.", "เลขที่อ้างอิง", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": item.receiptNumber ?? "",
-          "เลขที่ข้อมือ": item.referenceNumber ?? "",
-          "ลงวันที่": item.receiptDate ?? "",
+          "เลขรับ สรร.": extractReceiptNumber(item.receiptNumber),
+          "เลขที่อ้างอิง": extractReceiptNumber(item.receiptNumber),
+          "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
-          "วันที่รับงาน": item.receiveDate ?? "",
-          "วันที่เสนองาน ผอ.สรร.": item.proposeDate ?? "",
-          "สถานะ": item.status ?? "",
+          "วันที่รับงาน": fmtDate(item.receiveDate),
+          "วันที่เสนองาน ผอ.สรร.": fmtDate(item.proposeDate),
+          "สถานะ": translateStatusForExport(item.status),
           "จำนวน (วัน)": item.elapsedDays ?? "",
-          "ประเภทรายงาน": (item.outgoingReportTypes && item.outgoingReportTypes.length > 0) ? item.outgoingReportTypes.join(", ") : "-",
-          "อยู่ที่หน่วยงาน": item.outgoingDepartment || "-",
-          "เสร็จสิ้น": item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
-          "เสร็จแล้ว (วัน)": item.completedDays !== null && item.completedDays !== undefined ? item.completedDays : "-",
         })
       };
     } else if (type === "department_decision") {
       return {
-        columns: [...baseCols, "หน่วยงาน", "จำนวน (วัน)", ...outgoingCols],
+        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "หน่วยงานภายใน", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": item.receiptNumber ?? "",
-          "ลงวันที่": item.receiptDate ?? "",
+          "เลขรับ สรร.": extractReceiptNumber(item.receiptNumber),
+          "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
-          "วันที่รับงาน": item.receiveDate ?? "",
-          "วันที่เสนองาน ผอ.สรร.": item.proposeDate ?? "",
-          "หน่วยงาน": item.agency ?? "",
+          "วันที่รับงาน": fmtDate(item.receiveDate),
+          "วันที่เสนองาน ผอ.สรร.": fmtDate(item.proposeDate),
+          "หน่วยงานภายใน": item.agency ?? "",
           "จำนวน (วัน)": item.elapsedDays ?? "",
-          "ประเภทรายงาน": (item.outgoingReportTypes && item.outgoingReportTypes.length > 0) ? item.outgoingReportTypes.join(", ") : "-",
-          "อยู่ที่หน่วยงาน": item.outgoingDepartment || "-",
-          "เสร็จสิ้น": item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
-          "เสร็จแล้ว (วัน)": item.completedDays !== null && item.completedDays !== undefined ? item.completedDays : "-",
         })
       };
     } else {
       return {
-        columns: [...baseCols, "สถานะ", "จำนวน (วัน)", ...outgoingCols],
+        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": item.receiptNumber ?? "",
-          "ลงวันที่": item.receiptDate ?? "",
+          "เลขรับ สรร.": extractReceiptNumber(item.receiptNumber),
+          "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
-          "วันที่รับงาน": item.receiveDate ?? "",
-          "วันที่เสนองาน ผอ.สรร.": item.proposeDate ?? "",
-          "สถานะ": item.status ?? "",
+          "วันที่รับงาน": fmtDate(item.receiveDate),
+          "วันที่เสนองาน ผอ.สรร.": fmtDate(item.proposeDate),
+          "สถานะ": translateStatusForExport(item.status),
           "จำนวน (วัน)": item.elapsedDays ?? "",
-          "ประเภทรายงาน": (item.outgoingReportTypes && item.outgoingReportTypes.length > 0) ? item.outgoingReportTypes.join(", ") : "-",
-          "อยู่ที่หน่วยงาน": item.outgoingDepartment || "-",
-          "เสร็จสิ้น": item.isCompleted ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
-          "เสร็จแล้ว (วัน)": item.completedDays !== null && item.completedDays !== undefined ? item.completedDays : "-",
         })
       };
     }
@@ -351,19 +405,16 @@ const handleExportExcel = () => {
 
   const reportType = getFieldValue("dataType") || "";
 
-  // กำหนดชื่อไฟล์และชื่อรายงานตามประเภท
+  // กำหนดชื่อไฟล์และชื่อรายงานตามประเภท - ตาม Template
   let reportName = "ทั้งหมด";
-  let reportTitle = "การติดตามงานค้าง";
   if (reportType === "new_complaint") {
     reportName = "เรื่องร้องเรียนใหม่";
-    reportTitle = "รายงานติดตามงานค้าง (ประเภท เรื่องร้องเรียนใหม่)";
   } else if (reportType === "additional_complaint") {
-    reportName = "เรื่องร้องเรียนเพิ่มเติม";
-    reportTitle = "รายงานติดตามงานค้าง (ประเภท เรื่องร้องเรียนเพิ่มเติม)";
+    reportName = "ร้องเรียนเพิ่มเติม";
   } else if (reportType === "department_decision") {
     reportName = "ผลการพิจารณาจากหน่วยงาน";
-    reportTitle = "รายงานติดตามงานค้าง (ประเภท ผลการพิจารณาจากหน่วยงาน)";
   }
+  const reportTitle = "การติดตามงานค้าง";
 
   const filename = `${reportName}_${today}.xlsx`;
   const exportResult = getFlatExportData(reportType);
@@ -438,14 +489,8 @@ const handleExportExcel = () => {
     currentRow++;
   });
 
-  // กำหนดความกว้างคอลัมน์ - เพิ่ม columns ใหม่จาก outgoing reports
+  // กำหนดความกว้างคอลัมน์ - ตาม Template
   const colWidths = [];
-  const outgoingWidths = [
-    { wch: 18 }, // ประเภทรายงาน
-    { wch: 30 }, // อยู่ที่หน่วยงาน
-    { wch: 14 }, // เสร็จสิ้น
-    { wch: 14 }, // เสร็จแล้ว (วัน)
-  ];
   if (reportType === "new_complaint") {
     colWidths.push(
       { wch: 8 },  // ลำดับ
@@ -456,20 +501,18 @@ const handleExportExcel = () => {
       { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
       { wch: 20 }, // สถานะ
       { wch: 12 }, // จำนวน (วัน)
-      ...outgoingWidths
     );
   } else if (reportType === "additional_complaint") {
     colWidths.push(
       { wch: 8 },  // ลำดับ
       { wch: 12 }, // เลขรับ สรร.
-      { wch: 12 }, // เลขที่ข้อมือ
+      { wch: 15 }, // เลขที่อ้างอิง
       { wch: 15 }, // ลงวันที่
       { wch: 50 }, // เรื่อง
       { wch: 15 }, // วันที่รับงาน
       { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
       { wch: 20 }, // สถานะ
       { wch: 12 }, // จำนวน (วัน)
-      ...outgoingWidths
     );
   } else if (reportType === "department_decision") {
     colWidths.push(
@@ -479,9 +522,8 @@ const handleExportExcel = () => {
       { wch: 50 }, // เรื่อง
       { wch: 15 }, // วันที่รับงาน
       { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
-      { wch: 30 }, // หน่วยงาน
+      { wch: 30 }, // หน่วยงานภายใน
       { wch: 12 }, // จำนวน (วัน)
-      ...outgoingWidths
     );
   } else {
     colWidths.push(
@@ -493,7 +535,6 @@ const handleExportExcel = () => {
       { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
       { wch: 20 }, // สถานะ
       { wch: 12 }, // จำนวน (วัน)
-      ...outgoingWidths
     );
   }
   ws['!cols'] = colWidths;

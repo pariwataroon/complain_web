@@ -14,7 +14,7 @@ const Opm1111Components = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [readComplaints, setReadComplaints] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [timelineType, setTimelineType] = useState("A");  // "A" = ทั้งหมด, "I" = งานใหม่, "P" = กำลังดำเนินการ
+  const [timelineType, setTimelineType] = useState("I");  // "A" = ทั้งหมด, "I" = งานใหม่, "P" = กำลังดำเนินการ
   const router = useRouter();
 
   useEffect(() => {
@@ -99,16 +99,22 @@ const Opm1111Components = () => {
       const caseCodes = mappedComplaints.map(c => c.case_code);
 
       if (caseCodes.length > 0) {
-        const subjectStr = caseCodes.join(',');
-        const complaintsSubjectRes = await GetComplaintsSubjectOPM({
-          skip: 0,
-          limit: 10000,
-          subject: subjectStr,
-        });
+        // แบ่ง case codes เป็น batch ละ 50 เพื่อป้องกัน URL ยาวเกิน
+        const BATCH_SIZE = 50;
+        const readSubjects = new Set();
 
-        const readSubjects = new Set(
-          (complaintsSubjectRes?.res_data?.items || []).map(item => item.subject)
-        );
+        for (let i = 0; i < caseCodes.length; i += BATCH_SIZE) {
+          const batch = caseCodes.slice(i, i + BATCH_SIZE);
+          const subjectStr = batch.join(',');
+          const complaintsSubjectRes = await GetComplaintsSubjectOPM({
+            skip: 0,
+            limit: 10000,
+            subject: subjectStr,
+          });
+
+          const batchReadSubjects = (complaintsSubjectRes?.res_data?.items || []).map(item => item.subject);
+          batchReadSubjects.forEach(s => readSubjects.add(s));
+        }
 
         const complaintsWithReadStatus = mappedComplaints.map(item => ({
           ...item,

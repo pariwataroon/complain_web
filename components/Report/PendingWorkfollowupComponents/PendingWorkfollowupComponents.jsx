@@ -226,23 +226,15 @@ const PendingWorkfollowupComponents = () => {
     setSelectedDepartment(value);
     setSelectedDepartmentLabel(label);
 
-    console.log('Department Change:', {
-      departmentData,
-      value,
-      label: label
-    });
-
     // ถ้าค่าว่าง ให้ clear ข้อมูลและรีเซ็ตการกรอง
     if (!value || value === "") {
       const transformedData = transformComplaintsData(allComplaints);
       setFilteredComplaints(transformedData);
-      console.log('Reset filter - showing all data:', transformedData.length, 'items');
     } else {
-      // กรองข้อมูลทันทีเมื่อเลือกหน่วยงาน
-      handleSearch({
-        ...filters,
-        agency: label
-      });
+      // กรองข้อมูลทันทีเมื่อเลือกหน่วยงาน - ต้องใช้ label ที่ได้จาก departmentData
+      // เก็บ filters ปัจจุบันจาก TableWorkFollow โดยไม่เพิ่ม agency เข้าไปใน filters
+      // เพราะ agency ถูกกรองแยกผ่าน selectedDepartmentLabel อยู่แล้ว
+      applyFiltersWithDepartment(label);
     }
   };
 
@@ -260,8 +252,8 @@ const PendingWorkfollowupComponents = () => {
     return isNaN(d.getTime()) ? null : d;
   }
 
-  // ฟิลเตอร์ข้อมูลจาก filterData
-  const handleSearch = (filterData) => {
+  // ฟังก์ชันกรองข้อมูลหลัก - รองรับ departmentLabel แบบส่งผ่านพารามิเตอร์
+  const applyFilters = (filterData, departmentLabel) => {
     // แปลงข้อมูลและใช้เป็นฐานการกรอง
     const transformedData = transformComplaintsData(allComplaints);
     let result = [...transformedData];
@@ -293,37 +285,52 @@ const PendingWorkfollowupComponents = () => {
       result = result.filter((item) => item.assigned_officer_name === filterData.officer);
     }
 
-    // filter หน่วยงาน (ใช้ฟังก์ชัน helper)
-    if (selectedDepartmentLabel && selectedDepartmentLabel !== "") {
-      result = result.filter((item) => matchDepartment(item, selectedDepartmentLabel));
+    // filter หน่วยงาน (ใช้ค่าที่ส่งมาจากพารามิเตอร์)
+    const deptLabel = departmentLabel || "";
+    if (deptLabel !== "") {
+      result = result.filter((item) => matchDepartment(item, deptLabel));
     }
 
     // filter ประเภทเรื่อง - แก้ไขให้ตรงกับค่าที่ API ส่งมา
     if (filterData.dataType && filterData.dataType !== "") {
-      console.log('Filtering by dataType:', filterData.dataType);
-      console.log('Sample filing_type values:', result.slice(0, 5).map(item => item.filing_type_original));
-
       if (filterData.dataType === "new_complaint") {
-        // เรื่องร้องเรียนใหม่ - API ส่งมาเป็น "new" (เป็น string ธรรมดา)
         result = result.filter((item) => {
           const ft = (item.filing_type_original || "").toString().toLowerCase();
           return ft === "new";
         });
       } else if (filterData.dataType === "additional_complaint") {
-        // เรื่องร้องเรียนเพิ่มเติม - API ส่งมาเป็น "additional"
         result = result.filter((item) => {
           const ft = (item.filing_type_original || "").toString().toLowerCase();
           return ft === "additional";
         });
       } else if (filterData.dataType === "department_decision") {
-        // ผลการพิจารณาจากหน่วยงาน - กรองด้วย status (tracking = ติดตามผลการพิจารณา)
         result = result.filter((item) => {
           const st = (item.status_original || "").toString().toLowerCase();
-          // tracking = ติดตามผลการพิจารณา, reviewed = แจ้งผลการพิจารณา
-          return st === "tracking" || st === "reviewed";
+          const ft = (item.filing_type_original || "").toString().toLowerCase();
+          return (st === "tracking" || st === "reviewed") && ft !== "additional";
         });
       }
-      console.log('Filtered result count:', result.length);
+    }
+
+    setFilteredComplaints(result);
+  };
+
+  // ฟิลเตอร์ข้อมูลจาก filterData (ถูกเรียกจาก TableWorkFollow search button)
+  const handleSearch = (filterData) => {
+    applyFilters(filterData, selectedDepartmentLabel);
+  };
+
+  // ฟิลเตอร์ข้อมูลเมื่อเลือกหน่วยงาน (กรองทันที)
+  const applyFiltersWithDepartment = (departmentLabel) => {
+    // ใช้ filters ปัจจุบันจาก TableWorkFollow
+    // เนื่องจาก filters อยู่ใน TableWorkFollow component เราต้องกรองจาก allComplaints ใหม่
+    // โดยใช้ departmentLabel ที่ส่งมา
+    const transformedData = transformComplaintsData(allComplaints);
+    let result = [...transformedData];
+
+    // filter เฉพาะหน่วยงาน
+    if (departmentLabel && departmentLabel !== "") {
+      result = result.filter((item) => matchDepartment(item, departmentLabel));
     }
 
     setFilteredComplaints(result);
@@ -491,9 +498,15 @@ const PendingWorkfollowupComponents = () => {
         ? new Date(item.assigned_date).toLocaleDateString("th-TH")
         : "-",
       referenceNumber: item.reference_number || "-",
-      proposeDate: item.director_submission_date
-        ? new Date(item.director_submission_date).toLocaleDateString("th-TH")
-        : "-",
+      proposeDate: (() => {
+        // สำหรับ status = "tracking" (ยังรอผลจากหน่วยงาน = งานยังไม่เสร็จ) ให้แสดง "-"
+        // เพราะ director_submission_date เป็นวันที่จากขั้นตอนก่อนหน้า ไม่ใช่วันที่เกี่ยวกับผลจากหน่วยงาน
+        const st = (item.status_original || "").toString().toLowerCase();
+        if (st === "tracking") return "-";
+        return item.director_submission_date
+          ? new Date(item.director_submission_date).toLocaleDateString("th-TH")
+          : "-";
+      })(),
       complaint: item.subject || "-",
       receiveDate: item.assigned_date
         ? new Date(item.assigned_date).toLocaleDateString("th-TH")
@@ -625,9 +638,21 @@ const PendingWorkfollowupComponents = () => {
                 value={selectedDepartment}
                 onChange={(e) => {
                   const newValue = e.target.value;
-                  handleDepartmentChange({ value: newValue });
+                  // ถ้าค่าว่าง = clear ให้ reset ทั้ง value และ label
+                  if (!newValue) {
+                    handleDepartmentChange(null);
+                  }
+                  // ถ้ามีค่า จะจัดการผ่าน onDepartmentSelect แทน (จะได้ label ด้วย)
                 }}
-                onDepartmentSelect={handleDepartmentChange}
+                onDepartmentSelect={(departmentData) => {
+                  if (!departmentData) {
+                    // clear
+                    handleDepartmentChange(null);
+                  } else {
+                    // เลือกหน่วยงาน - ส่งทั้ง value และ label
+                    handleDepartmentChange(departmentData);
+                  }
+                }}
                 name="department"
               />
             ),

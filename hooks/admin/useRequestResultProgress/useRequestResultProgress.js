@@ -456,6 +456,7 @@ export const useRequestResultProgress = () => {
     // ---- SAVE ----
   const handleSave = useCallback(
     async (overrides = {}) => {
+      if (isLoading) return;
       const state = { ...form, ...overrides };
 
       // Validate required fields
@@ -581,7 +582,7 @@ export const useRequestResultProgress = () => {
           };
           try {
             const up1 = await UploadOutgoingReport3Attachments(buildFormData(false), createdId);
-            uploadOk = !!(up1 && (up1.success === true || up1.res_code === "0001"));
+            uploadOk = !!(up1 && (up1.success === true || up1.res_code === "0001" || (up1.res_code && String(up1.res_code).startsWith('2')) || up1.status === 'success'));
             if (!uploadOk) {
               lastErrorMsg = up1?.res_data?.error || up1?.res_message || up1?.message || "";
             }
@@ -593,7 +594,7 @@ export const useRequestResultProgress = () => {
           if (!uploadOk && attachmentFiles.length === 1) {
             try {
               const up2 = await UploadOutgoingReport3Attachments(buildFormData(true), createdId);
-              uploadOk = !!(up2 && (up2.success === true || up2.res_code === "0001"));
+              uploadOk = !!(up2 && (up2.success === true || up2.res_code === "0001" || (up2.res_code && String(up2.res_code).startsWith('2')) || up2.status === 'success'));
               if (!uploadOk) {
                 lastErrorMsg = up2?.res_data?.error || up2?.res_message || up2?.message || lastErrorMsg;
               }
@@ -640,7 +641,7 @@ export const useRequestResultProgress = () => {
 
         // --------- REDIRECT LOGIC AFTER SUBMIT ----------
         const returnUrl = router?.query?.returnUrl || router?.query?.from;
-        const cid = router?.query?.complaint_id || router?.query?.id || data.complaint_id;
+        const cid = router?.query?.complaint_id || router?.query?.id || state.complaint_id || form.complaint_id;
 
         if (cid) {
           router.push(`/admin/box/list/${cid}`);

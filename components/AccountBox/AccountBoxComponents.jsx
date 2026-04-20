@@ -242,7 +242,12 @@ const AccountBoxComponents = () => {
           idx === self.findIndex((r) => r?.staff_info?.id === row?.staff_info?.id)
       );
 
-      const nextStaff = uniqueStaff.map((row, idx) => {
+      // ซ่อน Admin ออกจากรายการ
+      const visibleStaff = uniqueStaff.filter(
+        (row) => row?.staff_info?.id !== "79beef1a-8c90-4bf5-8b10-a20e646bdac6"
+      );
+
+      const nextStaff = visibleStaff.map((row, idx) => {
         const info = row?.staff_info ?? {};
         const wl = row?.workload ?? {};
         const wsc = wl?.status_counts ?? {};
@@ -304,7 +309,7 @@ const AccountBoxComponents = () => {
 
       // ✅ อัปเดต summaryState ด้วยค่าที่คำนวณใหม่
       setSummaryState({
-        total_staff: Number(apiSummary.total_staff ?? 0),
+        total_staff: nextStaff.length,
         total_complaints: calculatedTotalComplaints, // ใช้ค่าที่คำนวณจาก staff_data
         in_progress_cases: calculatedInProgressCases, // คงค้างจาก staff_data
         closed_cases: calculatedClosedCases, // สำเร็จจาก staff_data
