@@ -74,6 +74,7 @@ def get_pending_tasks_report(
         db.query(
             Complaint.id.label("id"),
             Complaint.complaint_number.label("receive_reference_number"),
+            Complaint.reference_number.label("complaint_reference_number"),
             func.coalesce(Complaint.reference_number4, Complaint.reference_number).label("reference_number"),
             Complaint.subject.label("subject"),
             Complaint.assigned_date.label("assigned_date"),
@@ -361,6 +362,7 @@ def get_pending_tasks_report(
             {
                 "id": cid,
                 "receive_reference_number": r.receive_reference_number,
+                "complaint_reference_number": r.complaint_reference_number,
                 "reference_number": r.reference_number,
                 "parent_complaint_number": r.parent_complaint_number,
                 "subject": r.subject,
