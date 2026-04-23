@@ -56,42 +56,46 @@ def get_pending_tasks_report(
     # ไม่รวม COMPLETED (เสร็จสิ้น), CANCELLED (ยกเลิก), SUBMITTED (ส่งคำร้อง) ถ้าต้องการกรองเฉพาะที่กำลังดำเนินการ
 
     # ---------- Subqueries: department_name (internal) ----------
-    # รวมชื่อหน่วยงานภายในจาก OR/OR2/OR4 แล้วเลือกอันที่ created_at ใหม่สุด
-    or1_q = (
-        db.query(Department.name.label("name"), OutgoingReport.created_at.label("created_at"))
+    # ใช้ individual correlated subqueries สำหรับแต่ละตาราง OutgoingReport
+    # (ไม่ใช้ UNION subquery เพราะ .subquery() จะทำให้ correlation หาย)
+    or1_dept_name = (
+        db.query(Department.name)
         .join(Department, Department.id == OutgoingReport.department_id)
         .filter(
             OutgoingReport.complaint_id == Complaint.id,
             OutgoingReport.is_active == True,
-            # OutgoingReport.department_id.isnot(None),
         )
-    )
-    or2_q = (
-        db.query(Department.name.label("name"), OutgoingReport2.created_at.label("created_at"))
-        .join(Department, Department.id == OutgoingReport2.department_id)
-        .filter(
-            OutgoingReport2.complaint_id == Complaint.id,
-            OutgoingReport2.is_active == True,
-            # OutgoingReport2.department_id.isnot(None),
-        )
-    )
-    or4_q = (
-        db.query(Department.name.label("name"), OutgoingReport4.created_at.label("created_at"))
-        .join(Department, Department.id == OutgoingReport4.department_id)
-        .filter(
-            OutgoingReport4.complaint_id == Complaint.id,
-            OutgoingReport4.is_active == True,
-            # OutgoingReport4.department_id.isnot(None),
-        )
-    )
-    internal_union = or1_q.union_all(or2_q, or4_q).subquery()
-    latest_internal_dept_name = (
-        db.query(internal_union.c.name)
-        .order_by(internal_union.c.created_at.desc())
+        .order_by(OutgoingReport.created_at.desc())
         .limit(1)
         .correlate(Complaint)
         .scalar_subquery()
     )
+    or2_dept_name = (
+        db.query(Department.name)
+        .join(Department, Department.id == OutgoingReport2.department_id)
+        .filter(
+            OutgoingReport2.complaint_id == Complaint.id,
+            OutgoingReport2.is_active == True,
+        )
+        .order_by(OutgoingReport2.created_at.desc())
+        .limit(1)
+        .correlate(Complaint)
+        .scalar_subquery()
+    )
+    or4_dept_name = (
+        db.query(Department.name)
+        .join(Department, Department.id == OutgoingReport4.department_id)
+        .filter(
+            OutgoingReport4.complaint_id == Complaint.id,
+            OutgoingReport4.is_active == True,
+        )
+        .order_by(OutgoingReport4.created_at.desc())
+        .limit(1)
+        .correlate(Complaint)
+        .scalar_subquery()
+    )
+    # COALESCE: เอา department จาก OR1, OR2, OR4 (อันไหนมีค่าก่อน)
+    latest_internal_dept_name = func.coalesce(or1_dept_name, or2_dept_name, or4_dept_name)
 
     # ---------- Fallback: agency_sender → OutsideDepartment name (เหมือนหน้าคลัง) ----------
     # ใช้ TRY_CAST เพื่อป้องกัน error ตอน agency_sender ไม่ใช่ UUID
@@ -106,32 +110,32 @@ def get_pending_tasks_report(
     )
 
     # ---------- Subqueries: outside_department_name (external) ----------
-    out2_q = (
-        db.query(OutsideDepartment.name.label("name"), OutgoingReport2.created_at.label("created_at"))
+    # ใช้ individual correlated subqueries (เหมือน department_name)
+    out2_dept_name = (
+        db.query(OutsideDepartment.name)
         .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport2.outside_department_id)
         .filter(
             OutgoingReport2.complaint_id == Complaint.id,
             OutgoingReport2.is_active == True,
-            # OutgoingReport2.outside_department_id.isnot(None),
         )
-    )
-    out4_q = (
-        db.query(OutsideDepartment.name.label("name"), OutgoingReport4.created_at.label("created_at"))
-        .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport4.outside_department_id)
-        .filter(
-            OutgoingReport4.complaint_id == Complaint.id,
-            OutgoingReport4.is_active == True,
-            # OutgoingReport4.outside_department_id.isnot(None),
-        )
-    )
-    outside_union = out2_q.union_all(out4_q).subquery()
-    latest_outside_dept_name = (
-        db.query(outside_union.c.name)
-        .order_by(outside_union.c.created_at.desc())
+        .order_by(OutgoingReport2.created_at.desc())
         .limit(1)
         .correlate(Complaint)
         .scalar_subquery()
     )
+    out4_dept_name = (
+        db.query(OutsideDepartment.name)
+        .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport4.outside_department_id)
+        .filter(
+            OutgoingReport4.complaint_id == Complaint.id,
+            OutgoingReport4.is_active == True,
+        )
+        .order_by(OutgoingReport4.created_at.desc())
+        .limit(1)
+        .correlate(Complaint)
+        .scalar_subquery()
+    )
+    latest_outside_dept_name = func.coalesce(out2_dept_name, out4_dept_name)
 
     # ---------- Subquery: เริ่มนับเวลาจากประวัติของสถานะปัจจุบัน ----------
     latest_phase_start = (
