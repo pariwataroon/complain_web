@@ -493,48 +493,48 @@ const handleExportExcel = () => {
   const colWidths = [];
   if (reportType === "new_complaint") {
     colWidths.push(
-      { wch: 8 },  // ลำดับ
-      { wch: 12 }, // เลขรับ สรร.
-      { wch: 15 }, // ลงวันที่
-      { wch: 50 }, // เรื่อง
-      { wch: 15 }, // วันที่รับงาน
-      { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
-      { wch: 20 }, // สถานะ
-      { wch: 12 }, // จำนวน (วัน)
+      { wch: 4 },  // ลำดับ
+      { wch: 8 },  // เลขรับ สรร.
+      { wch: 10 }, // ลงวันที่
+      { wch: 22 }, // เรื่อง
+      { wch: 10 }, // วันที่รับงาน
+      { wch: 10 }, // วันที่เสนองาน ผอ.สรร.
+      { wch: 12 }, // สถานะ
+      { wch: 6 },  // จำนวน (วัน)
     );
   } else if (reportType === "additional_complaint") {
     colWidths.push(
-      { wch: 8 },  // ลำดับ
-      { wch: 12 }, // เลขรับ สรร.
-      { wch: 15 }, // เลขที่อ้างอิง
-      { wch: 15 }, // ลงวันที่
-      { wch: 50 }, // เรื่อง
-      { wch: 15 }, // วันที่รับงาน
-      { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
-      { wch: 20 }, // สถานะ
-      { wch: 12 }, // จำนวน (วัน)
+      { wch: 4 },  // ลำดับ
+      { wch: 8 },  // เลขรับ สรร.
+      { wch: 8 },  // เลขที่อ้างอิง
+      { wch: 10 }, // ลงวันที่
+      { wch: 20 }, // เรื่อง
+      { wch: 10 }, // วันที่รับงาน
+      { wch: 10 }, // วันที่เสนองาน ผอ.สรร.
+      { wch: 10 }, // สถานะ
+      { wch: 6 },  // จำนวน (วัน)
     );
   } else if (reportType === "department_decision") {
     colWidths.push(
-      { wch: 8 },  // ลำดับ
-      { wch: 12 }, // เลขรับ สรร.
-      { wch: 15 }, // ลงวันที่
-      { wch: 50 }, // เรื่อง
-      { wch: 15 }, // วันที่รับงาน
-      { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
-      { wch: 30 }, // หน่วยงานภายใน
-      { wch: 12 }, // จำนวน (วัน)
+      { wch: 4 },  // ลำดับ
+      { wch: 8 },  // เลขรับ สรร.
+      { wch: 10 }, // ลงวันที่
+      { wch: 22 }, // เรื่อง
+      { wch: 10 }, // วันที่รับงาน
+      { wch: 10 }, // วันที่เสนองาน ผอ.สรร.
+      { wch: 16 }, // หน่วยงานภายใน
+      { wch: 6 },  // จำนวน (วัน)
     );
   } else {
     colWidths.push(
-      { wch: 8 },  // ลำดับ
-      { wch: 12 }, // เลขรับ สรร.
-      { wch: 15 }, // ลงวันที่
-      { wch: 50 }, // เรื่อง
-      { wch: 15 }, // วันที่รับงาน
-      { wch: 18 }, // วันที่เสนองาน ผอ.สรร.
-      { wch: 20 }, // สถานะ
-      { wch: 12 }, // จำนวน (วัน)
+      { wch: 4 },  // ลำดับ
+      { wch: 8 },  // เลขรับ สรร.
+      { wch: 10 }, // ลงวันที่
+      { wch: 22 }, // เรื่อง
+      { wch: 10 }, // วันที่รับงาน
+      { wch: 10 }, // วันที่เสนองาน ผอ.สรร.
+      { wch: 12 }, // สถานะ
+      { wch: 6 },  // จำนวน (วัน)
     );
   }
   ws['!cols'] = colWidths;
@@ -577,9 +577,8 @@ const handleExportExcel = () => {
           wrapText: true
         };
         ws[cellAddress].s.font = {
-          name: "TH Sarabun",
-          bold: true,
-          sz: 13
+          name: "Cordia New",
+          sz: 14
         };
       }
       // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์) - ไม่ใส่เส้นตาราง
@@ -590,9 +589,8 @@ const handleExportExcel = () => {
           wrapText: true
         };
         ws[cellAddress].s.font = {
-          name: "TH Sarabun",
-          bold: true,
-          sz: 13
+          name: "Cordia New",
+          sz: 14
         };
       }
       // แถวข้อมูล - ใส่เส้นตาราง
@@ -603,9 +601,8 @@ const handleExportExcel = () => {
         if (officerRows.has(R)) {
           // แถวเจ้าหน้าที่
           ws[cellAddress].s.font = {
-            name: "TH Sarabun",
-            bold: true,
-            sz: 13
+            name: "Cordia New",
+            sz: 14
           };
           ws[cellAddress].s.alignment = {
             horizontal: "left",
@@ -613,46 +610,38 @@ const handleExportExcel = () => {
             wrapText: true
           };
         } else {
-          // แถวข้อมูลปกติ
-          if (C === 0) {
-            // คอลัมน์ลำดับ จัดกลาง
-            ws[cellAddress].s.alignment = {
-              horizontal: "center",
-              vertical: "center",
-              wrapText: true
-            };
-          } else {
-            ws[cellAddress].s.alignment = {
-              horizontal: "left",
-              vertical: "center",
-              wrapText: true
-            };
-          }
+          // แถวข้อมูลปกติ - จัดกลางทุกคอลัมน์
+          ws[cellAddress].s.alignment = {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true
+          };
           ws[cellAddress].s.font = {
-            name: "TH Sarabun",
-            sz: 13
+            name: "Cordia New",
+            sz: 14
           };
         }
       }
     }
   }
 
-  // ตั้งค่า Page Setup เป็น A4
+  // ตั้งค่า Page Setup เป็น A4 Landscape พอดีหน้า
   ws['!pageSetup'] = {
     paperSize: 9, // A4 = 9
-    orientation: "portrait",
-    fitToPage: false,
-    scale: 100,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
   };
 
-  // ตั้งค่า margins
+  // ตั้งค่า margins แคบลง
   ws['!margins'] = {
-    left: 0.5,
-    right: 0.5,
-    top: 0.5,
-    bottom: 0.5,
-    header: 0.3,
-    footer: 0.3,
+    left: 0.4,
+    right: 0.4,
+    top: 0.4,
+    bottom: 0.4,
+    header: 0.2,
+    footer: 0.2,
   };
 
   // เพิ่ม worksheet เข้า workbook
