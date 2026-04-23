@@ -108,11 +108,11 @@ const PendingWorkfollowupComponents = () => {
 
       let agency = "-";
       if (isDepartmentDecision) {
-        // ผลการพิจารณาจากหน่วยงาน - ใช้หน่วยงานภายนอก
-        agency = item.outside_department_name || "-";
+        // ผลการพิจารณาจากหน่วยงาน - ใช้หน่วยงานภายนอก, fallback เป็นหน่วยงานภายใน
+        agency = item.outside_department_name || item.department_name || "-";
       } else {
-        // เรื่องร้องเรียนใหม่/เพิ่มเติม - ใช้หน่วยงานในสังกัด
-        agency = item.department_name || "-";
+        // เรื่องร้องเรียนใหม่/เพิ่มเติม - ใช้หน่วยงานในสังกัด, fallback เป็นหน่วยงานภายนอก
+        agency = item.department_name || item.outside_department_name || "-";
       }
 
       return {
@@ -501,7 +501,7 @@ const PendingWorkfollowupComponents = () => {
     return filteredComplaints.map((item) => ({
       id: item.id,
       responsibleOfficer: item.assigned_officer_name || "-",
-      receiptNumber: item.complaint_number || item.receive_reference_number || "-",
+      receiptNumber: item.complaint_reference_number || item.receive_reference_number || "-",
       receiptDate: item.assigned_date
         ? new Date(item.assigned_date).toLocaleDateString("th-TH")
         : "-",

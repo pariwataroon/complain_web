@@ -310,7 +310,7 @@ const TableWorkFollow = ({
         columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": item.letterNumber ?? "",
+          "เลขรับ สรร.": item.receiptNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
@@ -324,7 +324,7 @@ const TableWorkFollow = ({
         columns: ["ลำดับ", "เลขรับ สรร.", "เลขที่อ้างอิง", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": item.letterNumber ?? "",
+          "เลขรับ สรร.": item.receiptNumber ?? "",
           "เลขที่อ้างอิง": item.referenceNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
@@ -339,7 +339,7 @@ const TableWorkFollow = ({
         columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "หน่วยงานภายใน", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": item.letterNumber ?? "",
+          "เลขรับ สรร.": item.receiptNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
@@ -353,7 +353,7 @@ const TableWorkFollow = ({
         columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": item.letterNumber ?? "",
+          "เลขรับ สรร.": item.receiptNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
