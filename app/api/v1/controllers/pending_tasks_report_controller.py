@@ -226,89 +226,98 @@ def get_pending_tasks_report(
     )
 
     # ---------- Post-process: batch lookup department names ----------
+    # chunk size 500 เพื่อไม่ให้เกิน SQL Server parameter limit (2100)
+    # UNION ALL x3 = 3 * chunk_size params -> 500 is safe
+    CHUNK_SIZE = 500
+
     complaint_ids = [r.id for r in page_rows]
     dept_map = {}       # complaint_id -> department_name (ภายใน)
     outside_map = {}    # complaint_id -> outside_department_name (ภายนอก)
 
+    def chunk_list(lst, size):
+        for i in range(0, len(lst), size):
+            yield lst[i:i + size]
+
     if complaint_ids:
-        # --- หน่วยงานภายใน: UNION ALL outgoing_reports / outgoing_reports2 / outgoing_reports4 ---
-        or1_q = (
-            db.query(
-                OutgoingReport.complaint_id.label("cid"),
-                Department.name.label("dept_name"),
-                OutgoingReport.created_at.label("created_at"),
+        for chunk in chunk_list(complaint_ids, CHUNK_SIZE):
+            # --- หน่วยงานภายใน: UNION ALL outgoing_reports / outgoing_reports2 / outgoing_reports4 ---
+            or1_q = (
+                db.query(
+                    OutgoingReport.complaint_id.label("cid"),
+                    Department.name.label("dept_name"),
+                    OutgoingReport.created_at.label("created_at"),
+                )
+                .join(Department, Department.id == OutgoingReport.department_id)
+                .filter(OutgoingReport.complaint_id.in_(chunk), OutgoingReport.is_active == True)
             )
-            .join(Department, Department.id == OutgoingReport.department_id)
-            .filter(OutgoingReport.complaint_id.in_(complaint_ids), OutgoingReport.is_active == True)
-        )
-        or2_q = (
-            db.query(
-                OutgoingReport2.complaint_id.label("cid"),
-                Department.name.label("dept_name"),
-                OutgoingReport2.created_at.label("created_at"),
+            or2_q = (
+                db.query(
+                    OutgoingReport2.complaint_id.label("cid"),
+                    Department.name.label("dept_name"),
+                    OutgoingReport2.created_at.label("created_at"),
+                )
+                .join(Department, Department.id == OutgoingReport2.department_id)
+                .filter(OutgoingReport2.complaint_id.in_(chunk), OutgoingReport2.is_active == True)
             )
-            .join(Department, Department.id == OutgoingReport2.department_id)
-            .filter(OutgoingReport2.complaint_id.in_(complaint_ids), OutgoingReport2.is_active == True)
-        )
-        or4_q = (
-            db.query(
-                OutgoingReport4.complaint_id.label("cid"),
-                Department.name.label("dept_name"),
-                OutgoingReport4.created_at.label("created_at"),
+            or4_q = (
+                db.query(
+                    OutgoingReport4.complaint_id.label("cid"),
+                    Department.name.label("dept_name"),
+                    OutgoingReport4.created_at.label("created_at"),
+                )
+                .join(Department, Department.id == OutgoingReport4.department_id)
+                .filter(OutgoingReport4.complaint_id.in_(chunk), OutgoingReport4.is_active == True)
             )
-            .join(Department, Department.id == OutgoingReport4.department_id)
-            .filter(OutgoingReport4.complaint_id.in_(complaint_ids), OutgoingReport4.is_active == True)
-        )
 
-        all_depts = or1_q.union_all(or2_q, or4_q).subquery()
-        latest_dept = (
-            db.query(
-                all_depts.c.cid,
-                all_depts.c.dept_name,
-                func.row_number().over(
-                    partition_by=all_depts.c.cid,
-                    order_by=all_depts.c.created_at.desc()
-                ).label("rn"),
-            )
-        ).subquery()
+            all_depts = or1_q.union_all(or2_q, or4_q).subquery()
+            latest_dept = (
+                db.query(
+                    all_depts.c.cid,
+                    all_depts.c.dept_name,
+                    func.row_number().over(
+                        partition_by=all_depts.c.cid,
+                        order_by=all_depts.c.created_at.desc()
+                    ).label("rn"),
+                )
+            ).subquery()
 
-        for row in db.query(latest_dept).filter(latest_dept.c.rn == 1).all():
-            dept_map[str(row.cid)] = row.dept_name
+            for row in db.query(latest_dept).filter(latest_dept.c.rn == 1).all():
+                dept_map[str(row.cid)] = row.dept_name
 
-        # --- หน่วยงานภายนอก: UNION ALL outgoing_reports2 / outgoing_reports4 ---
-        out2_q = (
-            db.query(
-                OutgoingReport2.complaint_id.label("cid"),
-                OutsideDepartment.name.label("dept_name"),
-                OutgoingReport2.created_at.label("created_at"),
+            # --- หน่วยงานภายนอก: UNION ALL outgoing_reports2 / outgoing_reports4 ---
+            out2_q = (
+                db.query(
+                    OutgoingReport2.complaint_id.label("cid"),
+                    OutsideDepartment.name.label("dept_name"),
+                    OutgoingReport2.created_at.label("created_at"),
+                )
+                .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport2.outside_department_id)
+                .filter(OutgoingReport2.complaint_id.in_(chunk), OutgoingReport2.is_active == True)
             )
-            .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport2.outside_department_id)
-            .filter(OutgoingReport2.complaint_id.in_(complaint_ids), OutgoingReport2.is_active == True)
-        )
-        out4_q = (
-            db.query(
-                OutgoingReport4.complaint_id.label("cid"),
-                OutsideDepartment.name.label("dept_name"),
-                OutgoingReport4.created_at.label("created_at"),
+            out4_q = (
+                db.query(
+                    OutgoingReport4.complaint_id.label("cid"),
+                    OutsideDepartment.name.label("dept_name"),
+                    OutgoingReport4.created_at.label("created_at"),
+                )
+                .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport4.outside_department_id)
+                .filter(OutgoingReport4.complaint_id.in_(chunk), OutgoingReport4.is_active == True)
             )
-            .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport4.outside_department_id)
-            .filter(OutgoingReport4.complaint_id.in_(complaint_ids), OutgoingReport4.is_active == True)
-        )
 
-        all_out = out2_q.union_all(out4_q).subquery()
-        latest_out = (
-            db.query(
-                all_out.c.cid,
-                all_out.c.dept_name,
-                func.row_number().over(
-                    partition_by=all_out.c.cid,
-                    order_by=all_out.c.created_at.desc()
-                ).label("rn"),
-            )
-        ).subquery()
+            all_out = out2_q.union_all(out4_q).subquery()
+            latest_out = (
+                db.query(
+                    all_out.c.cid,
+                    all_out.c.dept_name,
+                    func.row_number().over(
+                        partition_by=all_out.c.cid,
+                        order_by=all_out.c.created_at.desc()
+                    ).label("rn"),
+                )
+            ).subquery()
 
-        for row in db.query(latest_out).filter(latest_out.c.rn == 1).all():
-            outside_map[str(row.cid)] = row.dept_name
+            for row in db.query(latest_out).filter(latest_out.c.rn == 1).all():
+                outside_map[str(row.cid)] = row.dept_name
 
     # --- Fallback: agency_sender -> OutsideDepartment ---
     agency_dept_map = {}
