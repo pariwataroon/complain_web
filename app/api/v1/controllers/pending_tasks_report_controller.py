@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 from typing import Optional
 from sqlalchemy.orm import Session, aliased
-from sqlalchemy import func, or_, case, and_
+from sqlalchemy import func, or_, case, and_, text
 
 from models.comp_complaint import Complaint, ComplaintStatus
 from models.outgoing_reports import OutgoingReport
@@ -93,6 +93,18 @@ def get_pending_tasks_report(
         .scalar_subquery()
     )
 
+    # ---------- Fallback: agency_sender → OutsideDepartment name (เหมือนหน้าคลัง) ----------
+    # ใช้ TRY_CAST เพื่อป้องกัน error ตอน agency_sender ไม่ใช่ UUID
+    agency_sender_dept_name = (
+        db.query(OutsideDepartment.name)
+        .filter(
+            text("outside_departments.id = TRY_CAST(comp_complaints.agency_sender AS uniqueidentifier)"),
+            OutsideDepartment.is_active == True,
+        )
+        .correlate(Complaint)
+        .scalar_subquery()
+    )
+
     # ---------- Subqueries: outside_department_name (external) ----------
     out2_q = (
         db.query(OutsideDepartment.name.label("name"), OutgoingReport2.created_at.label("created_at"))
@@ -149,8 +161,8 @@ def get_pending_tasks_report(
             Complaint.subject.label("subject"),
             Complaint.assigned_date.label("assigned_date"),
             Complaint.director_submission_date.label("director_submission_date"),
-            # department_name: เอาชื่อหน่วยงานภายในล่าสุด ถ้าไม่มีก็ fallback เป็นช่อง assigned_to เดิม
-            func.coalesce(latest_internal_dept_name, Complaint.assigned_to).label("department_name"),
+            # department_name: เอาชื่อหน่วยงานภายในล่าสุดจาก OR/OR2/OR4, fallback เป็น agency_sender → OutsideDepartment (เหมือนหน้าคลัง)
+            func.coalesce(latest_internal_dept_name, agency_sender_dept_name).label("department_name"),
             # outside_department_name: เอาจาก union ล่าสุดของ OR2/OR4
             latest_outside_dept_name.label("outside_department_name"),
             Complaint.document_number.label("document_number"),
