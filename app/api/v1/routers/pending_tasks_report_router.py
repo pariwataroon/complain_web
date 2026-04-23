@@ -1,3 +1,4 @@
+import traceback as tb
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -8,6 +9,9 @@ from app.api.middleware.jwt_verify import verify_token
 from app.api.v1.controllers.pending_tasks_report_controller import get_pending_tasks_report
 from lib.format_data import FormatResponseModel, format_response
 from app.api.middleware.permission_middleware import can_read
+from lib.logger import get_logger
+
+logger = get_logger("pending_tasks_router")
 
 router = APIRouter(
     prefix="/reports/pending-tasks",
@@ -56,4 +60,5 @@ def list_pending_tasks(
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"Pending tasks error: {type(e).__name__}: {repr(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
