@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 from typing import Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, or_, case, and_
 
 from models.comp_complaint import Complaint, ComplaintStatus
@@ -136,6 +136,9 @@ def get_pending_tasks_report(
     # ใช้ phase_start -> assigned_date -> created_at
     start_ref = func.coalesce(latest_phase_start, Complaint.assigned_date, Complaint.created_at)
 
+    # ---------- Alias สำหรับ parent complaint ----------
+    ParentComplaint = aliased(Complaint)
+
     # ---------- สร้าง ordered_subq ----------
     assigned_nulls_last = case((Complaint.assigned_date.is_(None), 1), else_=0).asc()
     ordered_subq = (
@@ -156,6 +159,7 @@ def get_pending_tasks_report(
             Complaint.assigned_officer_id.label("assigned_officer_id"),
             Complaint.complaint_filing_type.label("filing_type"),  # เพิ่ม filing_type
             Complaint.processing_notes.label("assigned_remark"),  # เพิ่ม remark
+            ParentComplaint.complaint_number.label("parent_complaint_number"),  # เลขอ้างอิง (เรื่องต้นเรื่อง)
             start_ref.label("start_ref"),
             func.row_number()
             .over(order_by=(assigned_nulls_last, Complaint.assigned_date.desc(), Complaint.created_at.desc()))
@@ -163,6 +167,7 @@ def get_pending_tasks_report(
         )
         .select_from(Complaint)
         .outerjoin(User, Complaint.assigned_officer_id == User.id)
+        .outerjoin(ParentComplaint, Complaint.parent_complaint_id == ParentComplaint.id)  # join parent
         .filter(Complaint.status.in_(PENDING_STATUSES))
     )
 
@@ -327,6 +332,7 @@ def get_pending_tasks_report(
                 "id": str(r.id),
                 "receive_reference_number": r.receive_reference_number,
                 "reference_number": r.reference_number,
+                "parent_complaint_number": r.parent_complaint_number,  # เลขอ้างอิง (เรื่องต้นเรื่อง)
                 "subject": r.subject,
                 "assigned_date": r.assigned_date,
                 "director_submission_date": r.director_submission_date,

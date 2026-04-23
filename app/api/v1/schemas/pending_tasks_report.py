@@ -8,6 +8,7 @@ class PendingTaskItem(BaseModel):
     id: UUID
     receive_reference_number: Optional[str] = None  # เลขรับ สรร. (reference_number4)
     reference_number: Optional[str] = None  # เลขที่อ้างอิง
+    parent_complaint_number: Optional[str] = None  # เลขอ้างอิง (เลขเรื่องต้นเรื่อง)
     subject: Optional[str] = None  # เรื่อง
     assigned_date: Optional[datetime] = None  # วันที่รับงาน
     director_submission_date: Optional[datetime] = None  # วันที่เสนอ ผอ.สรร.
