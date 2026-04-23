@@ -4,6 +4,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import { getDocumentStorageForWebsite } from "@pages/api/document/document";
+import { GetEnhancedComplaints } from "@pages/api/complaint/complaint";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 
@@ -77,7 +78,7 @@ const displayOrDash = (v) =>
   v === undefined || v === null || v === "" ? "-" : v;
 
 /* ---------- แปลงข้อมูลจาก API -> แถวของตาราง ---------- */
-const transformComplaintData = (apiItems) => {
+const transformComplaintData = (apiItems, documentNumberMap = {}) => {
   return apiItems.map((item) => {
     const clean = (s) =>
       typeof s === "string" ? s.trim().replace(/\s+/g, " ") : s;
@@ -128,6 +129,22 @@ const transformComplaintData = (apiItems) => {
       item.master_complaint?.complaint_number
     );
 
+    // document_number = เลขที่หนังสือ (จาก enhanced complaints API เช่น นร02690018710)
+    const documentNumber = documentNumberMap[id] || item.document_number || "";
+
+    // caseCode รวบรวมเลขอ้างอิงทั้งหมด เพื่อใช้ค้นหา
+    const allReferenceNumbers = [
+      documentNumber,
+      item.reference_number5,
+      item.reference_number4,
+      item.reference_number,
+      item.reference_number2,
+      item.reference_number3,
+      item.master_complaint?.complaint_number,
+    ].filter(v => v && v !== "" && v !== null && v !== "-");
+
+    const caseCode = allReferenceNumbers.join(" | ");
+
     // Determine master flag:
     // 1. If the API gives item.is_master explicitly, use that exact boolean.
     // 2. If undefined, check if it has a master_complaint reference:
@@ -155,6 +172,8 @@ const transformComplaintData = (apiItems) => {
       statusColor: getStatusColor(statusEn), // เพิ่มสีสำหรับแสดงผล
       note: displayOrDash(item.note),
       complaintNumber,
+      documentNumber,
+      caseCode,
       isMaster,
       complaintNumberSorn,
       created_at: item.created_at, // เก็บ created_at สำหรับ filter
@@ -293,12 +312,24 @@ const ComplaintArchives = () => {
       }
 
       if (filters.status && filters.status !== "") {
-        ok = ok && item.status === filters.status; 
+        ok = ok && item.status === filters.status;
       }
 
       if (filters.complaintNumber && filters.complaintNumber.trim() !== "") {
         const q = filters.complaintNumber.toLowerCase();
         ok = ok && (item.complaintNumber || "").toLowerCase().includes(q);
+      }
+
+      // กรองด้วยรหัสเรื่อง - ค้นหาใน documentNumber, caseCode และฟิลด์เลขอ้างอิงอื่นๆ
+      if (filters.caseCode && filters.caseCode.trim() !== "") {
+        const q = filters.caseCode.toLowerCase().trim();
+        const searchFields = [
+          item.documentNumber,
+          item.caseCode,
+          item.complaintNumber,
+          item.complaintNumberSorn,
+        ].map(v => (v || "").toLowerCase());
+        ok = ok && searchFields.some(field => field.includes(q));
       }
 
       // Filter ตามช่วงวันที่สร้าง
@@ -310,13 +341,11 @@ const ComplaintArchives = () => {
           if (!itemDate.isValid()) {
             ok = false;
           } else {
-            // ถ้ามี startDate ให้เช็คว่าวันที่สร้างต้อง >= startDate
             if (filters.startDate) {
               const start = dayjs(filters.startDate).startOf('day');
               if (itemDate.isBefore(start)) ok = false;
             }
 
-            // ถ้ามี endDate ให้เช็คว่าวันที่สร้างต้อง <= endDate
             if (filters.endDate) {
               const end = dayjs(filters.endDate).endOf('day');
               if (itemDate.isAfter(end)) ok = false;
@@ -346,11 +375,29 @@ const ComplaintArchives = () => {
     const fetchDocumentStorage = async () => {
       try {
         setLoading(true);
-        const res = await getDocumentStorageForWebsite({ skip: 0, limit: 10000 });
-        const items = res?.res_data?.items ?? [];
+
+        // ดึงข้อมูลจาก document-storage + enhanced complaints (มี document_number) พร้อมกัน
+        const [docStorageRes, enhancedRes] = await Promise.all([
+          getDocumentStorageForWebsite({ skip: 0, limit: 10000 }),
+          GetEnhancedComplaints({ skip: 0, limit: 10000 }).catch(() => null),
+        ]);
+
+        const items = docStorageRes?.res_data?.items ?? [];
+
+        // สร้าง map ของ complaint_id -> document_number จาก enhanced complaints API
+        const documentNumberMap = {};
+        if (enhancedRes?.res_data?.items) {
+          enhancedRes.res_data.items.forEach((c) => {
+            const cId = c.id || c.complaint_id;
+            const docNum = c.document_number || "";
+            if (cId && docNum) {
+              documentNumberMap[cId] = docNum;
+            }
+          });
+        }
 
         // 1) แปลงข้อมูลเพื่อแสดงผล และกรองเอาเฉพาะเรื่องร้องหลัก (ไม่แสดงเรื่องร้องเพิ่มเติม)
-        const transformed = transformComplaintData(items);
+        const transformed = transformComplaintData(items, documentNumberMap);
         const masterComplaintsOnly = transformed.filter(item => item.isMaster);
         setAllComplaints(masterComplaintsOnly);
         setFilteredComplaints(masterComplaintsOnly);
@@ -358,7 +405,6 @@ const ComplaintArchives = () => {
         // 2) สกัด options จาก API items
         const opts = extractFilterOptionsFromItems(items);
 
-        // ถ้าอยาก merge กับชุดสถานะที่รองรับทั้งหมดจากระบบ (ไม่จำกัดเฉพาะที่มีในหน้า):
         // รวมสถานะไทยจาก mapping ทั้งหมด + ที่พบจริง แล้ว unique
         const allStatusTh = Array.from(
           new Set([
@@ -379,7 +425,6 @@ const ComplaintArchives = () => {
         console.error("Error fetching document storage:", err);
         setAllComplaints([]);
         setFilteredComplaints([]);
-        // ถ้า error ให้ยังแสดงตัวเลือกสถานะจาก mapping ไว้ก่อน
         setFilterOptions((prev) => ({
           ...prev,
           statusOptions: Object.values(statusMapEnToTh).map((th) => ({
@@ -487,6 +532,11 @@ const ComplaintArchives = () => {
           {
             name: "complaintNumberSorn",
             label: "เลข สรร.",
+            type: "text",
+          },
+          {
+            name: "caseCode",
+            label: "รหัสเรื่อง",
             type: "text",
           },
           {

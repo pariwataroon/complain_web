@@ -16,10 +16,16 @@ import {
 
 // แปลง status code เป็นภาษาไทย
 const STATUS_LABELS = {
+  submitted: "ส่งคำร้อง",
+  sent_to_agency: "มอบหมายเจ้าหน้าที่",
+  sent_to_external: "ส่งต่อหน่วยงานภายนอก",
+  in_process: "อยู่ระหว่างดำเนินการ",
   in_review: "อยู่ระหว่างดำเนินการ",
   tracking: "รอติดตาม",
+  reviewed: "แจ้งผลการพิจารณา",
+  completed: "เสร็จสิ้น",
   done: "เสร็จสิ้น",
-  sent_to_external: "ส่งต่อหน่วยงานภายนอก",
+  cancelled: "ยกเลิก",
 };
 
 const FILING_TYPE_LABELS = {
@@ -92,7 +98,7 @@ const PendingWorkfollowupComponents = () => {
       }
 
       // ขั้นตอนปัจจุบัน จาก status ของ complaint
-      const statusStep = STATUS_TRANSLATION[item.status] || item.status || "-";
+      const statusStep = STATUS_TRANSLATION[(item.status || "").toLowerCase()] || item.status || "-";
 
       // กำหนดค่า agency ตามประเภทเรื่อง
       // ถ้าเป็น "ผลการพิจารณาจากหน่วยงาน" (status = tracking/reviewed) ให้ใช้หน่วยงานภายนอก (outside_department_name)
@@ -114,6 +120,8 @@ const PendingWorkfollowupComponents = () => {
         complaint_id: item.complaint_id,
         assigned_officer_name: item.assigned_officer_name || "-",
         receive_reference_number: item.receive_reference_number || "-",
+        complaint_number: item.complaint_number || item.receive_reference_number || "-",
+        parent_complaint_number: item.parent_complaint_number || "-",
         assigned_date: item.assigned_date,
         reference_number: item.reference_number || "-",
         director_submission_date: item.director_submission_date,
@@ -124,7 +132,7 @@ const PendingWorkfollowupComponents = () => {
         agency,
         _rawAgency: agency,
         document_number: item.document_number || "-",
-        status: STATUS_LABELS[item.status] || item.status || "-",
+        status: STATUS_LABELS[(item.status || "").toLowerCase()] || item.status || "-",
         status_original: item.status,
         days_in_progress: item.days_in_progress || 0,
         source: "pending_tasks",
@@ -417,7 +425,7 @@ const PendingWorkfollowupComponents = () => {
         // รีเฟรชข้อมูลจาก API เพื่อให้แน่ใจว่าข้อมูลล่าสุด
         setTimeout(async () => {
           try {
-            const response = await getPendingTasksReport();
+            const response = await getPendingTasksReport({ all_officers: true });
             const complaintsData = response || [];
 
             // แปลงข้อมูล pendingData ให้มี remark จาก assigned_remark
@@ -493,11 +501,11 @@ const PendingWorkfollowupComponents = () => {
     return filteredComplaints.map((item) => ({
       id: item.id,
       responsibleOfficer: item.assigned_officer_name || "-",
-      receiptNumber: item.receive_reference_number || "-",
+      receiptNumber: item.complaint_number || item.receive_reference_number || "-",
       receiptDate: item.assigned_date
         ? new Date(item.assigned_date).toLocaleDateString("th-TH")
         : "-",
-      referenceNumber: item.reference_number || "-",
+      referenceNumber: item.parent_complaint_number || item.reference_number || "-",
       proposeDate: (() => {
         // สำหรับ status = "tracking" (ยังรอผลจากหน่วยงาน = งานยังไม่เสร็จ) ให้แสดง "-"
         // เพราะ director_submission_date เป็นวันที่จากขั้นตอนก่อนหน้า ไม่ใช่วันที่เกี่ยวกับผลจากหน่วยงาน
@@ -516,7 +524,7 @@ const PendingWorkfollowupComponents = () => {
         : undefined,
       agency: item._rawAgency || item.outside_department_name || item.department_name || "-",
       letterNumber: item.document_number || "-",
-      status: STATUS_LABELS[item.status] || item.status || "-",
+      status: STATUS_LABELS[(item.status || "").toLowerCase()] || item.status || "-",
       elapsedDays: item.days_in_progress,
       issueType: item.subject,
       source: item.source || "pending",

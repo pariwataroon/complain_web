@@ -310,7 +310,7 @@ const TableWorkFollow = ({
         columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": extractReceiptNumber(item.receiptNumber),
+          "เลขรับ สรร.": item.letterNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
@@ -324,8 +324,8 @@ const TableWorkFollow = ({
         columns: ["ลำดับ", "เลขรับ สรร.", "เลขที่อ้างอิง", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": extractReceiptNumber(item.receiptNumber),
-          "เลขที่อ้างอิง": extractReceiptNumber(item.receiptNumber),
+          "เลขรับ สรร.": item.letterNumber ?? "",
+          "เลขที่อ้างอิง": item.referenceNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
@@ -339,7 +339,7 @@ const TableWorkFollow = ({
         columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "หน่วยงานภายใน", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": extractReceiptNumber(item.receiptNumber),
+          "เลขรับ สรร.": item.letterNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
@@ -353,7 +353,7 @@ const TableWorkFollow = ({
         columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
-          "เลขรับ สรร.": extractReceiptNumber(item.receiptNumber),
+          "เลขรับ สรร.": item.letterNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
@@ -579,7 +579,7 @@ const handleExportExcel = () => {
         ws[cellAddress].s.font = {
           name: "TH Sarabun",
           bold: true,
-          sz: 16
+          sz: 13
         };
       }
       // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์) - ไม่ใส่เส้นตาราง
@@ -592,7 +592,7 @@ const handleExportExcel = () => {
         ws[cellAddress].s.font = {
           name: "TH Sarabun",
           bold: true,
-          sz: 11
+          sz: 13
         };
       }
       // แถวข้อมูล - ใส่เส้นตาราง
@@ -605,7 +605,7 @@ const handleExportExcel = () => {
           ws[cellAddress].s.font = {
             name: "TH Sarabun",
             bold: true,
-            sz: 11
+            sz: 13
           };
           ws[cellAddress].s.alignment = {
             horizontal: "left",
@@ -630,7 +630,7 @@ const handleExportExcel = () => {
           }
           ws[cellAddress].s.font = {
             name: "TH Sarabun",
-            sz: 11
+            sz: 13
           };
         }
       }
@@ -1258,7 +1258,8 @@ const handleExportExcel = () => {
                                           onClick={() => handleSubRowClick(item.id)}
                                         >
                                           {col.field === "status"
-                                            ? STATUS_TRANSLATION[item.status] ||
+                                            ? STATUS_TRANSLATION[(item.status || "").toLowerCase()] ||
+                                              STATUS_TRANSLATION[item.status] ||
                                               item.status ||
                                               "-"
                                             : col.field === "statusStep"
