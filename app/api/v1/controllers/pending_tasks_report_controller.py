@@ -31,19 +31,18 @@ def get_pending_tasks_report(
     limit: int = 20,
     status: Optional[str] = None,
     department: Optional[str] = None,
-    officer_id: Optional[str] = None,  # เปลี่ยนจาก UUID เป็น str
+    officer_id: Optional[str] = None,
     search: Optional[str] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
-    filing_type: Optional[str] = None,  # เพิ่ม parameter filing_type
+    filing_type: Optional[str] = None,
 ):
     """
     รายการงานค้าง (pending-tasks)
     - department_name = หน่วยงานที่เกี่ยวข้อง (ภายใน) -> มาจาก OutgoingReport/2/4.department_id (ล่าสุด)
-    - outside_department_name = หน่วยงานที่เกี่ยวข้อง (ภายนอก) ที่ได้รับมอบหมาย -> มาจาก OutgoingReport2/4.outside_department_id (ล่าสุด)
-    - days_in_progress = นับจากจุดเริ่มของ 'สถานะปัจจุบัน' (ComplaintStatusHistory.changed_at) ถ้าไม่มี ใช้ assigned_date -> created_at
+    - outside_department_name = หน่วยงานที่เกี่ยวข้อง (ภายนอก) -> มาจาก OutgoingReport2/4.outside_department_id (ล่าสุด)
+    - days_in_progress = นับจากจุดเริ่มของ 'สถานะปัจจุบัน' (ComplaintStatusHistory.changed_at)
     """
-    # imports ภายในฟังก์ชันเพื่อลดวงจร import
     from models.comp_complaint import Complaint, ComplaintStatusHistory
     from models.user import User
     from models.departments import Department
@@ -52,66 +51,24 @@ def get_pending_tasks_report(
     from models.outgoing_reports2 import OutgoingReport2
     from models.outgoing_reports4 import OutgoingReport4
 
-    # ใช้ PENDING_STATUSES จากด้านบน (รวม SUBMITTED, SENT_TO_AGENCY, SENT_TO_EXTERNAL, IN_PROCESS, IN_REVIEW, TRACKING, REVIEWED)
-    # ไม่รวม COMPLETED (เสร็จสิ้น), CANCELLED (ยกเลิก), SUBMITTED (ส่งคำร้อง) ถ้าต้องการกรองเฉพาะที่กำลังดำเนินการ
-
-    # ---------- department_name & outside_department_name: raw SQL ----------
-    # ใช้ text() เพื่อให้ตรงกับ SQL query ที่ทดสอบแล้วใน SSMS
-    # (ไม่ใช้ SQLAlchemy ORM subquery เพราะมีปัญหากับ correlated scalar subquery + COALESCE + ORDER BY)
-
-    department_name_expr = text("""
-        COALESCE(
-            (SELECT TOP 1 sub.name
-             FROM (
-                SELECT d.name, or1.created_at FROM outgoing_reports or1
-                JOIN departments d ON d.id = or1.department_id
-                WHERE or1.complaint_id = comp_complaints.id AND or1.is_active = 1
-                UNION ALL
-                SELECT d.name, or2.created_at FROM outgoing_reports2 or2
-                JOIN departments d ON d.id = or2.department_id
-                WHERE or2.complaint_id = comp_complaints.id AND or2.is_active = 1
-                UNION ALL
-                SELECT d.name, or4.created_at FROM outgoing_reports4 or4
-                JOIN departments d ON d.id = or4.department_id
-                WHERE or4.complaint_id = comp_complaints.id AND or4.is_active = 1
-             ) sub ORDER BY sub.created_at DESC),
-            (SELECT TOP 1 od.name FROM outside_departments od
-             WHERE od.id = TRY_CAST(comp_complaints.agency_sender AS uniqueidentifier) AND od.is_active = 1)
-        )
-    """).label("department_name")
-
-    outside_dept_name_expr = text("""
-        (SELECT TOP 1 sub2.name
-         FROM (
-            SELECT od.name, or2.created_at FROM outgoing_reports2 or2
-            JOIN outside_departments od ON od.id = or2.outside_department_id
-            WHERE or2.complaint_id = comp_complaints.id AND or2.is_active = 1
-            UNION ALL
-            SELECT od.name, or4.created_at FROM outgoing_reports4 or4
-            JOIN outside_departments od ON od.id = or4.outside_department_id
-            WHERE or4.complaint_id = comp_complaints.id AND or4.is_active = 1
-         ) sub2 ORDER BY sub2.created_at DESC)
-    """).label("outside_department_name")
-
     # ---------- Subquery: เริ่มนับเวลาจากประวัติของสถานะปัจจุบัน ----------
     latest_phase_start = (
         db.query(ComplaintStatusHistory.changed_at)
         .filter(
             ComplaintStatusHistory.complaint_id == Complaint.id,
-            ComplaintStatusHistory.status == Complaint.status,  # จุดเริ่มของเฟสล่าสุด = ประวัติของสถานะปัจจุบัน
+            ComplaintStatusHistory.status == Complaint.status,
         )
         .order_by(ComplaintStatusHistory.changed_at.desc())
         .limit(1)
         .correlate(Complaint)
         .scalar_subquery()
     )
-    # ใช้ phase_start -> assigned_date -> created_at
     start_ref = func.coalesce(latest_phase_start, Complaint.assigned_date, Complaint.created_at)
 
     # ---------- Alias สำหรับ parent complaint ----------
     ParentComplaint = aliased(Complaint)
 
-    # ---------- สร้าง ordered_subq ----------
+    # ---------- สร้าง ordered_subq (ไม่มี department_name / outside_department_name) ----------
     assigned_nulls_last = case((Complaint.assigned_date.is_(None), 1), else_=0).asc()
     ordered_subq = (
         db.query(
@@ -121,17 +78,14 @@ def get_pending_tasks_report(
             Complaint.subject.label("subject"),
             Complaint.assigned_date.label("assigned_date"),
             Complaint.director_submission_date.label("director_submission_date"),
-            # department_name: raw SQL - หน่วยงานภายในล่าสุดจาก OR/OR2/OR4, fallback เป็น agency_sender → OutsideDepartment
-            department_name_expr,
-            # outside_department_name: raw SQL - หน่วยงานภายนอกล่าสุดจาก OR2/OR4
-            outside_dept_name_expr,
             Complaint.document_number.label("document_number"),
             Complaint.status.label("status"),
             Complaint.created_at.label("created_at"),
             Complaint.assigned_officer_id.label("assigned_officer_id"),
-            Complaint.complaint_filing_type.label("filing_type"),  # เพิ่ม filing_type
-            Complaint.processing_notes.label("assigned_remark"),  # เพิ่ม remark
-            ParentComplaint.complaint_number.label("parent_complaint_number"),  # เลขอ้างอิง (เรื่องต้นเรื่อง)
+            Complaint.complaint_filing_type.label("filing_type"),
+            Complaint.processing_notes.label("assigned_remark"),
+            Complaint.agency_sender.label("agency_sender"),
+            ParentComplaint.complaint_number.label("parent_complaint_number"),
             start_ref.label("start_ref"),
             func.row_number()
             .over(order_by=(assigned_nulls_last, Complaint.assigned_date.desc(), Complaint.created_at.desc()))
@@ -139,13 +93,12 @@ def get_pending_tasks_report(
         )
         .select_from(Complaint)
         .outerjoin(User, Complaint.assigned_officer_id == User.id)
-        .outerjoin(ParentComplaint, Complaint.parent_complaint_id == ParentComplaint.id)  # join parent
+        .outerjoin(ParentComplaint, Complaint.parent_complaint_id == ParentComplaint.id)
         .filter(Complaint.status.in_(PENDING_STATUSES))
     )
 
     # ---------- filters ----------
     if status:
-        # รองรับทั้ง string และ enum name
         from models.comp_complaint import ComplaintStatus as CS
         try:
             ordered_subq = ordered_subq.filter(Complaint.status == CS(status))
@@ -173,35 +126,28 @@ def get_pending_tasks_report(
         )
 
     if department:
-        # ช่องนี้ยังคง filter จาก assigned_to ถ้าต้องการให้ filter ตาม department_name ใหม่
-        # ให้เปลี่ยนไป filter ที่ Department/OutgoingReport ตาม business rule ของคุณ
         ordered_subq = ordered_subq.filter(Complaint.assigned_to == department)
 
-    # เพิ่มการกรองตาม filing_type (new, additional)
     if filing_type:
         from models.comp_complaint import ComplaintFilingType
         try:
             ft_enum = ComplaintFilingType(filing_type.lower())
             ordered_subq = ordered_subq.filter(Complaint.complaint_filing_type == ft_enum)
         except Exception:
-            # ถ้าไม่ใช่ค่าที่ถูกต้อง ให้เพิกเฉย
             pass
 
     if officer_id:
-        # แปลง officer_id จาก string เป็น UUID
         try:
             officer_uuid = UUID(officer_id) if isinstance(officer_id, str) else officer_id
         except Exception:
             officer_uuid = None
 
         if officer_uuid:
-            # Filter เหมือนหน้าคลัง: รวม created_by, assigned_officer_id, confirm_assigned_by, และ OutgoingReport/2/3
             ordered_subq = ordered_subq.filter(
                 or_(
                     Complaint.created_by == officer_uuid,
                     Complaint.assigned_officer_id == officer_uuid,
                     Complaint.confirm_assigned_by == officer_uuid,
-                    # OutgoingReport
                     db.query(OutgoingReport.id).filter(
                         and_(
                             OutgoingReport.complaint_id == Complaint.id,
@@ -212,7 +158,6 @@ def get_pending_tasks_report(
                             )
                         )
                     ).exists(),
-                    # OutgoingReport2
                     db.query(OutgoingReport2.id).filter(
                         and_(
                             OutgoingReport2.complaint_id == Complaint.id,
@@ -224,7 +169,6 @@ def get_pending_tasks_report(
                             )
                         )
                     ).exists(),
-                    # OutgoingReport3
                     db.query(OutgoingReport3.id).filter(
                         and_(
                             OutgoingReport3.complaint_id == Complaint.id,
@@ -235,7 +179,6 @@ def get_pending_tasks_report(
                             )
                         )
                     ).exists(),
-                    # OutgoingReport4
                     db.query(OutgoingReport4.id).filter(
                         and_(
                             OutgoingReport4.complaint_id == Complaint.id,
@@ -247,7 +190,6 @@ def get_pending_tasks_report(
                             )
                         )
                     ).exists(),
-                    # OutgoingReport5
                     db.query(OutgoingReport5.id).filter(
                         and_(
                             OutgoingReport5.complaint_id == Complaint.id,
@@ -259,7 +201,6 @@ def get_pending_tasks_report(
                             )
                         )
                     ).exists(),
-                    # OutgoingReport6
                     db.query(OutgoingReport6.id).filter(
                         and_(
                             OutgoingReport6.complaint_id == Complaint.id,
@@ -284,7 +225,111 @@ def get_pending_tasks_report(
         .all()
     )
 
-    # map officer name (bulk)
+    # ---------- Post-process: batch lookup department names ----------
+    complaint_ids = [r.id for r in page_rows]
+    dept_map = {}       # complaint_id -> department_name (ภายใน)
+    outside_map = {}    # complaint_id -> outside_department_name (ภายนอก)
+
+    if complaint_ids:
+        # --- หน่วยงานภายใน: UNION ALL outgoing_reports / outgoing_reports2 / outgoing_reports4 ---
+        or1_q = (
+            db.query(
+                OutgoingReport.complaint_id.label("cid"),
+                Department.name.label("dept_name"),
+                OutgoingReport.created_at.label("created_at"),
+            )
+            .join(Department, Department.id == OutgoingReport.department_id)
+            .filter(OutgoingReport.complaint_id.in_(complaint_ids), OutgoingReport.is_active == True)
+        )
+        or2_q = (
+            db.query(
+                OutgoingReport2.complaint_id.label("cid"),
+                Department.name.label("dept_name"),
+                OutgoingReport2.created_at.label("created_at"),
+            )
+            .join(Department, Department.id == OutgoingReport2.department_id)
+            .filter(OutgoingReport2.complaint_id.in_(complaint_ids), OutgoingReport2.is_active == True)
+        )
+        or4_q = (
+            db.query(
+                OutgoingReport4.complaint_id.label("cid"),
+                Department.name.label("dept_name"),
+                OutgoingReport4.created_at.label("created_at"),
+            )
+            .join(Department, Department.id == OutgoingReport4.department_id)
+            .filter(OutgoingReport4.complaint_id.in_(complaint_ids), OutgoingReport4.is_active == True)
+        )
+
+        all_depts = or1_q.union_all(or2_q, or4_q).subquery()
+        latest_dept = (
+            db.query(
+                all_depts.c.cid,
+                all_depts.c.dept_name,
+                func.row_number().over(
+                    partition_by=all_depts.c.cid,
+                    order_by=all_depts.c.created_at.desc()
+                ).label("rn"),
+            )
+        ).subquery()
+
+        for row in db.query(latest_dept).filter(latest_dept.c.rn == 1).all():
+            dept_map[str(row.cid)] = row.dept_name
+
+        # --- หน่วยงานภายนอก: UNION ALL outgoing_reports2 / outgoing_reports4 ---
+        out2_q = (
+            db.query(
+                OutgoingReport2.complaint_id.label("cid"),
+                OutsideDepartment.name.label("dept_name"),
+                OutgoingReport2.created_at.label("created_at"),
+            )
+            .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport2.outside_department_id)
+            .filter(OutgoingReport2.complaint_id.in_(complaint_ids), OutgoingReport2.is_active == True)
+        )
+        out4_q = (
+            db.query(
+                OutgoingReport4.complaint_id.label("cid"),
+                OutsideDepartment.name.label("dept_name"),
+                OutgoingReport4.created_at.label("created_at"),
+            )
+            .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport4.outside_department_id)
+            .filter(OutgoingReport4.complaint_id.in_(complaint_ids), OutgoingReport4.is_active == True)
+        )
+
+        all_out = out2_q.union_all(out4_q).subquery()
+        latest_out = (
+            db.query(
+                all_out.c.cid,
+                all_out.c.dept_name,
+                func.row_number().over(
+                    partition_by=all_out.c.cid,
+                    order_by=all_out.c.created_at.desc()
+                ).label("rn"),
+            )
+        ).subquery()
+
+        for row in db.query(latest_out).filter(latest_out.c.rn == 1).all():
+            outside_map[str(row.cid)] = row.dept_name
+
+    # --- Fallback: agency_sender -> OutsideDepartment ---
+    agency_dept_map = {}
+    missing_dept_ids = []
+    for r in page_rows:
+        cid = str(r.id)
+        if cid not in dept_map and r.agency_sender:
+            try:
+                missing_dept_ids.append(UUID(str(r.agency_sender)))
+            except (ValueError, AttributeError):
+                pass
+
+    if missing_dept_ids:
+        unique_ids = list(set(missing_dept_ids))
+        for u in db.query(OutsideDepartment.id, OutsideDepartment.name).filter(
+            OutsideDepartment.id.in_(unique_ids),
+            OutsideDepartment.is_active == True
+        ).all():
+            agency_dept_map[str(u.id)] = u.name
+
+    # ---------- map officer name (bulk) ----------
     officer_ids = [r.assigned_officer_id for r in page_rows if r.assigned_officer_id]
     officers = {}
     if officer_ids:
@@ -295,33 +340,36 @@ def get_pending_tasks_report(
     now = datetime.now(timezone.utc)
     items = []
     for r in page_rows:
-        # เริ่มนับเวลาตามกติกาใหม่
         start_date = r.start_ref or r.assigned_date or r.created_at
         days_in_progress = (now - (start_date.replace(tzinfo=timezone.utc) if start_date.tzinfo is None else start_date)).days
 
+        cid = str(r.id)
+        dept_name = dept_map.get(cid)
+        if not dept_name and r.agency_sender:
+            dept_name = agency_dept_map.get(str(r.agency_sender))
+
         items.append(
             {
-                "id": str(r.id),
+                "id": cid,
                 "receive_reference_number": r.receive_reference_number,
                 "reference_number": r.reference_number,
-                "parent_complaint_number": r.parent_complaint_number,  # เลขอ้างอิง (เรื่องต้นเรื่อง)
+                "parent_complaint_number": r.parent_complaint_number,
                 "subject": r.subject,
                 "assigned_date": r.assigned_date,
                 "director_submission_date": r.director_submission_date,
-                "department_name": r.department_name,                  # ภายใน
-                "outside_department_name": r.outside_department_name,  # ภายนอก (ผู้รับมอบหมาย)
+                "department_name": dept_name,
+                "outside_department_name": outside_map.get(cid),
                 "document_number": r.document_number,
                 "status": r.status.value if hasattr(r.status, "value") else r.status,
                 "days_in_progress": days_in_progress,
                 "assigned_officer_name": officers.get(str(r.assigned_officer_id)) if r.assigned_officer_id else None,
-                "filing_type": r.filing_type.value if hasattr(r.filing_type, "value") else r.filing_type,  # เพิ่ม filing_type
-                "assigned_remark": r.assigned_remark,  # เพิ่ม remark
-                "remark": r.assigned_remark,  # เพิ่ม remark (alias เพิ่อความยืดหยุ่น)
+                "filing_type": r.filing_type.value if hasattr(r.filing_type, "value") else r.filing_type,
+                "assigned_remark": r.assigned_remark,
+                "remark": r.assigned_remark,
             }
         )
 
     # ---------- total ----------
-    # นับจำนวนทั้งหมดจาก query เดียวกัน (ไม่ต้องนับใหม่ทั้งหมด)
     total = db.query(func.count()).select_from(subq).scalar() or 0
 
     return {
