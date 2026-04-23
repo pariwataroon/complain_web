@@ -55,87 +55,43 @@ def get_pending_tasks_report(
     # ใช้ PENDING_STATUSES จากด้านบน (รวม SUBMITTED, SENT_TO_AGENCY, SENT_TO_EXTERNAL, IN_PROCESS, IN_REVIEW, TRACKING, REVIEWED)
     # ไม่รวม COMPLETED (เสร็จสิ้น), CANCELLED (ยกเลิก), SUBMITTED (ส่งคำร้อง) ถ้าต้องการกรองเฉพาะที่กำลังดำเนินการ
 
-    # ---------- Subqueries: department_name (internal) ----------
-    # ใช้ individual correlated subqueries สำหรับแต่ละตาราง OutgoingReport
-    # (ไม่ใช้ UNION subquery เพราะ .subquery() จะทำให้ correlation หาย)
-    or1_dept_name = (
-        db.query(Department.name)
-        .join(Department, Department.id == OutgoingReport.department_id)
-        .filter(
-            OutgoingReport.complaint_id == Complaint.id,
-            OutgoingReport.is_active == True,
-        )
-        .order_by(OutgoingReport.created_at.desc())
-        .limit(1)
-        .correlate(Complaint)
-        .scalar_subquery()
-    )
-    or2_dept_name = (
-        db.query(Department.name)
-        .join(Department, Department.id == OutgoingReport2.department_id)
-        .filter(
-            OutgoingReport2.complaint_id == Complaint.id,
-            OutgoingReport2.is_active == True,
-        )
-        .order_by(OutgoingReport2.created_at.desc())
-        .limit(1)
-        .correlate(Complaint)
-        .scalar_subquery()
-    )
-    or4_dept_name = (
-        db.query(Department.name)
-        .join(Department, Department.id == OutgoingReport4.department_id)
-        .filter(
-            OutgoingReport4.complaint_id == Complaint.id,
-            OutgoingReport4.is_active == True,
-        )
-        .order_by(OutgoingReport4.created_at.desc())
-        .limit(1)
-        .correlate(Complaint)
-        .scalar_subquery()
-    )
-    # COALESCE: เอา department จาก OR1, OR2, OR4 (อันไหนมีค่าก่อน)
-    latest_internal_dept_name = func.coalesce(or1_dept_name, or2_dept_name, or4_dept_name)
+    # ---------- department_name & outside_department_name: raw SQL ----------
+    # ใช้ text() เพื่อให้ตรงกับ SQL query ที่ทดสอบแล้วใน SSMS
+    # (ไม่ใช้ SQLAlchemy ORM subquery เพราะมีปัญหากับ correlated scalar subquery + COALESCE + ORDER BY)
 
-    # ---------- Fallback: agency_sender → OutsideDepartment name (เหมือนหน้าคลัง) ----------
-    # ใช้ TRY_CAST เพื่อป้องกัน error ตอน agency_sender ไม่ใช่ UUID
-    agency_sender_dept_name = (
-        db.query(OutsideDepartment.name)
-        .filter(
-            text("outside_departments.id = TRY_CAST(comp_complaints.agency_sender AS uniqueidentifier)"),
-            OutsideDepartment.is_active == True,
+    department_name_expr = text("""
+        COALESCE(
+            (SELECT TOP 1 sub.name
+             FROM (
+                SELECT d.name, or1.created_at FROM outgoing_reports or1
+                JOIN departments d ON d.id = or1.department_id
+                WHERE or1.complaint_id = comp_complaints.id AND or1.is_active = 1
+                UNION ALL
+                SELECT d.name, or2.created_at FROM outgoing_reports2 or2
+                JOIN departments d ON d.id = or2.department_id
+                WHERE or2.complaint_id = comp_complaints.id AND or2.is_active = 1
+                UNION ALL
+                SELECT d.name, or4.created_at FROM outgoing_reports4 or4
+                JOIN departments d ON d.id = or4.department_id
+                WHERE or4.complaint_id = comp_complaints.id AND or4.is_active = 1
+             ) sub ORDER BY sub.created_at DESC),
+            (SELECT TOP 1 od.name FROM outside_departments od
+             WHERE od.id = TRY_CAST(comp_complaints.agency_sender AS uniqueidentifier) AND od.is_active = 1)
         )
-        .correlate(Complaint)
-        .scalar_subquery()
-    )
+    """).label("department_name")
 
-    # ---------- Subqueries: outside_department_name (external) ----------
-    # ใช้ individual correlated subqueries (เหมือน department_name)
-    out2_dept_name = (
-        db.query(OutsideDepartment.name)
-        .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport2.outside_department_id)
-        .filter(
-            OutgoingReport2.complaint_id == Complaint.id,
-            OutgoingReport2.is_active == True,
-        )
-        .order_by(OutgoingReport2.created_at.desc())
-        .limit(1)
-        .correlate(Complaint)
-        .scalar_subquery()
-    )
-    out4_dept_name = (
-        db.query(OutsideDepartment.name)
-        .join(OutsideDepartment, OutsideDepartment.id == OutgoingReport4.outside_department_id)
-        .filter(
-            OutgoingReport4.complaint_id == Complaint.id,
-            OutgoingReport4.is_active == True,
-        )
-        .order_by(OutgoingReport4.created_at.desc())
-        .limit(1)
-        .correlate(Complaint)
-        .scalar_subquery()
-    )
-    latest_outside_dept_name = func.coalesce(out2_dept_name, out4_dept_name)
+    outside_dept_name_expr = text("""
+        (SELECT TOP 1 sub2.name
+         FROM (
+            SELECT od.name, or2.created_at FROM outgoing_reports2 or2
+            JOIN outside_departments od ON od.id = or2.outside_department_id
+            WHERE or2.complaint_id = comp_complaints.id AND or2.is_active = 1
+            UNION ALL
+            SELECT od.name, or4.created_at FROM outgoing_reports4 or4
+            JOIN outside_departments od ON od.id = or4.outside_department_id
+            WHERE or4.complaint_id = comp_complaints.id AND or4.is_active = 1
+         ) sub2 ORDER BY sub2.created_at DESC)
+    """).label("outside_department_name")
 
     # ---------- Subquery: เริ่มนับเวลาจากประวัติของสถานะปัจจุบัน ----------
     latest_phase_start = (
@@ -165,10 +121,10 @@ def get_pending_tasks_report(
             Complaint.subject.label("subject"),
             Complaint.assigned_date.label("assigned_date"),
             Complaint.director_submission_date.label("director_submission_date"),
-            # department_name: เอาชื่อหน่วยงานภายในล่าสุดจาก OR/OR2/OR4, fallback เป็น agency_sender → OutsideDepartment (เหมือนหน้าคลัง)
-            func.coalesce(latest_internal_dept_name, agency_sender_dept_name).label("department_name"),
-            # outside_department_name: เอาจาก union ล่าสุดของ OR2/OR4
-            latest_outside_dept_name.label("outside_department_name"),
+            # department_name: raw SQL - หน่วยงานภายในล่าสุดจาก OR/OR2/OR4, fallback เป็น agency_sender → OutsideDepartment
+            department_name_expr,
+            # outside_department_name: raw SQL - หน่วยงานภายนอกล่าสุดจาก OR2/OR4
+            outside_dept_name_expr,
             Complaint.document_number.label("document_number"),
             Complaint.status.label("status"),
             Complaint.created_at.label("created_at"),
