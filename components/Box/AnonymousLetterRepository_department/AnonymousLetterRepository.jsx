@@ -304,9 +304,9 @@ const AnonymousLetterRepository = () => {
           );
         }
         const typeRes = await GetAllSelectComplaintTypes();
-        if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data?.items)) {
+        if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data)) {
           const map = {};
-          typeRes.res_data.items.forEach(t => { map[t.name] = t.id; });
+          typeRes.res_data.forEach(t => { map[t.name] = t.id; });
           setTypeNameToId(map);
         }
       } catch (e) {

@@ -106,14 +106,18 @@ const Opm1111Components = () => {
         for (let i = 0; i < caseCodes.length; i += BATCH_SIZE) {
           const batch = caseCodes.slice(i, i + BATCH_SIZE);
           const subjectStr = batch.join(',');
-          const complaintsSubjectRes = await GetComplaintsSubjectOPM({
-            skip: 0,
-            limit: 10000,
-            subject: subjectStr,
-          });
+          try {
+            const complaintsSubjectRes = await GetComplaintsSubjectOPM({
+              skip: 0,
+              limit: 10000,
+              subject: subjectStr,
+            });
 
-          const batchReadSubjects = (complaintsSubjectRes?.res_data?.items || []).map(item => item.subject);
-          batchReadSubjects.forEach(s => readSubjects.add(s));
+            const batchReadSubjects = (complaintsSubjectRes?.res_data?.items || []).map(item => item.subject);
+            batchReadSubjects.forEach(s => readSubjects.add(s));
+          } catch (batchError) {
+            console.warn(`Failed to check read status for batch starting at ${i}:`, batchError.message);
+          }
         }
 
         const complaintsWithReadStatus = mappedComplaints.map(item => ({

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { GetAllComplaintChannels } from "@pages/api/allselect/allselect";
-import { CreateComplaint } from "@pages/api/complaint/complaint";
+import { CreateComplaint, GetComplaintsSubjectOPM } from "@pages/api/complaint/complaint";
 
 const useDetailOPMData = ({
   caseDetails,
@@ -245,9 +245,15 @@ const useDetailOPMData = ({
       };
     }
 
-    // เก็บ summary เป็นชื่อเรื่อง และเก็บ case_code ไว้ใน reference_number5
-    const subjectText = detailsData.summary || "";
-    const descriptionText = detailsData.detail || "";
+    // เก็บ case_code เป็น subject เพื่อให้ backend dedup check (นร) ทำงานได้
+    // summary เดิมย้ายไปรวมใน description
+    const caseCode = mainInfo.case_code || "";
+    const summaryText = detailsData.summary || "";
+    const detailText = detailsData.detail || "";
+    const subjectText = caseCode || summaryText || "";
+    const descriptionText = summaryText
+      ? (detailText ? `${summaryText}\n\n${detailText}` : summaryText)
+      : detailText;
 
     const step3 = {
       general: {
@@ -540,6 +546,27 @@ const useDetailOPMData = ({
   const autoCreateComplaint = async () => {
     try {
       setAutoCreateAttempted(true);
+
+      // เช็คก่อนว่าเรื่องนี้มีอยู่แล้วในระบบหรือยัง (ป้องกันสร้างซ้ำ)
+      const mainInfo = getSectionData("main_information");
+      const caseCode = mainInfo?.case_code;
+      if (caseCode) {
+        try {
+          const existingRes = await GetComplaintsSubjectOPM({
+            skip: 0,
+            limit: 10,
+            subject: caseCode,
+          });
+          const existingItems = existingRes?.res_data?.items || [];
+          if (existingItems.length > 0) {
+            console.log(`[OPM] เรื่อง ${caseCode} มีอยู่แล้วในระบบ ข้ามการสร้าง`);
+            return null;
+          }
+        } catch (checkError) {
+          console.warn("[OPM] ไม่สามารถเช็คเรื่องซ้ำได้ จะดำเนินการสร้างต่อ:", checkError.message);
+        }
+      }
+
       const apiData = getFormattedDataForCreateAPI();
       const result = await createComplaintAPI(apiData);
       return result;
@@ -549,16 +576,20 @@ const useDetailOPMData = ({
   };
 
   useEffect(() => {
+    let timeoutId;
     if (
       isDataReady &&
       opmChannelId &&
       !autoCreateAttempted &&
       !isCreating
     ) {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         autoCreateComplaint();
       }, 18000);
     }
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
   }, [
     isDataReady,
     opmChannelId,
