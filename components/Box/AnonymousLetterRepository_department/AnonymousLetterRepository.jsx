@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
-import { GetAllSubComplaintTypes } from "@pages/api/allselect/allselect";
+import { GetAllSubComplaintTypes, GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 
 const issueTypeOptions = [
   { value: "ภารกิจ", label: "ภารกิจ" },
@@ -285,6 +285,8 @@ const AnonymousLetterRepository = () => {
   const [allComplaints] = useState(mockComplaints);
   const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
   const [apiSubTypeOptions, setApiSubTypeOptions] = useState(subIssueTypeOptions);
+  const [allApiSubTypes, setAllApiSubTypes] = useState([]);
+  const [typeNameToId, setTypeNameToId] = useState({});
   const router = useRouter();
 
   // ดึง sub-types จาก API
@@ -293,11 +295,19 @@ const AnonymousLetterRepository = () => {
       try {
         const res = await GetAllSubComplaintTypes();
         if (res?.res_code === "0000" && Array.isArray(res?.res_data?.items)) {
+          const allSubs = res.res_data.items;
+          setAllApiSubTypes(allSubs);
           setApiSubTypeOptions(
-            res.res_data.items
+            allSubs
               .map((item) => ({ value: item.name, label: item.name }))
               .sort((a, b) => a.label.localeCompare(b.label, "th"))
           );
+        }
+        const typeRes = await GetAllSelectComplaintTypes();
+        if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data?.items)) {
+          const map = {};
+          typeRes.res_data.items.forEach(t => { map[t.name] = t.id; });
+          setTypeNameToId(map);
         }
       } catch (e) {
         console.error("Error fetching sub complaint types:", e);
@@ -330,6 +340,25 @@ const AnonymousLetterRepository = () => {
     setFilteredComplaints(result);
   };
 
+  // เมื่อเปลี่ยน parent type -> กรอง sub-type options
+  const handleFilterChange = (field, value) => {
+    if (field === "issueType") {
+      let filteredSubTypes;
+      if (value && typeNameToId[value]) {
+        const parentId = typeNameToId[value];
+        filteredSubTypes = allApiSubTypes
+          .filter((st) => st.parent_type_id === parentId)
+          .map((st) => ({ value: st.name, label: st.name }))
+          .sort((a, b) => a.label.localeCompare(b.label, "th"));
+      } else {
+        filteredSubTypes = allApiSubTypes
+          .map((st) => ({ value: st.name, label: st.name }))
+          .sort((a, b) => a.label.localeCompare(b.label, "th"));
+      }
+      setApiSubTypeOptions(filteredSubTypes);
+    }
+  };
+
   return (
     <>
       <BreadcrumbsService
@@ -353,6 +382,7 @@ const AnonymousLetterRepository = () => {
         title="รับเข้าบัตรสนเท่ห์"
         navigateTo="/admin/box/new"
         onSearch={handleSearch}
+        onFilterChange={handleFilterChange}
         filterFields={[
           { name: "claimantName", label: "ชื่อผู้ร้อง", type: "text" },
           { name: "subject", label: "เรื่อง", type: "text" },

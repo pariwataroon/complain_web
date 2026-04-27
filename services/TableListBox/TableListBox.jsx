@@ -40,6 +40,7 @@ const TableListBox = ({
   onSearch = () => {},
   onResetSearch,
   filterFields = [],
+  onFilterChange,
 }) => {
   const router = useRouter();
   const tableWrapperRef = useRef(null);
@@ -134,6 +135,7 @@ const TableListBox = ({
     }
 
     setFilters({ ...filters, [field]: value });
+    if (onFilterChange) onFilterChange(field, value, { ...filters, [field]: value });
   };
 
   // Pagination

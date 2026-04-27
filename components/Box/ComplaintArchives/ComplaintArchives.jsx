@@ -5,7 +5,7 @@ import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import { getDocumentStorageForWebsite } from "@pages/api/document/document";
 import { GetEnhancedComplaints } from "@pages/api/complaint/complaint";
-import { GetAllSubComplaintTypes } from "@pages/api/allselect/allselect";
+import { GetAllSubComplaintTypes, GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 
@@ -238,6 +238,10 @@ const ComplaintArchives = () => {
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // เก็บ sub-types ทั้งหมดจาก API + mapping parent type
+  const [allApiSubTypes, setAllApiSubTypes] = useState([]);
+  const [typeNameToId, setTypeNameToId] = useState({});
+
   // ตัวเลือกฟิลเตอร์ที่ "ดึงจาก API"
   const [filterOptions, setFilterOptions] = useState({
     issueTypeOptions: [],
@@ -365,6 +369,25 @@ const ComplaintArchives = () => {
     setFilteredComplaints(allComplaints);
   };
 
+  // เมื่อเปลี่ยน parent type -> กรอง sub-type options
+  const handleFilterChange = (field, value) => {
+    if (field === "issueType") {
+      let filteredSubTypes;
+      if (value && typeNameToId[value]) {
+        const parentId = typeNameToId[value];
+        filteredSubTypes = allApiSubTypes
+          .filter((st) => st.parent_type_id === parentId)
+          .map((st) => ({ value: st.name, label: st.name }))
+          .sort((a, b) => a.label.localeCompare(b.label, "th"));
+      } else {
+        filteredSubTypes = allApiSubTypes
+          .map((st) => ({ value: st.name, label: st.name }))
+          .sort((a, b) => a.label.localeCompare(b.label, "th"));
+      }
+      setFilterOptions((prev) => ({ ...prev, subIssueTypeOptions: filteredSubTypes }));
+    }
+  };
+
   /* ---------- คลิกแถว -> ไปหน้ารายการ พร้อมพารามิเตอร์สถานะที่ถูกต้อง ---------- */
   const handleRowClick = (item) => {
     const englishStatus = item.statusEn || getEnglishStatus(item.status);
@@ -419,9 +442,18 @@ const ComplaintArchives = () => {
         try {
           const subRes = await GetAllSubComplaintTypes();
           if (subRes?.res_code === "0000" && Array.isArray(subRes?.res_data?.items)) {
-            subTypeOpts = subRes.res_data.items
-              .map((item) => ({ value: item.name, label: item.name }))
+            const allSubs = subRes.res_data.items;
+            setAllApiSubTypes(allSubs);
+            subTypeOpts = allSubs
+              .map((item) => ({ value: item.name, label: item.name, parentTypeId: item.parent_type_id }))
               .sort((a, b) => a.label.localeCompare(b.label, "th"));
+          }
+          // ดึง complaint types เพื่อ map ชื่อ → UUID
+          const typeRes = await GetAllSelectComplaintTypes();
+          if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data?.items)) {
+            const map = {};
+            typeRes.res_data.items.forEach(t => { map[t.name] = t.id; });
+            setTypeNameToId(map);
           }
         } catch (e) {
           console.error("Error fetching sub complaint types:", e);
@@ -489,6 +521,7 @@ const ComplaintArchives = () => {
         onRowClick={handleRowClick}
         onSearch={handleSearch}
         onResetSearch={handleResetSearch}
+        onFilterChange={handleFilterChange}
         filterFields={[
           { name: "claimantName", label: "ชื่อผู้ร้อง", type: "text" },
           { name: "issue", label: "เรื่อง", type: "text" },
