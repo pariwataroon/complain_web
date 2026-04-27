@@ -228,7 +228,7 @@ def get_pending_tasks_report(
 
     # ---------- Post-process: batch lookup department names ----------
     # chunk size 500 เพื่อไม่ให้เกิน SQL Server parameter limit (2100)
-    # UNION ALL x3 = 3 * chunk_size params -> 500 is safe
+    # UNION ALL x4 = 4 * chunk_size params -> 500 is safe
     CHUNK_SIZE = 500
 
     complaint_ids = [r.id for r in page_rows]
@@ -241,7 +241,7 @@ def get_pending_tasks_report(
 
     if complaint_ids:
         for chunk in chunk_list(complaint_ids, CHUNK_SIZE):
-            # --- หน่วยงานภายใน: UNION ALL outgoing_reports / outgoing_reports2 / outgoing_reports4 ---
+            # --- หน่วยงานภายใน: UNION ALL outgoing_reports / outgoing_reports2 / outgoing_reports4 / outgoing_reports5 ---
             or1_q = (
                 db.query(
                     OutgoingReport.complaint_id.label("cid"),
@@ -269,8 +269,17 @@ def get_pending_tasks_report(
                 .join(Department, Department.id == OutgoingReport4.department_id)
                 .filter(OutgoingReport4.complaint_id.in_(chunk), OutgoingReport4.is_active == True)
             )
+            or5_q = (
+                db.query(
+                    OutgoingReport5.complaint_id.label("cid"),
+                    Department.name.label("dept_name"),
+                    OutgoingReport5.created_at.label("created_at"),
+                )
+                .join(Department, Department.id == OutgoingReport5.department_id)
+                .filter(OutgoingReport5.complaint_id.in_(chunk), OutgoingReport5.is_active == True)
+            )
 
-            all_depts = or1_q.union_all(or2_q, or4_q).subquery()
+            all_depts = or1_q.union_all(or2_q, or4_q, or5_q).subquery()
             latest_dept = (
                 db.query(
                     all_depts.c.cid,
