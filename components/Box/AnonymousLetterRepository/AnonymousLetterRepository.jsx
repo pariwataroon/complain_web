@@ -4,6 +4,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import { getDocumentStorageForCard } from "@pages/api/document/document";
+import { GetAllSubComplaintTypes } from "@pages/api/allselect/allselect";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 
@@ -319,9 +320,22 @@ const AnonymousLetterRepository = () => {
           ])
         ).map((v) => ({ value: v, label: v }));
 
+        // ดึง sub-types จาก API จริง
+        let subTypeOpts = opts.subIssueTypeOptions;
+        try {
+          const subRes = await GetAllSubComplaintTypes();
+          if (subRes?.res_code === "0000" && Array.isArray(subRes?.res_data?.items)) {
+            subTypeOpts = subRes.res_data.items
+              .map((item) => ({ value: item.name, label: item.name }))
+              .sort((a, b) => a.label.localeCompare(b.label, "th"));
+          }
+        } catch (e) {
+          console.error("Error fetching sub complaint types:", e);
+        }
+
         setFilterOptions({
           issueTypeOptions: opts.issueTypeOptions,
-          subIssueTypeOptions: opts.subIssueTypeOptions,
+          subIssueTypeOptions: subTypeOpts,
           agencyOptions: opts.agencyOptions,
           responsibleOfficerOptions: opts.responsibleOfficerOptions,
           statusOptions: allStatusTh,

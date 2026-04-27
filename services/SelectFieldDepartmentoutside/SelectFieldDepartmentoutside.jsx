@@ -68,11 +68,13 @@ const SelectFieldDepartment = ({
             setApiError(null);
             // ใช้ API ใหม่ที่ดึงทั้งหน่วยงานภายในและภายนอก
             const allAgencies = await GetAllAgenciesForReport();
-            if (allAgencies && allAgencies.length > 0) {
-                setOptions(allAgencies);
-                console.log(`✅ SelectFieldDepartment: Loaded ${allAgencies.length} agencies (internal + external)`);
+            // แสดงเฉพาะหน่วยงานภายในของ กค.
+            const internalOnly = (allAgencies || []).filter(item => item.type === "internal");
+            if (internalOnly && internalOnly.length > 0) {
+                setOptions(internalOnly);
+                console.log(`✅ SelectFieldDepartment: Loaded ${internalOnly.length} internal agencies`);
             } else {
-                console.warn("⚠️ SelectFieldDepartment: No agencies data found");
+                console.warn("⚠️ SelectFieldDepartment: No internal agencies data found");
                 setOptions([]);
             }
         } catch (error) {

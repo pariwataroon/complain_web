@@ -5,6 +5,7 @@ import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import { getDocumentStorageForWebsite } from "@pages/api/document/document";
 import { GetEnhancedComplaints } from "@pages/api/complaint/complaint";
+import { GetAllSubComplaintTypes } from "@pages/api/allselect/allselect";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 
@@ -413,9 +414,22 @@ const ComplaintArchives = () => {
           ])
         ).map((v) => ({ value: v, label: v }));
 
+        // 3) ดึง sub-types จาก API จริง
+        let subTypeOpts = opts.subIssueTypeOptions;
+        try {
+          const subRes = await GetAllSubComplaintTypes();
+          if (subRes?.res_code === "0000" && Array.isArray(subRes?.res_data?.items)) {
+            subTypeOpts = subRes.res_data.items
+              .map((item) => ({ value: item.name, label: item.name }))
+              .sort((a, b) => a.label.localeCompare(b.label, "th"));
+          }
+        } catch (e) {
+          console.error("Error fetching sub complaint types:", e);
+        }
+
         setFilterOptions({
           issueTypeOptions: opts.issueTypeOptions,
-          subIssueTypeOptions: opts.subIssueTypeOptions,
+          subIssueTypeOptions: subTypeOpts,
           agencyOptions: opts.agencyOptions,
           agency2Options: opts.agency2Options,
           responsibleOfficerOptions: opts.responsibleOfficerOptions,

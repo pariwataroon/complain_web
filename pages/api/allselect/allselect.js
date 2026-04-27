@@ -535,9 +535,28 @@ const GetAllAgenciesForReport = async ({
   }
 };
 
+const GetAllSubComplaintTypes = async () => {
+  try {
+    const response = await axiosInstance.get(`/complaint-metadata/subtypes`, {
+      params: {
+        skip: 0,
+        limit: 10000,
+        active_only: true,
+      },
+    });
+    if (response && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.error("Error fetching all sub complaint types:", error);
+    throw error;
+  }
+};
+
 export {
   GetAllSelect,
   getSubComplaintTypeById,
+  GetAllSubComplaintTypes,
   GetProvincesSelect,
   GetAmphuresSelect,
   GetDistrictsSelect,

@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListWebComplaints from "@services/TableListWebComplaints/TableListWebComplaints";
 import { GetAllComplaints } from "@pages/api/complaint/complaint";
+import { GetAllSubComplaintTypes } from "@pages/api/allselect/allselect";
 import dayjs from "dayjs";
 
 const breadcrumbItems = [
@@ -28,6 +29,7 @@ const WebsiteComplaints = () => {
   const [page, setPage] = useState(0);
   const [limit, setLimit] = useState(10);
   const [availableTypes, setAvailableTypes] = useState([]);
+  const [apiSubTypes, setApiSubTypes] = useState([]);
 
   // สร้าง issueTypeOptions จาก API response
   const issueTypeOptions = useMemo(() => {
@@ -39,24 +41,16 @@ const WebsiteComplaints = () => {
     return options;
   }, [availableTypes]);
 
-  // สร้าง issueSubTypeOptions จากข้อมูลจริง
+  // สร้าง issueSubTypeOptions จาก API
   const issueSubTypeOptions = useMemo(() => {
-    const uniqueSubTypes = [
-      ...new Set(
-        allComplaints
-          .map((item) => item.sub_complaint_type || item.subIssueType)
-          .filter((type) => type && type.trim() !== "")
-      ),
-    ].sort();
-
     return [
       { value: "", label: "เลือกประเภทเรื่องย่อย" },
-      ...uniqueSubTypes.map((type) => ({
-        value: type,
-        label: type,
+      ...apiSubTypes.map((type) => ({
+        value: type.name,
+        label: type.name,
       })),
     ];
-  }, [allComplaints]);
+  }, [apiSubTypes]);
 
   const fetchComplaints = async () => {
     const skip = page * limit;
@@ -95,6 +89,20 @@ const WebsiteComplaints = () => {
   useEffect(() => {
     fetchComplaints();
   }, [page, limit]);
+
+  // ดึง sub-types จาก API
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await GetAllSubComplaintTypes();
+        if (res?.res_code === "0000" && Array.isArray(res?.res_data?.items)) {
+          setApiSubTypes(res.res_data.items);
+        }
+      } catch (e) {
+        console.error("Error fetching sub complaint types:", e);
+      }
+    })();
+  }, []);
 
   const handleSearch = (filters) => {
     const {

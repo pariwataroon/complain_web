@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
+import { GetAllSubComplaintTypes } from "@pages/api/allselect/allselect";
 
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 
@@ -17,23 +18,7 @@ const issueTypeOptions = [
   { value: "การบริการสาธารณะ", label: "การบริการสาธารณะ" },
 ];
 
-const subIssueTypeOptions = [
-  {
-    value: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
-    label: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
-  },
-  { value: "หนี้นอกระบบ", label: "หนี้นอกระบบ" },
-  { value: "โครงการสาธารณูปโภคพื้นฐาน", label: "โครงการสาธารณูปโภคพื้นฐาน" },
-  {
-    value: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-    label: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-  },
-  { value: "หนี้และสภาพหนี้ระบบ", label: "หนี้และสภาพหนี้ระบบ" },
-  { value: "การเรียกรับสินบน", label: "การเรียกรับสินบน" },
-  { value: "การบริการล่าช้า", label: "การบริการล่าช้า" },
-  { value: "การปฏิบัติไม่เป็นธรรม", label: "การปฏิบัติไม่เป็นธรรม" },
-  { value: "ข้อร้องเรียนทั่วไป", label: "ข้อร้องเรียนทั่วไป" },
-];
+const subIssueTypeOptions = [];
 
 const agencyOptions = [
   { value: "กรมสรรพากร", label: "กรมสรรพากร" },
@@ -188,7 +173,26 @@ const mockComplaints = [
 const ComplaintArchives = () => {
   const [allComplaints] = useState(mockComplaints);
   const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [apiSubTypeOptions, setApiSubTypeOptions] = useState(subIssueTypeOptions);
   const router = useRouter();
+
+  // ดึง sub-types จาก API
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await GetAllSubComplaintTypes();
+        if (res?.res_code === "0000" && Array.isArray(res?.res_data?.items)) {
+          setApiSubTypeOptions(
+            res.res_data.items
+              .map((item) => ({ value: item.name, label: item.name }))
+              .sort((a, b) => a.label.localeCompare(b.label, "th"))
+          );
+        }
+      } catch (e) {
+        console.error("Error fetching sub complaint types:", e);
+      }
+    })();
+  }, []);
 
   const handleSearch = (filters) => {
     const result = allComplaints.filter((item) => {
@@ -253,7 +257,7 @@ const ComplaintArchives = () => {
             name: "subIssueType",
             label: "ประเภทเรื่องย่อย",
             type: "select",
-            options: subIssueTypeOptions,
+            options: apiSubTypeOptions,
           },
           {
             name: "agency",

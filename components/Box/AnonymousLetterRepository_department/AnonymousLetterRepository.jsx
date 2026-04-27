@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
+import { GetAllSubComplaintTypes } from "@pages/api/allselect/allselect";
 
 const issueTypeOptions = [
   { value: "ภารกิจ", label: "ภารกิจ" },
@@ -13,20 +14,7 @@ const issueTypeOptions = [
   { value: "นโยบายรัฐฯ ด้านสวัสดิการ", label: "นโยบายรัฐฯ ด้านสวัสดิการ" },
 ];
 
-const subIssueTypeOptions = [
-  {
-    value: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
-    label: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
-  },
-  { value: "หนี้นอกระบบ", label: "หนี้นอกระบบ" },
-  { value: "โครงการสาธารณูปโภคพื้นฐาน", label: "โครงการสาธารณูปโภคพื้นฐาน" },
-  {
-    value: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-    label: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-  },
-  { value: "หนี้และสภาพหนี้ระบบ", label: "หนี้และสภาพหนี้ระบบ" },
-  { value: "-", label: "-" },
-];
+const subIssueTypeOptions = [];
 
 const agencyOptions = [
   { value: "กรมสรรพากร", label: "กรมสรรพากร" },
@@ -296,7 +284,26 @@ const mockComplaints = [
 const AnonymousLetterRepository = () => {
   const [allComplaints] = useState(mockComplaints);
   const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
+  const [apiSubTypeOptions, setApiSubTypeOptions] = useState(subIssueTypeOptions);
   const router = useRouter();
+
+  // ดึง sub-types จาก API
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await GetAllSubComplaintTypes();
+        if (res?.res_code === "0000" && Array.isArray(res?.res_data?.items)) {
+          setApiSubTypeOptions(
+            res.res_data.items
+              .map((item) => ({ value: item.name, label: item.name }))
+              .sort((a, b) => a.label.localeCompare(b.label, "th"))
+          );
+        }
+      } catch (e) {
+        console.error("Error fetching sub complaint types:", e);
+      }
+    })();
+  }, []);
 
   // 3) ฟังก์ชันค้นหา
   const handleSearch = ({
@@ -359,7 +366,7 @@ const AnonymousLetterRepository = () => {
             name: "subIssueType",
             label: "ประเภทเรื่องย่อย",
             type: "select",
-            options: subIssueTypeOptions,
+            options: apiSubTypeOptions,
           },
           {
             name: "accusedName",

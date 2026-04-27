@@ -581,8 +581,9 @@ const handleExportExcel = () => {
           sz: 14
         };
       }
-      // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์) - ไม่ใส่เส้นตาราง
+      // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์) - ใส่เส้นตาราง
       else if (R === 3) {
+        ws[cellAddress].s.border = borderStyle;
         ws[cellAddress].s.alignment = {
           horizontal: "center",
           vertical: "center",

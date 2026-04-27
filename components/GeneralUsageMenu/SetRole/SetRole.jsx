@@ -78,6 +78,8 @@ const rotateClose = keyframes`
   }
 `;
 
+const PROTECTED_ROLE_NAMES = ["admin", "admin_home", "supervisor", "staff", "department", "people"];
+
 const breadcrumbItems = [
   {
     label: "เมนูการใช้งานทั่วไป",
@@ -163,23 +165,79 @@ const SetRole = () => {
   };
 
   const confirmDelete = async () => {
+    // Safety check: prevent deleting system roles
+    const group = groups.find((g) => g.role_id === groupToDelete);
+    if (!group || PROTECTED_ROLE_NAMES.includes(group.role_name)) {
+      alertWarning("ไม่สามารถลบกลุ่มระบบได้");
+      setOpenDeleteModal(false);
+      return;
+    }
+
     try {
-      const response = await deleteRole(groupToDelete);
+      // Step 1: Snapshot all permissions for OTHER roles before deleting
+      const savedPermissions = [];
+      menuData.forEach((grp) => {
+        (grp.resources ?? []).forEach((res) => {
+          (res.roles_tracking ?? []).forEach((role) => {
+            if (role.role_id !== groupToDelete && role.found) {
+              savedPermissions.push({
+                role_id: role.role_id,
+                resource_id: res.id,
+                can_create: role.can_create,
+                can_read: role.can_read,
+                can_update: role.can_update,
+                can_delete: role.can_delete,
+              });
+            }
+          });
+        });
+      });
 
-      // console.log("Response from deleteRole:", response);
+      // Step 2: Delete the role
+      await deleteRole(groupToDelete);
 
-      setGroups(groups.filter((group) => group.id !== groupToDelete));
+      // Step 3: Fetch fresh data and check if other roles lost permissions
+      const { res_data: afterData } = await getMenuPermission();
 
-      // console.log("Updated groups list after deletion:", groups);
+      // Build set of surviving role:resource pairs
+      const survivingPairs = new Set();
+      afterData.forEach((grp) => {
+        (grp.resources ?? []).forEach((res) => {
+          (res.roles_tracking ?? []).forEach((role) => {
+            if (role.role_id !== groupToDelete && role.found) {
+              survivingPairs.add(`${role.role_id}:${res.id}`);
+            }
+          });
+        });
+      });
 
-      const { res_data } = await getMenuPermission();
-      setMenuData(res_data);
-      setSections(buildSections(res_data));
+      // Step 4: Find and restore missing permissions
+      const missingPerms = savedPermissions.filter(
+        (sp) => !survivingPairs.has(`${sp.role_id}:${sp.resource_id}`)
+      );
+
+      if (missingPerms.length > 0) {
+        console.warn(`Restoring ${missingPerms.length} permissions lost during role deletion`);
+        await Promise.all(
+          missingPerms.map((mp) =>
+            createPermission({
+              role_id: mp.role_id,
+              resource_id: mp.resource_id,
+              can_create: mp.can_create,
+              can_read: mp.can_read,
+              can_update: mp.can_update,
+              can_delete: mp.can_delete,
+            })
+          )
+        );
+      }
+
+      // Step 5: Refresh UI with final data
+      const { res_data: finalData } = await getMenuPermission();
+      setMenuData(finalData);
+      setSections(buildSections(finalData));
 
       setOpenDeleteModal(false);
-
-      // console.log("Delete modal closed.");
-
       alertSuccess("ลบกลุ่มสิทธิ์สำเร็จ");
     } catch (error) {
       console.error("Error while deleting role:", error);
@@ -520,6 +578,7 @@ const SetRole = () => {
       (res.roles_tracking ?? []).map((role, i) => ({
         id: i + 1,
         role_id: role.role_id,
+        role_name: role.role_name,
         name: role.role_description ?? role.role_name,
         permission_id: role.permission_id || null,
         selected: role.found,
@@ -894,8 +953,8 @@ const SetRole = () => {
                     label={`${group.name}`}
                     sx={{ color: "#304FFE" }}
                   />
-                  {/* แสดงไอคอนลบเฉพาะกลุ่มที่มี id ตั้งแต่ 7 เป็นต้นไป */}
-                  {group.id >= 7 && (
+                  {/* แสดงไอคอนลบเฉพาะกลุ่มที่ไม่ใช่ system role */}
+                  {!PROTECTED_ROLE_NAMES.includes(group.role_name) && (
                     <IconButton
                       onClick={() => handleGroupDelete(group.role_id)} // Pass the group.id to the delete handler
                       sx={{
@@ -1259,6 +1318,11 @@ const SetRole = () => {
           </DialogTitle>
 
           <DialogContent>
+            <Typography
+              sx={{ color: "#932626", textAlign: "center", fontWeight: "bold", fontSize: "1.1rem", mb: 1 }}
+            >
+              {groups.find((g) => g.role_id === groupToDelete)?.name || ""}
+            </Typography>
             <Typography
               sx={{ color: "#932626", textAlign: "center", fontWeight: "bold" }}
             >
