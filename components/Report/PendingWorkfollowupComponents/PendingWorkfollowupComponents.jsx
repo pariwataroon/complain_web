@@ -269,23 +269,33 @@ const PendingWorkfollowupComponents = () => {
     const transformedData = transformComplaintsData(allComplaints);
     let result = [...transformedData];
 
-    // filter เลข สรน. (MOF)
+    // filter เลข สรน. (MOF) - reference_number เช่น "MOF-25690227-00200"
     if (filterData.receiptNumber && filterData.receiptNumber.trim() !== "") {
       const searchVal = filterData.receiptNumber.trim().toLowerCase();
       result = result.filter((item) => {
-        const refNum = (item.receive_reference_number || "").toString().toLowerCase();
+        const refNum = (item.reference_number || "").toString().toLowerCase();
         const compRefNum = (item.complaint_reference_number || "").toString().toLowerCase();
         return refNum.includes(searchVal) || compRefNum.includes(searchVal);
       });
     }
 
-    // filter รหัสเรื่อง (นร.)
+    // filter รหัสเรื่อง (นร.) - receive_reference_number, parent_complaint_number, id
     if (filterData.complaintNumber && filterData.complaintNumber.trim() !== "") {
       const searchVal = filterData.complaintNumber.trim().toLowerCase();
       result = result.filter((item) => {
-        const compNum = (item.complaint_number || "").toString().toLowerCase();
-        const compId = (item.complaint_id || "").toString().toLowerCase();
-        return compNum.includes(searchVal) || compId.includes(searchVal);
+        const recRefNum = (item.receive_reference_number || "").toString().toLowerCase();
+        const parentNum = (item.parent_complaint_number || "").toString().toLowerCase();
+        const itemId = (item.id || "").toString().toLowerCase();
+        return recRefNum.includes(searchVal) || parentNum.includes(searchVal) || itemId.includes(searchVal);
+      });
+    }
+
+    // filter ชื่อเรื่อง
+    if (filterData.subject && filterData.subject.trim() !== "") {
+      const searchVal = filterData.subject.trim().toLowerCase();
+      result = result.filter((item) => {
+        const subject = (item.subject || "").toString().toLowerCase();
+        return subject.includes(searchVal);
       });
     }
 
@@ -650,6 +660,12 @@ const PendingWorkfollowupComponents = () => {
             label: "รหัสเรื่อง (นร.)",
             type: "text",
             placeholder: "กรอกรหัสเรื่อง",
+          },
+          {
+            name: "subject",
+            label: "ชื่อเรื่อง",
+            type: "text",
+            placeholder: "กรอกชื่อเรื่อง",
           },
           {
             name: "receiveDateFrom",

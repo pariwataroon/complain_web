@@ -420,7 +420,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                         })()}
 
                         {accountData.address && (accountData.address.address ||accountData.address.subdistrict || accountData.address.district || accountData.address.province) && (
-                            <Grid item xs={12}>
+                            <Grid item xs={12} md={8}>
                                 <Box className={styles.infoItem}>
                                     <LocationIcon className={styles.infoIcon} />
                                     <Box>
@@ -547,7 +547,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             })()}
 
                             {customerData.address && (customerData.address.address || customerData.address.subdistrict || customerData.address.district || customerData.address.province) && (
-                                <Grid item xs={12}>
+                                <Grid item xs={12} md={8}>
                                     <Box className={styles.infoItem}>
                                         <LocationIcon className={styles.infoIcon} />
                                         <Box>
@@ -603,47 +603,35 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                         </Box>
                     ) : (
                         <Box className={styles.orgList}>
-                            {/* Header */}
-                            <Box className={styles.orgListHeader}>
-                                <Typography variant="subtitle2" className={styles.orgListHeaderText}>ลำดับ</Typography>
-                                <Typography variant="subtitle2" className={styles.orgListHeaderText}>หน่วยงาน</Typography>
-                                <Typography variant="subtitle2" className={styles.orgListHeaderText}>สถานะ</Typography>
-                                <Typography variant="subtitle2" className={styles.orgListHeaderText}>ผลการดำเนินงาน</Typography>
-                            </Box>
                             {orgOwnerList.map((org, index) => (
-                                <Box key={index} className={styles.orgListRow}>
-                                    <Box className={styles.orgListCell}>
+                                <Box key={index} className={styles.orgRow}>
+                                    <Box className={styles.orgRowLeft}>
                                         <Avatar
+                                            className={styles.orgAvatar}
                                             sx={{
-                                                width: 28,
-                                                height: 28,
-                                                fontSize: '0.8rem',
                                                 bgcolor: theme.palette[getStatusColor(org.case_org_status_text)]?.main || '#9e9e9e'
                                             }}
                                         >
                                             {org.line || index + 1}
                                         </Avatar>
+                                        <Box className={styles.orgInfo}>
+                                            <Typography variant="body1" className={styles.orgName}>
+                                                {org.org_text || 'ไม่ระบุหน่วยงาน'}
+                                            </Typography>
+                                            {org.case_org_summary_result && (
+                                                <Typography variant="body2" className={styles.orgSummary}>
+                                                    {org.case_org_summary_result}
+                                                </Typography>
+                                            )}
+                                        </Box>
                                     </Box>
-                                    <Box className={styles.orgListCell}>
-                                        <BusinessIcon sx={{ fontSize: 16, color: '#0a2cbd', mr: 1 }} />
-                                        <Typography variant="body1" className={styles.orgListValue}>
-                                            {org.org_text || 'ไม่ระบุหน่วยงาน'}
-                                        </Typography>
-                                    </Box>
-                                    <Box className={styles.orgListCell}>
-                                        <Chip
-                                            label={org.case_org_status_text || 'ไม่ระบุสถานะ'}
-                                            color={getStatusColor(org.case_org_status_text)}
-                                            size="small"
-                                            icon={getStatusIcon(org.case_org_status_text)}
-                                            sx={{ height: 24, fontSize: '0.75rem' }}
-                                        />
-                                    </Box>
-                                    <Box className={styles.orgListCell}>
-                                        <Typography variant="body1" className={styles.orgListValue}>
-                                            {org.case_org_summary_result || '-'}
-                                        </Typography>
-                                    </Box>
+                                    <Chip
+                                        label={org.case_org_status_text || 'ไม่ระบุสถานะ'}
+                                        color={getStatusColor(org.case_org_status_text)}
+                                        size="small"
+                                        icon={getStatusIcon(org.case_org_status_text)}
+                                        className={styles.orgStatusChip}
+                                    />
                                 </Box>
                             ))}
                         </Box>
@@ -664,8 +652,8 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                         </Typography>
                     </Box>
 
-                    <Grid container spacing={3} className={styles.infoGrid}>
-                        <Grid item xs={12} md={6}>
+                    <Grid container spacing={2} className={styles.infoGrid}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     ช่องทางการรับเรื่อง
@@ -676,7 +664,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     ระดับความสำคัญ
@@ -687,7 +675,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     ระดับความเร่งด่วน
@@ -698,7 +686,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     ระดับความลับ
@@ -709,7 +697,32 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={12}>
+                        <Grid item xs={12} md={4}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ฟ้องร้องในชั้นศาล
+                                </Typography>
+                                <Chip
+                                    label={getFieldValue("is_in_court_text")}
+                                    color={getFieldValue("is_in_court") === "T" ? "error" : "success"}
+                                    size="small"
+                                    className={styles.statusChip}
+                                />
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={4}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    ผู้ถูกร้อง
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("defendant")}
+                                </Typography>
+                            </Box>
+                        </Grid>
+
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     พื้นที่เกิดเหตุ
@@ -725,20 +738,18 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={12}>
-                            <Grid item xs={12}>
-                                <Box className={styles.infoItem}>
-                                    <Typography variant="subtitle2" className={styles.label}>
-                                        ช่วงเวลาที่เกิดเหตุ
-                                    </Typography>
-                                    <Typography variant="body1" className={styles.value}>
-                                        {getFieldValue("time_occurrenced")}
-                                    </Typography>
-                                </Box>
-                            </Grid>
+                        <Grid item xs={12} md={4}>
+                            <Box className={styles.infoItem}>
+                                <Typography variant="subtitle2" className={styles.label}>
+                                    เวลาที่เกิดเหตุ
+                                </Typography>
+                                <Typography variant="body1" className={styles.value}>
+                                    {getFieldValue("time_occurrenced")}
+                                </Typography>
+                            </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={12}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     วันที่เกิดเหตุ (จาก - ถึง)
@@ -751,34 +762,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
-                            <Box className={styles.infoItem}>
-                                <Typography variant="subtitle2" className={styles.label}>
-                                    อยู่ระหว่างการฟ้องร้อง / พิจารณาในชั้นศาล
-                                </Typography>
-                                <Chip
-                                    label={getFieldValue("is_in_court_text")}
-                                    color={getFieldValue("is_in_court") === "T" ? "error" : "success"}
-                                    size="small"
-                                    className={styles.statusChip}
-                                />
-                            </Box>
-                        </Grid>
-
-                        <Grid item xs={12} md={6}>
-                            <Grid item xs={12}>
-                                <Box className={styles.infoItem}>
-                                    <Typography variant="subtitle2" className={styles.label}>
-                                        ผู้ถูกร้อง
-                                    </Typography>
-                                    <Typography variant="body1" className={styles.value}>
-                                        {getFieldValue("defendant")}
-                                    </Typography>
-                                </Box>
-                            </Grid>
-                        </Grid>
-
-                        <Grid item xs={12} md={12}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     สร้างโดย
@@ -790,7 +774,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                         </Grid>
 
                         {getFieldValue("remark") && getFieldValue("remark") !== '-' && (
-                            <Grid item xs={12}>
+                            <Grid item xs={12} md={8}>
                                 <Box className={styles.infoItem}>
                                     <Typography variant="subtitle2" className={styles.label}>
                                         หมายเหตุ

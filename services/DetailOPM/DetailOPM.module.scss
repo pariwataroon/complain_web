@@ -306,64 +306,82 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-// Org List Styles (table-like rows)
+// Org List Styles
 .orgList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.orgRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, #f8fbff 0%, #f1f8ff 100%);
     border: 1px solid #e3f2fd;
-    border-radius: 12px;
+    border-radius: 14px;
+    transition: all 0.25s ease;
+    gap: 16px;
+
+    &:hover {
+        background: linear-gradient(135deg, #eef4ff 0%, #e3edff 100%);
+        border-color: #90caf9;
+        box-shadow: 0 4px 16px rgba(10, 44, 189, 0.08);
+        transform: translateX(4px);
+    }
+}
+
+.orgRowLeft {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.orgAvatar {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 0.85rem !important;
+    font-weight: 700;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
+}
+
+.orgInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.orgName {
+    color: #2c3e50;
+    font-weight: 600;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.orgSummary {
+    color: #78909c;
+    font-size: 0.78rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
 }
 
-.orgListHeader {
-    display: grid;
-    grid-template-columns: 60px 1fr 180px 1fr;
-    background: linear-gradient(to bottom, #0a2cbd, #3c7bff);
-    padding: 10px 16px;
-    align-items: center;
-}
-
-.orgListHeaderText {
-    color: white;
-    font-weight: 700;
-    font-size: 0.8rem;
-    letter-spacing: 0.5px;
-}
-
-.orgListRow {
-    display: grid;
-    grid-template-columns: 60px 1fr 180px 1fr;
-    padding: 12px 16px;
-    align-items: center;
-    border-bottom: 1px solid #e3f2fd;
-    transition: background 0.2s ease;
-
-    &:last-child {
-        border-bottom: none;
-    }
-
-    &:hover {
-        background: #f8fbff;
-    }
-
-    &:nth-child(even) {
-        background: #fafcff;
-
-        &:hover {
-            background: #f0f6ff;
-        }
-    }
-}
-
-.orgListCell {
-    display: flex;
-    align-items: center;
-    padding: 0 8px;
-}
-
-.orgListValue {
-    color: #2c3e50;
-    font-weight: 500;
-    font-size: 0.85rem;
-    word-break: break-word;
+.orgStatusChip {
+    flex-shrink: 0;
+    height: 26px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 20px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 // Timeline Styles
