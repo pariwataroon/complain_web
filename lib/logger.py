@@ -29,16 +29,29 @@ class HourlyRotatingFileHandler(logging.Handler):
             date_dir = os.path.join(self.base_dir, date_str)
             Path(date_dir).mkdir(exist_ok=True)
             file_path = os.path.join(date_dir, f"{hour:02d}.log")
-            self.file_handler = logging.FileHandler(file_path, encoding='utf-8')
-            self.file_handler.setFormatter(logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-            ))
-            self.current_date = date_str
-            self.current_hour = hour
+            try:
+                self.file_handler = logging.FileHandler(file_path, encoding='utf-8')
+                self.file_handler.setFormatter(logging.Formatter(
+                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                ))
+                self.current_date = date_str
+                self.current_hour = hour
+            except PermissionError:
+                # ไฟล์ถูกล็อคโดย process อื่น (เช่น uvicorn เก่า) — ใช้ .tmp แทน
+                tmp_path = file_path + ".tmp"
+                self.file_handler = logging.FileHandler(tmp_path, encoding='utf-8')
+                self.file_handler.setFormatter(logging.Formatter(
+                    '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                ))
+                self.current_date = date_str
+                self.current_hour = hour
 
     def emit(self, record):
-        self._update_handler()
-        self.file_handler.emit(record)
+        try:
+            self._update_handler()
+            self.file_handler.emit(record)
+        except Exception:
+            pass  # ข้ามถ้าเขียน log ไม่ได้ ไม่ให้ crash แอป
 
     def _clean_old_logs(self):
         """Delete log folders older than 90 days"""
