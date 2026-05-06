@@ -1,5 +1,5 @@
 from datetime import datetime, date
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_
 from uuid import UUID
 from typing import List, Dict, Any, Optional
@@ -1623,7 +1623,24 @@ def get_complaints_enhanced(
 
     total_count = query.count()
     query = query.order_by(Complaint.created_at.desc())
-    complaints = query.offset(skip).limit(limit).all()
+    complaints = query.options(
+        joinedload(Complaint.complaint_subtype_relation),
+        joinedload(Complaint.complaint_channel_relation),
+    ).offset(skip).limit(limit).all()
+
+    # Batch-load channel names (avoid N+1)
+    channel_ids_in_result = {c.complaint_channel_id for c in complaints if c.complaint_channel_id}
+    channel_map: Dict = {}
+    if channel_ids_in_result:
+        ch_rows = db.query(ComplaintChannel).filter(ComplaintChannel.id.in_(channel_ids_in_result)).all()
+        channel_map = {ch.id: ch.name for ch in ch_rows}
+
+    # Batch-load subtype names (avoid N+1, backup for joinedload)
+    subtype_ids_in_result = {c.complaint_subtype_id for c in complaints if c.complaint_subtype_id}
+    subtype_map: Dict = {}
+    if subtype_ids_in_result:
+        st_rows = db.query(ComplaintSubType).filter(ComplaintSubType.id.in_(subtype_ids_in_result)).all()
+        subtype_map = {st.id: st.name for st in st_rows}
 
     result = []
     for complaint in complaints:
@@ -1634,16 +1651,14 @@ def get_complaints_enhanced(
             delegate_data = ensure_dict(complaint.delegate_data)
             respondent_data = ensure_dict(complaint.respondent_data)
             
-            # ดึงชื่อ complaint subtype
+            # ดึงชื่อ complaint subtype (ใช้ batch-loaded map)
             complaint_subtype_name = ""
             if hasattr(complaint, "complaint_subtype_id") and complaint.complaint_subtype_id:
-                try:
-                    from models.comp_complaint_types import ComplaintSubType
-                    subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
-                    if subtype:
-                        complaint_subtype_name = subtype.name
-                except Exception:
-                    pass
+                # ลองจาก eager-loaded relationship ก่อน
+                if complaint.complaint_subtype_relation:
+                    complaint_subtype_name = complaint.complaint_subtype_relation.name
+                elif complaint.complaint_subtype_id in subtype_map:
+                    complaint_subtype_name = subtype_map[complaint.complaint_subtype_id]
             
             # ตรวจสอบสถานะการมอบหมาย
             is_assigned = bool(
@@ -1730,7 +1745,7 @@ def get_complaints_enhanced(
                 "document_number": complaint.document_number,
                 "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
                 "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
-                "complaint_channel_name": get_channel_name(db, complaint.complaint_channel_id) if complaint.complaint_channel_id else None
+                "complaint_channel_name": channel_map.get(complaint.complaint_channel_id) if complaint.complaint_channel_id else None
             }
             
             result.append(enhanced_item)

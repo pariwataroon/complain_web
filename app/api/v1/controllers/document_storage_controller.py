@@ -1,12 +1,12 @@
 from datetime import datetime, timezone, timedelta
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, contains_eager
 from sqlalchemy import and_, or_, func
 from uuid import UUID
 from typing import Dict, Any, Optional, List
 import json
 import logging
 
-from models.comp_complaint import Complaint, ComplaintAttachment
+from models.comp_complaint import Complaint, ComplaintAttachment, ComplaintFilingType
 from models.comp_complaint_types import ComplaintChannel, ComplaintType, ComplaintSubType
 from models.user import User
 from models.departments import Department
@@ -1187,8 +1187,12 @@ def get_document_storage_by_channel(
         
         # ดึง channel IDs
         channel_ids = [channel.id for channel in target_channels]
-        
-        if not channel_ids:
+
+        # สำหรับ card type: ถ้าไม่มี channel "บัตรสนเท่ห์" ในระบบ
+        # ให้ดึงจาก group_work/anonymous แทน (ไม่ต้อง return empty ก่อน)
+        if normalized_page_type == "card" and not channel_ids:
+            pass  # ข้าม early return ไปสร้าง query จาก group_work/anonymous
+        elif not channel_ids:
             # ดึง departments แม้ว่าจะไม่มี channels
             departments_list = db.query(Department).filter(
                 Department.is_active == True
@@ -1217,9 +1221,21 @@ def get_document_storage_by_channel(
             }
         
         # สร้าง base query
-        query = db.query(Complaint).filter(
-            Complaint.complaint_channel_id.in_(channel_ids)
-        )
+        if normalized_page_type == "card":
+            # สำหรับหน้าคลังบัตรสนเท่ห์: แสดงเรื่องจากช่องทางบัตรสนเท่ห์
+            # รวมถึงเรื่องที่ group_work=True หรือ complaint_filing_type=anonymous
+            # เพื่อให้เรื่อง "รับเรื่องจากคณะทำงานฯ บัตรสนเท่ห์" แสดงในคลังด้วย
+            or_conditions = [
+                Complaint.group_work == True,
+                Complaint.complaint_filing_type == ComplaintFilingType.ANONYMOUS
+            ]
+            if channel_ids:
+                or_conditions.append(Complaint.complaint_channel_id.in_(channel_ids))
+            query = db.query(Complaint).filter(or_(*or_conditions))
+        else:
+            query = db.query(Complaint).filter(
+                Complaint.complaint_channel_id.in_(channel_ids)
+            )
 
         # จำกัดเฉพาะเรื่องที่เกี่ยวข้องกับผู้ใช้ (ถ้ามี user_id)
         if user_id:
@@ -1346,14 +1362,108 @@ def get_document_storage_by_channel(
         
         # Get total count
         total = query.count()
-        
-        # Apply pagination
-        complaints = query.order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
+
+        # Apply pagination with eager loading to avoid N+1 queries
+        complaints = query.options(
+            joinedload(Complaint.assigned_officer),
+            joinedload(Complaint.creator),
+            joinedload(Complaint.complaint_type_relation),
+            joinedload(Complaint.complaint_subtype_relation),
+            joinedload(Complaint.complaint_channel_relation),
+            joinedload(Complaint.outgoing_reports),
+            joinedload(Complaint.parent_complaint),
+        ).order_by(Complaint.created_at.desc()).offset(skip).limit(limit).all()
         
         # � สำหรับ summary listing ไม่ต้องโหลด relationships เพื่อ performance
         # สำหรับ detail ให้ใช้ get_document_storage_detail() แทน
         
-        # Format response
+        # ── Batch-load related data outside the loop ──
+        complaint_ids = [c.id for c in complaints]
+
+        # 1) Collect grandparent IDs
+        grandparent_ids = set()
+        for c in complaints:
+            if c.parent_complaint_id and c.parent_complaint and c.parent_complaint.parent_complaint_id:
+                grandparent_ids.add(c.parent_complaint.parent_complaint_id)
+
+        grandparents_by_id: Dict = {}
+        if grandparent_ids:
+            gp_rows = db.query(Complaint).filter(Complaint.id.in_(grandparent_ids)).all()
+            grandparents_by_id = {gp.id: gp for gp in gp_rows}
+
+        # 2) Batch load children (for master complaints)
+        master_ids = [c.id for c in complaints if c.parent_complaint_id is None]
+        parent_ids_for_siblings = [c.parent_complaint_id for c in complaints if c.parent_complaint_id]
+
+        children_map: Dict[str, List] = {}
+        if master_ids:
+            child_rows = db.query(Complaint).filter(
+                Complaint.parent_complaint_id.in_(master_ids)
+            ).order_by(Complaint.complaint_number).all()
+            for child in child_rows:
+                key = str(child.parent_complaint_id)
+                children_map.setdefault(key, []).append({
+                    "id": str(child.id),
+                    "complaint_number": child.complaint_number,
+                    "subject": child.subject,
+                    "status": child.status.value if child.status else None,
+                    "is_master": False
+                })
+
+        # 3) Batch load siblings
+        siblings_map: Dict[str, List] = {}
+        if parent_ids_for_siblings:
+            sibling_rows = db.query(Complaint).filter(
+                Complaint.parent_complaint_id.in_(parent_ids_for_siblings),
+                ~Complaint.id.in_(complaint_ids)
+            ).order_by(Complaint.complaint_number).all()
+            for sib in sibling_rows:
+                key = str(sib.parent_complaint_id)
+                siblings_map.setdefault(key, []).append({
+                    "id": str(sib.id),
+                    "complaint_number": sib.complaint_number,
+                    "subject": sib.subject,
+                    "status": sib.status.value if sib.status else None,
+                    "is_master": False
+                })
+
+        # 4) Batch-load OutgoingReport -> Department
+        outgoing_report_rows = db.query(OutgoingReport).filter(
+            OutgoingReport.complaint_id.in_(complaint_ids),
+            OutgoingReport.is_active == True
+        ).all()
+
+        dept_ids_for_outgoing = [r.department_id for r in outgoing_report_rows if r.department_id]
+        dept_by_id: Dict = {}
+        if dept_ids_for_outgoing:
+            dept_rows = db.query(Department).filter(Department.id.in_(dept_ids_for_outgoing)).all()
+            dept_by_id = {d.id: d for d in dept_rows}
+
+        outgoing_by_complaint: Dict[str, tuple] = {}
+        for r in outgoing_report_rows:
+            cid = str(r.complaint_id)
+            if cid not in outgoing_by_complaint:
+                dept = dept_by_id.get(r.department_id) if r.department_id else None
+                outgoing_by_complaint[cid] = (r, dept)
+
+        # 5) Batch-load OutsideDepartment for agency names
+        agency_sender_uuids = []
+        for c in complaints:
+            raw = (getattr(c, "agency_sender", None) or '').strip()
+            try:
+                agency_sender_uuids.append(UUID(raw))
+            except Exception:
+                pass
+
+        outside_dept_map: Dict[str, str] = {}
+        if agency_sender_uuids:
+            od_rows = db.query(OutsideDepartment).filter(
+                OutsideDepartment.id.in_(agency_sender_uuids),
+                OutsideDepartment.is_active == True
+            ).all()
+            outside_dept_map = {str(od.id): od.name for od in od_rows if od.name}
+
+        # ── Format response (no per-item DB queries) ──
         items = []
         for complaint in complaints:
             # ดึงข้อมูลผู้ร้องเรียน
@@ -1363,7 +1473,7 @@ def get_document_storage_by_channel(
             except (json.JSONDecodeError, TypeError) as e:
                 logger.warning(f"Error parsing complainant_data for complaint {complaint.id}: {str(e)}")
                 complainant_data = {}
-            
+
             # ดึงข้อมูลผู้ถูกร้องเรียน
             respondent_data = {}
             try:
@@ -1371,26 +1481,18 @@ def get_document_storage_by_channel(
             except (json.JSONDecodeError, TypeError) as e:
                 logger.warning(f"Error parsing respondent_data for complaint {complaint.id}: {str(e)}")
                 respondent_data = {}
-            
-            # ดึงข้อมูลเจ้าหน้าที่ที่รับผิดชอบ
-            assigned_officer = None
-            if complaint.assigned_officer_id:
-                assigned_officer = db.query(User).filter(User.id == complaint.assigned_officer_id).first()
-            
-            # ดึงข้อมูลผู้สร้างเรื่องร้องเรียน (created_by)
-            creator = None
-            if complaint.created_by:
-                creator = db.query(User).filter(User.id == complaint.created_by).first()
-            
-            # 📝 สำหรับ summary: ข้อมูลพื้นฐานเท่านั้น ไม่รวม detailed relationships
-            # หาก parent/master พื้นฐานเพื่อแสดงสถานะ is_master
+
+            # ใช้ relationship ที่ eager-loaded แล้ว (ไม่ต้อง query ใหม่)
+            assigned_officer = complaint.assigned_officer
+            creator = complaint.creator
+
+            # คำนวณ parent/master จาก eager-loaded relationship
             has_parent = complaint.parent_complaint_id is not None
             parent_complaint_basic = None
             master_complaint_basic = None
-            
+
             if has_parent:
-                # ดึงข้อมูล parent พื้นฐาน
-                parent = db.query(Complaint).filter(Complaint.id == complaint.parent_complaint_id).first()
+                parent = complaint.parent_complaint  # already eager-loaded
                 if parent:
                     parent_complaint_basic = {
                         "id": str(parent.id),
@@ -1399,11 +1501,9 @@ def get_document_storage_by_channel(
                         "status": parent.status.value if parent.status else None,
                         "is_master": parent.parent_complaint_id is None
                     }
-                    
-                    # หา master ถ้า parent ไม่ใช่ master
+
                     if parent.parent_complaint_id is not None:
-                        # ถ้า parent ไม่ใช่ master ให้หา master ต่อไป (แค่ 1 ระดับเพื่อ performance)
-                        master = db.query(Complaint).filter(Complaint.id == parent.parent_complaint_id).first()
+                        master = grandparents_by_id.get(parent.parent_complaint_id)
                         if master and master.parent_complaint_id is None:
                             master_complaint_basic = {
                                 "id": str(master.id),
@@ -1415,7 +1515,6 @@ def get_document_storage_by_channel(
                     else:
                         master_complaint_basic = parent_complaint_basic
             else:
-                # ตัวเองเป็น master
                 master_complaint_basic = {
                     "id": str(complaint.id),
                     "complaint_number": complaint.complaint_number,
@@ -1423,47 +1522,15 @@ def get_document_storage_by_channel(
                     "status": complaint.status.value if complaint.status else None,
                     "is_master": True
                 }
-            
-            # ดึงจำนวน children พื้นฐาน (แค่นับ ไม่ดึงรายละเอียด)
-            children_count = db.query(Complaint).filter(Complaint.parent_complaint_id == complaint.id).count()
-            child_complaints_basic = []
-            if children_count > 0:
-                children = db.query(Complaint).filter(
-                    Complaint.parent_complaint_id == complaint.id
-                ).order_by(Complaint.complaint_number).all()
-                child_complaints_basic = [
-                    {
-                        "id": str(child.id),
-                        "complaint_number": child.complaint_number,
-                        "subject": child.subject,
-                        "status": child.status.value if child.status else None,
-                        "is_master": False
-                    } for child in children
-                ]
-            
-            # หา siblings พื้นฐาน (ถ้ามี parent เดียวกัน)
-            sibling_complaints_basic = []
-            if has_parent:
-                siblings = db.query(Complaint).filter(
-                    Complaint.parent_complaint_id == complaint.parent_complaint_id,
-                    Complaint.id != complaint.id
-                ).order_by(Complaint.complaint_number).all()
-                sibling_complaints_basic = [
-                    {
-                        "id": str(sibling.id),
-                        "complaint_number": sibling.complaint_number,
-                        "subject": sibling.subject,
-                        "status": sibling.status.value if sibling.status else None,
-                        "is_master": False
-                    } for sibling in siblings
-                ]
-            
-            # ดึงข้อมูล channel
-            channel_info = None
-            if complaint.complaint_channel_id:
-                channel_info = db.query(ComplaintChannel).filter(
-                    ComplaintChannel.id == complaint.complaint_channel_id
-                ).first()
+
+            # ใช้ batch-loaded children
+            child_complaints_basic = children_map.get(str(complaint.id), [])
+
+            # ใช้ batch-loaded siblings
+            sibling_complaints_basic = siblings_map.get(str(complaint.parent_complaint_id), []) if has_parent else []
+
+            # ใช้ eager-loaded channel relationship
+            channel_info = complaint.complaint_channel_relation
             
             # 🔥 วันที่ร้อง = วันที่สร้างเรื่องร้องเรียน (created_at)
             received_date = ""
@@ -1493,44 +1560,36 @@ def get_document_storage_by_channel(
             elif complaint.new_complaint:
                 complaint_category = "เรื่องร้องเรียนใหม่"
             
-            # ดึงข้อมูลประเภทเรื่องและประเภทเรื่องย่อย
+            # ใช้ eager-loaded type/subtype relationships
             complaint_type_name = ""
             complaint_subtype_name = ""
-            
-            if complaint.complaint_type_id:
-                complaint_type_obj = db.query(ComplaintType).filter(ComplaintType.id == complaint.complaint_type_id).first()
-                complaint_type_name = complaint_type_obj.name if complaint_type_obj else ""
-            
-            if complaint.complaint_subtype_id:
-                complaint_subtype_obj = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
-                complaint_subtype_name = complaint_subtype_obj.name if complaint_subtype_obj else ""
-            
-            # หน่วยงาน (standardized)
-            agency_name = _resolve_agency_name(db, complaint)
 
-            # 🔥 ดึงข้อมูลหน่วยงานจาก OutgoingReport (หน่วยงาน 2)
+            if complaint.complaint_type_relation:
+                complaint_type_name = complaint.complaint_type_relation.name
+
+            if complaint.complaint_subtype_relation:
+                complaint_subtype_name = complaint.complaint_subtype_relation.name
+
+            # หน่วยงาน - ใช้ batch-loaded OutsideDepartment
+            agency_name = ""
+            raw_agency = (getattr(complaint, "agency_sender", None) or '').strip()
+            if raw_agency:
+                agency_name = outside_dept_map.get(raw_agency, "")
+
+            # หน่วยงาน 2 - ใช้ batch-loaded OutgoingReport + Department
             outgoing_department_name = ""
             outgoing_department_info = None
-            try:
-                outgoing_report = db.query(OutgoingReport).filter(
-                    OutgoingReport.complaint_id == complaint.id,
-                    OutgoingReport.is_active == True
-                ).first()
-
-                if outgoing_report and outgoing_report.department_id:
-                    department = db.query(Department).filter(
-                        Department.id == outgoing_report.department_id
-                    ).first()
-                    if department:
-                        outgoing_department_name = department.name
-                        outgoing_department_info = {
-                            "id": str(department.id),
-                            "name": department.name,
-                            "short_name": department.short_name,
-                            "code": department.code
-                        }
-            except Exception as e:
-                logger.warning(f"Error getting outgoing department for complaint {complaint.id}: {str(e)}")
+            out_match = outgoing_by_complaint.get(str(complaint.id))
+            if out_match:
+                _, dept = out_match
+                if dept:
+                    outgoing_department_name = dept.name
+                    outgoing_department_info = {
+                        "id": str(dept.id),
+                        "name": dept.name,
+                        "short_name": dept.short_name,
+                        "code": dept.code
+                    }
 
             # ✅ ตรวจสอบสถานะการมอบหมาย
             is_assigned = bool(complaint.assigned_officer_id or complaint.assigned_to)
