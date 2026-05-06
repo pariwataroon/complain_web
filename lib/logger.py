@@ -50,7 +50,7 @@ class HourlyRotatingFileHandler(logging.Handler):
             try:
                 dir_date = datetime.datetime.strptime(date_dir.name, "%Y-%m-%d").date()
                 if dir_date < three_months_ago:
-                    shutil.rmtree(date_dir)
+                    shutil.rmtree(date_dir, ignore_errors=True)
             except ValueError:
                 continue
 
