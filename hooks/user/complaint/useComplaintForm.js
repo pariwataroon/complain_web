@@ -154,8 +154,11 @@ export default function useComplaintForm() {
         // หน่วยงานที่ส่งเรื่อง
         agency_sender: tab31Data.senderAgency || "",
         
-        // ประเภทการรับเรื่อง
-        complaint_filing_type: tab31Data.complaint_filing_type || "new",
+        // ประเภทการรับเรื่อง (map "committee" → "anonymous" ตาม backend enum)
+        complaint_filing_type: (() => {
+          const typeMap = { new: "new", additional: "additional", committee: "anonymous" };
+          return typeMap[tab31Data.complaint_filing_type] || tab31Data.complaint_filing_type || "new";
+        })(),
         new_complaint: (tab31Data.complaint_filing_type || "new") === "new",
         add_more_complaint_to_ref: (tab31Data.complaint_filing_type || "new") === "additional",
         group_work: (tab31Data.complaint_filing_type || "new") === "committee",

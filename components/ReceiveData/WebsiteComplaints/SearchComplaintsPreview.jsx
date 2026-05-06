@@ -401,15 +401,21 @@ const handleSubmit = async () => {
     await handleUpdateAssignment(id, mappedFormData, userInfo);
 
     // --- STEP4: บันทึกวันรับเรื่อง/วันเสนองาน ---
-    await UpdateAssignmentCompleteByAdmin(id, {
+    const isGroupWork = step3Data.complaint_filing_type === "committee" || step3Data.isCommitteeComplaint === true;
+    const step4Payload = {
       new_complaint: step3Data.complaint_filing_type === "new" || step3Data.isNewComplaint === true || !step3Data.complaint_filing_type,
       add_more_complaint_to_ref: step3Data.complaint_filing_type === "additional" || step3Data.isAdditionalComplaint === true,
-      group_work: step3Data.complaint_filing_type === "committee" || step3Data.isCommitteeComplaint === true,
+      group_work: isGroupWork,
       registration_date:      formatDateForAPI(step4Data.officerReceivedDate || assignmentOriginal.registration_date),
       director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate || assignmentOriginal.director_submission_date),
       incidentDate: formatDateForAPI(step4Data.incidentDateTime || assignmentOriginal.incidentDate),
       assigned_date: assignmentOriginal.assigned_date || formData.assigned_date || null,
-    });
+    };
+    // ส่ง additional_reference_number2 ไปด้วยเมื่อ group_work=true เพื่อผ่าน backend validation
+    if (isGroupWork && step3Data.additionalReference2) {
+      step4Payload.additional_reference_number2 = step3Data.additionalReference2;
+    }
+    await UpdateAssignmentCompleteByAdmin(id, step4Payload);
 
     alertSuccess("บันทึกสำเร็จ", "ข้อมูลได้รับการบันทึกแล้ว");
 
