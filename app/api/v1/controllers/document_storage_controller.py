@@ -6,7 +6,7 @@ from typing import Dict, Any, Optional, List
 import json
 import logging
 
-from models.comp_complaint import Complaint, ComplaintAttachment, ComplaintFilingType
+from models.comp_complaint import Complaint, ComplaintAttachment
 from models.comp_complaint_types import ComplaintChannel, ComplaintType, ComplaintSubType
 from models.user import User
 from models.departments import Department
@@ -1188,11 +1188,7 @@ def get_document_storage_by_channel(
         # ดึง channel IDs
         channel_ids = [channel.id for channel in target_channels]
 
-        # สำหรับ card type: ถ้าไม่มี channel "บัตรสนเท่ห์" ในระบบ
-        # ให้ดึงจาก group_work/anonymous แทน (ไม่ต้อง return empty ก่อน)
-        if normalized_page_type == "card" and not channel_ids:
-            pass  # ข้าม early return ไปสร้าง query จาก group_work/anonymous
-        elif not channel_ids:
+        if not channel_ids:
             # ดึง departments แม้ว่าจะไม่มี channels
             departments_list = db.query(Department).filter(
                 Department.is_active == True
@@ -1222,16 +1218,9 @@ def get_document_storage_by_channel(
         
         # สร้าง base query
         if normalized_page_type == "card":
-            # สำหรับหน้าคลังบัตรสนเท่ห์: แสดงเรื่องจากช่องทางบัตรสนเท่ห์
-            # รวมถึงเรื่องที่ group_work=True หรือ complaint_filing_type=anonymous
-            # เพื่อให้เรื่อง "รับเรื่องจากคณะทำงานฯ บัตรสนเท่ห์" แสดงในคลังด้วย
-            or_conditions = [
-                Complaint.group_work == True,
-                Complaint.complaint_filing_type == ComplaintFilingType.ANONYMOUS
-            ]
-            if channel_ids:
-                or_conditions.append(Complaint.complaint_channel_id.in_(channel_ids))
-            query = db.query(Complaint).filter(or_(*or_conditions))
+            query = db.query(Complaint).filter(
+                Complaint.complaint_channel_id.in_(channel_ids)
+            )
         else:
             query = db.query(Complaint).filter(
                 Complaint.complaint_channel_id.in_(channel_ids)
