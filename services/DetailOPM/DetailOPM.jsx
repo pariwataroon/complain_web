@@ -11,10 +11,6 @@ import {
     Avatar,
     useTheme,
     useMediaQuery,
-    Stepper,
-    Step,
-    StepLabel,
-    StepContent,
     IconButton,
 } from "@mui/material";
 import {
@@ -210,7 +206,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
     return (
         <Box className={styles.detailContainer}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-                <Typography variant="h4" className={styles.title}>
+                <Typography variant="h5" className={styles.title}>
                     รายละเอียดคำร้อง {accountData.fullName && accountData.fullName !== '-' && `- ${accountData.fullName}`}
                 </Typography>
             </Box>
@@ -242,7 +238,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                     </Box>
 
                     <Grid container spacing={3} className={styles.infoGrid}>
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     รหัสเรื่อง
@@ -253,7 +249,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     วัตถุประสงค์
@@ -266,7 +262,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     ประเภท
@@ -277,7 +273,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     สถานะ
@@ -291,7 +287,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     สถานะหลัก
@@ -305,7 +301,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Box>
                         </Grid>
 
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <Typography variant="subtitle2" className={styles.label}>
                                     วันที่เปิดคำร้อง
@@ -334,8 +330,8 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                         </Typography>
                     </Box>
 
-                    <Grid container spacing={3} className={styles.infoGrid}>
-                        <Grid item xs={12} md={12}>
+                    <Grid container spacing={2} className={styles.infoGrid}>
+                        <Grid item xs={12} md={4}>
                             <Box className={styles.infoItem}>
                                 <PersonIcon className={styles.infoIcon} />
                                 <Box>
@@ -344,8 +340,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                     </Typography>
                                     <Typography variant="body1" className={styles.value} sx={{
                                         color: '#1976d2',
-                                        fontWeight: 'medium',
-                                        fontSize: '1.1rem'
+                                        fontWeight: 'medium'
                                     }}>
                                         {accountData.fullName}
                                     </Typography>
@@ -354,7 +349,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                         </Grid>
 
                         {accountData.citizenId && accountData.citizenId !== '-' && (
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={4}>
                                 <Box className={styles.infoItem}>
                                     <BadgeIcon className={styles.infoIcon} />
                                     <Box>
@@ -370,7 +365,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                         )}
 
                         {accountData.gender && (
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={4}>
                                 <Box className={styles.infoItem}>
                                     <PersonIcon className={styles.infoIcon} />
                                     <Box>
@@ -386,7 +381,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                         )}
 
                         {accountData.contacts?.find(c => c.detail_type === 'E')?.detail && (
-                            <Grid item xs={12} md={6}>
+                            <Grid item xs={12} md={4}>
                                 <Box className={styles.infoItem}>
                                     <EmailIcon className={styles.infoIcon} />
                                     <Box>
@@ -408,7 +403,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                 ?.filter(Boolean) || [];
 
                             return phoneNumbers.length > 0 ? (
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} md={4}>
                                     <Box className={styles.infoItem}>
                                         <PhoneIcon className={styles.infoIcon} />
                                         <Box>
@@ -462,8 +457,8 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Typography>
                         </Box>
 
-                        <Grid container spacing={3} className={styles.infoGrid}>
-                            <Grid item xs={12} md={12}>
+                        <Grid container spacing={2} className={styles.infoGrid}>
+                            <Grid item xs={12} md={4}>
                                 <Box className={styles.infoItem}>
                                     <PersonIcon className={styles.infoIcon} />
                                     <Box>
@@ -472,8 +467,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                         </Typography>
                                         <Typography variant="body1" className={styles.value} sx={{
                                             color: '#d32f2f',
-                                            fontWeight: 'medium',
-                                            fontSize: '1.1rem'
+                                            fontWeight: 'medium'
                                         }}>
                                             {customerData.fullName}
                                         </Typography>
@@ -482,7 +476,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Grid>
 
                             {customerData.citizenId && customerData.citizenId !== '-' && (
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} md={4}>
                                     <Box className={styles.infoItem}>
                                         <BadgeIcon className={styles.infoIcon} />
                                         <Box>
@@ -498,7 +492,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             )}
 
                             {customerData.gender && (
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} md={4}>
                                     <Box className={styles.infoItem}>
                                         <PersonIcon className={styles.infoIcon} />
                                         <Box>
@@ -514,7 +508,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             )}
 
                             {customerData.contacts?.find(c => c.detail_type === 'E')?.detail && (
-                                <Grid item xs={12} md={6}>
+                                <Grid item xs={12} md={4}>
                                     <Box className={styles.infoItem}>
                                         <EmailIcon className={styles.infoIcon} />
                                         <Box>
@@ -536,7 +530,7 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                     ?.filter(Boolean) || [];
 
                                 return phoneNumbers.length > 0 ? (
-                                    <Grid item xs={12} md={6}>
+                                    <Grid item xs={12} md={4}>
                                         <Box className={styles.infoItem}>
                                             <PhoneIcon className={styles.infoIcon} />
                                             <Box>
@@ -550,8 +544,8 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                         </Box>
                                     </Grid>
                                 ) : null;
-                            })()}                            
-                            
+                            })()}
+
                             {customerData.address && (customerData.address.address || customerData.address.subdistrict || customerData.address.district || customerData.address.province) && (
                                 <Grid item xs={12}>
                                     <Box className={styles.infoItem}>
@@ -608,77 +602,51 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                             </Typography>
                         </Box>
                     ) : (
-                        <Stepper orientation="vertical" className={styles.stepper}>
+                        <Box className={styles.orgList}>
+                            {/* Header */}
+                            <Box className={styles.orgListHeader}>
+                                <Typography variant="subtitle2" className={styles.orgListHeaderText}>ลำดับ</Typography>
+                                <Typography variant="subtitle2" className={styles.orgListHeaderText}>หน่วยงาน</Typography>
+                                <Typography variant="subtitle2" className={styles.orgListHeaderText}>สถานะ</Typography>
+                                <Typography variant="subtitle2" className={styles.orgListHeaderText}>ผลการดำเนินงาน</Typography>
+                            </Box>
                             {orgOwnerList.map((org, index) => (
-                                <Step key={index} active={true} completed={org.case_org_status_text === "เสร็จสิ้น"}>
-                                    <StepLabel
-                                        icon={
-                                            <Avatar
-                                                className={styles.stepAvatar}
-                                                sx={{
-                                                    bgcolor: theme.palette[getStatusColor(org.case_org_status_text)]?.main || '#gray'
-                                                }}
-                                            >
-                                                {org.line || index + 1}
-                                            </Avatar>
-                                        }
-                                    >
-                                        <Typography variant="h6" className={styles.stepTitle}>
-                                            หน่วยงานที่ {org.line || index + 1}
+                                <Box key={index} className={styles.orgListRow}>
+                                    <Box className={styles.orgListCell}>
+                                        <Avatar
+                                            sx={{
+                                                width: 28,
+                                                height: 28,
+                                                fontSize: '0.8rem',
+                                                bgcolor: theme.palette[getStatusColor(org.case_org_status_text)]?.main || '#9e9e9e'
+                                            }}
+                                        >
+                                            {org.line || index + 1}
+                                        </Avatar>
+                                    </Box>
+                                    <Box className={styles.orgListCell}>
+                                        <BusinessIcon sx={{ fontSize: 16, color: '#0a2cbd', mr: 1 }} />
+                                        <Typography variant="body1" className={styles.orgListValue}>
+                                            {org.org_text || 'ไม่ระบุหน่วยงาน'}
                                         </Typography>
-                                    </StepLabel>
-                                    <StepContent>
-                                        <Card className={styles.stepCard}>
-                                            <CardContent className={styles.stepContent}>
-                                                <Box className={styles.stepInfo}>
-                                                    <BusinessIcon className={styles.stepIcon} />
-                                                    <Box>
-                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                            หน่วยงาน
-                                                        </Typography>
-                                                        <Typography variant="body1" className={styles.stepValue}>
-                                                            {org.org_text || 'ไม่ระบุหน่วยงาน'}
-                                                        </Typography>
-                                                    </Box>
-                                                </Box>
-
-                                                <Box className={styles.stepInfo}>
-                                                    <Box className={styles.statusContainer}>
-                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                            สถานะ
-                                                        </Typography>
-                                                        <Chip
-                                                            label={org.case_org_status_text || 'ไม่ระบุสถานะ'}
-                                                            color={getStatusColor(org.case_org_status_text)}
-                                                            className={styles.statusChip}
-                                                            size="small"
-                                                            icon={getStatusIcon(org.case_org_status_text)}
-                                                        />
-                                                    </Box>
-                                                </Box>
-
-                                                {org.case_org_summary_result && (
-                                                    <Box className={styles.summaryResult}>
-                                                        <Typography variant="subtitle2" className={styles.stepLabel}>
-                                                            สรุปผลการดำเนินงาน
-                                                        </Typography>
-                                                        <Typography variant="body2" className={styles.summaryText}>
-                                                            {org.case_org_summary_result}
-                                                        </Typography>
-                                                    </Box>
-                                                )}
-
-                                                <Box className={styles.createdBy}>
-                                                    <Typography variant="caption" className={styles.createdByText}>
-                                                        สร้างโดย: {org.created_by_text || 'ไม่ระบุ'}
-                                                    </Typography>
-                                                </Box>
-                                            </CardContent>
-                                        </Card>
-                                    </StepContent>
-                                </Step>
+                                    </Box>
+                                    <Box className={styles.orgListCell}>
+                                        <Chip
+                                            label={org.case_org_status_text || 'ไม่ระบุสถานะ'}
+                                            color={getStatusColor(org.case_org_status_text)}
+                                            size="small"
+                                            icon={getStatusIcon(org.case_org_status_text)}
+                                            sx={{ height: 24, fontSize: '0.75rem' }}
+                                        />
+                                    </Box>
+                                    <Box className={styles.orgListCell}>
+                                        <Typography variant="body1" className={styles.orgListValue}>
+                                            {org.case_org_summary_result || '-'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
                             ))}
-                        </Stepper>
+                        </Box>
                     )}
                 </CardContent>
             </Card>

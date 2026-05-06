@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Box, Typography, Modal, IconButton } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
-import SelectMenuService from "@services/SelectMenu/SelectMenu";
 import TextfieldService from "@services/TextfieldService/TextfieldService";
+import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { getStaffWorkload } from "@pages/api/statistics/statistics";
 
 const breadcrumbItems = [
@@ -19,27 +19,6 @@ const breadcrumbItems = [
   },
 ];
 
-const getFiscalYearOptions = () => {
-  const currentYearBE = new Date().getFullYear() + 543;
-  const years = [];
-  for (let y = currentYearBE - 2; y <= currentYearBE + 2; y++) {
-    years.push({ label: String(y), value: String(y) });
-  }
-  return years;
-};
-
-const fiscalYearOptions = getFiscalYearOptions();
-
-const thaiYearToGregorian = (thaiYearStr) => {
-  const y = parseInt(thaiYearStr, 10);
-  return Number.isNaN(y) ? new Date().getFullYear() : y - 543;
-};
-
-const buildDateRangeOfYear = (gregYear) => ({
-  date_from: `${gregYear}-01-01`,
-  date_to: `${gregYear}-12-31`,
-});
-
 const statusLabel = (s) =>
   ({
     submitted: "รับเรื่อง",
@@ -52,9 +31,6 @@ const statusLabel = (s) =>
     completed: "สำเร็จ",
     cancelled: "ยุติ",
   }[s] ?? s);
-
-// ✅ ปี พ.ศ. "ปัจจุบัน" (ไม่ใช่ปีงบฯ)
-const getCurrentThaiCalendarYear = () => String(new Date().getFullYear() + 543);
 
 const ComplaintCard = ({ complaint, index, backlog }) => {
   const bg = index < backlog ? "#FDEAEA" : "#EAF4FE";
@@ -126,7 +102,7 @@ const StaffProfile = ({ staff }) => {
       >
         {[
           { label: "รับงาน", value: staff.received },
-          { label: "คงค้าง", value: staff.backlog },
+          { label: "รอผลพิจารณา", value: staff.backlog },
           { label: "สำเร็จ", value: staff.done },
         ].map(({ label, value }) => (
           <Box
@@ -152,14 +128,18 @@ const StaffProfile = ({ staff }) => {
 };
 
 const AccountBoxComponents = () => {
-  // ✅ ใช้ปี พ.ศ. ปัจจุบันเป็นค่าเริ่มต้น
-  const [fiscalYear, setFiscalYear] = useState(() => {
-    const fy = getCurrentThaiCalendarYear();
-    const exists = fiscalYearOptions.some((o) => o.value === fy);
-    return exists ? fy : fiscalYearOptions[0].value;
-  });
-  const handleYearChange = (e) => {
-    setFiscalYear(e.target.value);
+  const today = new Date();
+  const yearStart = new Date(today.getFullYear(), 0, 1).toISOString();
+  const yearEnd = new Date(today.getFullYear(), 11, 31).toISOString();
+
+  const [dateFrom, setDateFrom] = useState(yearStart);
+  const [dateTo, setDateTo] = useState(yearEnd);
+
+  const handleDateFromChange = (newDate) => {
+    setDateFrom(newDate);
+  };
+  const handleDateToChange = (newDate) => {
+    setDateTo(newDate);
   };
 
   const [open, setOpen] = useState(false);
@@ -192,11 +172,21 @@ const AccountBoxComponents = () => {
     [summaryState]
   );
 
-  const fetchData = async (thaiYearStr) => {
+  const isoToDateString = (isoStr) => {
+    if (!isoStr) return null;
+    const d = new Date(isoStr);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const fetchData = async (from, to) => {
     try {
       setLoading(true);
-      const year = thaiYearToGregorian(thaiYearStr);
-      const { date_from, date_to } = buildDateRangeOfYear(year);
+      const date_from = isoToDateString(from);
+      const date_to = isoToDateString(to);
+      const year = date_from ? new Date(date_from).getFullYear() : new Date().getFullYear();
       const data = await getStaffWorkload({ skip: 0, limit: 10000, date_from, date_to, year });
 
       const apiSummary = data?.summary ?? {};
@@ -252,7 +242,7 @@ const AccountBoxComponents = () => {
         const wl = row?.workload ?? {};
         const wsc = wl?.status_counts ?? {};
 
-        // ✅ คงค้าง (รวม 7 สถานะ และเพิ่ม sent_to_external)
+        // ✅ รอผลพิจารณา (รวม 7 สถานะ และเพิ่ม sent_to_external)
         const backlog =
           Number(wsc.submitted ?? 0) +
           Number(wsc.sent_to_agency ?? 0) +
@@ -272,12 +262,19 @@ const AccountBoxComponents = () => {
         );
 
         const complaints = Array.isArray(row?.latest_complaints)
-          ? row.latest_complaints.map((c) => ({
-              topic: c.subject ?? "-",
-              channel: "เว็บไซต์รับเรื่องร้องทุกข์",
-              type: statusLabel(c.status),
-              code: c.complaint_number ?? "-",
-            }))
+          ? row.latest_complaints
+              .map((c) => ({
+                topic: c.subject ?? "-",
+                channel: "เว็บไซต์รับเรื่องร้องทุกข์",
+                type: statusLabel(c.status),
+                code: c.complaint_number ?? "-",
+                createdAt: c.created_at ?? c.date ?? null,
+              }))
+              .sort((a, b) => {
+                if (!a.createdAt) return 1;
+                if (!b.createdAt) return -1;
+                return new Date(b.createdAt) - new Date(a.createdAt);
+              })
           : [];
 
         return {
@@ -304,14 +301,14 @@ const AccountBoxComponents = () => {
       console.log('=== Total Calculation from Staff Data ===');
       console.log('- Total (รับงาน):', calculatedTotalComplaints);
       console.log('- Closed (สำเร็จ):', calculatedClosedCases);
-      console.log('- In Progress (คงค้าง):', calculatedInProgressCases);
+      console.log('- In Progress (รอผลพิจารณา):', calculatedInProgressCases);
       console.log('- API total_complaints:', Number(apiSummary.total_complaints ?? 0));
 
       // ✅ อัปเดต summaryState ด้วยค่าที่คำนวณใหม่
       setSummaryState({
         total_staff: nextStaff.length,
         total_complaints: calculatedTotalComplaints, // ใช้ค่าที่คำนวณจาก staff_data
-        in_progress_cases: calculatedInProgressCases, // คงค้างจาก staff_data
+        in_progress_cases: calculatedInProgressCases, // รอผลพิจารณาจาก staff_data
         closed_cases: calculatedClosedCases, // สำเร็จจาก staff_data
       });
 
@@ -331,24 +328,38 @@ const AccountBoxComponents = () => {
   };
 
   useEffect(() => {
-    fetchData(fiscalYear);
-  }, [fiscalYear]);
+    if (dateFrom && dateTo) {
+      fetchData(dateFrom, dateTo);
+    }
+  }, [dateFrom, dateTo]);
 
   return (
     <Box>
       <BreadcrumbsService items={breadcrumbItems} />
-      <Box display="flex" justifyContent="flex-end" mt={2} px={1}>
-        <Typography color="#1120A3" fontWeight={600} mb={0.5} mr={2}>
-          ปีงบประมาณ
-        </Typography>
-        <SelectMenuService
-          options={fiscalYearOptions}
-          value={fiscalYear}
-          handleChange={handleYearChange}
-          name="fiscalYear"
-          width="160px"
-          placeholder="เลือกปี"
-        />
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mt={2} px={1} gap={2} flexWrap="wrap">
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography color="#1120A3" fontWeight={600} mr={1}>
+            ตั้งแต่
+          </Typography>
+          <DateThaiPickerService
+            value={dateFrom}
+            onChange={handleDateFromChange}
+            placeholder="เลือกวันที่เริ่มต้น"
+            maxDate={dateTo}
+          />
+        </Box>
+        <Box display="flex" alignItems="center" gap={1}>
+          <Typography color="#1120A3" fontWeight={600} mr={1}>
+            ถึง
+          </Typography>
+          <DateThaiPickerService
+            value={dateTo}
+            onChange={handleDateToChange}
+            placeholder="เลือกวันที่สิ้นสุด"
+            minDate={dateFrom}
+            maxDate={new Date().toISOString()}
+          />
+        </Box>
       </Box>
 
       <Box display="flex" flexWrap="wrap" gap={3} mt={4} px={1}>
@@ -431,10 +442,10 @@ const AccountBoxComponents = () => {
                   )}
                 </Typography>
 
-                <Box display="grid" gridTemplateColumns="80px 1fr" rowGap={0.5}>
+                <Box display="grid" gridTemplateColumns="auto 1fr" rowGap={0.5} columnGap={1}>
                   <Typography>รับงาน</Typography>
                   <Typography>{staff.received} เรื่อง</Typography>
-                  <Typography>คงค้าง</Typography>
+                  <Typography>รอผลพิจารณา</Typography>
                   <Typography>{staff.backlog} เรื่อง</Typography>
                   <Typography>สำเร็จ</Typography>
                   <Typography>{staff.done} เรื่อง</Typography>
@@ -549,7 +560,7 @@ const AccountBoxComponents = () => {
                 >
                   {[
                     { label: "รับงาน", value: selectedStaff.received },
-                    { label: "คงค้าง", value: selectedStaff.backlog },
+                    { label: "รอผลพิจารณา", value: selectedStaff.backlog },
                     { label: "สำเร็จ", value: selectedStaff.done },
                   ].map(({ label, value }) => (
                     <Box

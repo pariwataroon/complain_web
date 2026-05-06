@@ -262,6 +262,7 @@ const TableWorkFollow = ({
     { label: "วันที่เสนอ ผอ.สรร.", width: 160, field: "proposeDate" },
     { label: "หน่วยงาน", width: 200, field: "agency" },
     { label: "เลขที่หนังสือจากส่วนราชการ", width: 160, field: "letterNumber" },
+    { label: "วันที่หนังสือ", width: 140, field: "documentDate" },
     { label: "สถานะเรื่อง", width: 140, field: "status" },
     { label: "ดำเนินการมาแล้ว (วัน)", width: 180, field: "elapsedDays" },
     { label: "ขั้นตอนปัจจุบัน", width: 160, field: "statusStep" },
@@ -307,7 +308,7 @@ const TableWorkFollow = ({
 
     if (type === "new_complaint") {
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
+        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
           "เลขรับ สรร.": item.receiptNumber ?? "",
@@ -315,13 +316,14 @@ const TableWorkFollow = ({
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
           "วันที่เสนองาน ผอ.สรร.": fmtDate(item.proposeDate),
+          "วันที่หนังสือ": fmtDate(item.documentDate),
           "สถานะ": translateStatusForExport(item.status),
           "จำนวน (วัน)": item.elapsedDays ?? "",
         })
       };
     } else if (type === "additional_complaint") {
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "เลขที่อ้างอิง", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
+        columns: ["ลำดับ", "เลขรับ สรร.", "เลขที่อ้างอิง", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
           "เลขรับ สรร.": item.receiptNumber ?? "",
@@ -330,13 +332,14 @@ const TableWorkFollow = ({
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
           "วันที่เสนองาน ผอ.สรร.": fmtDate(item.proposeDate),
+          "วันที่หนังสือ": fmtDate(item.documentDate),
           "สถานะ": translateStatusForExport(item.status),
           "จำนวน (วัน)": item.elapsedDays ?? "",
         })
       };
     } else if (type === "department_decision") {
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "หน่วยงานภายใน", "จำนวน (วัน)"],
+        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "หน่วยงานภายใน", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
           "เลขรับ สรร.": item.receiptNumber ?? "",
@@ -344,13 +347,14 @@ const TableWorkFollow = ({
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
           "วันที่เสนองาน ผอ.สรร.": fmtDate(item.proposeDate),
+          "วันที่หนังสือ": fmtDate(item.documentDate),
           "หน่วยงานภายใน": item.agency ?? "",
           "จำนวน (วัน)": item.elapsedDays ?? "",
         })
       };
     } else {
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "สถานะ", "จำนวน (วัน)"],
+        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
           "เลขรับ สรร.": item.receiptNumber ?? "",
@@ -358,6 +362,7 @@ const TableWorkFollow = ({
           "เรื่อง": item.complaint ?? "",
           "วันที่รับงาน": fmtDate(item.receiveDate),
           "วันที่เสนองาน ผอ.สรร.": fmtDate(item.proposeDate),
+          "วันที่หนังสือ": fmtDate(item.documentDate),
           "สถานะ": translateStatusForExport(item.status),
           "จำนวน (วัน)": item.elapsedDays ?? "",
         })
@@ -499,6 +504,7 @@ const handleExportExcel = () => {
       { wch: 22 }, // เรื่อง
       { wch: 10 }, // วันที่รับงาน
       { wch: 10 }, // วันที่เสนองาน ผอ.สรร.
+      { wch: 12 }, // วันที่หนังสือ
       { wch: 12 }, // สถานะ
       { wch: 6 },  // จำนวน (วัน)
     );
@@ -511,6 +517,7 @@ const handleExportExcel = () => {
       { wch: 20 }, // เรื่อง
       { wch: 10 }, // วันที่รับงาน
       { wch: 10 }, // วันที่เสนองาน ผอ.สรร.
+      { wch: 12 }, // วันที่หนังสือ
       { wch: 10 }, // สถานะ
       { wch: 6 },  // จำนวน (วัน)
     );
@@ -522,6 +529,7 @@ const handleExportExcel = () => {
       { wch: 22 }, // เรื่อง
       { wch: 10 }, // วันที่รับงาน
       { wch: 10 }, // วันที่เสนองาน ผอ.สรร.
+      { wch: 12 }, // วันที่หนังสือ
       { wch: 16 }, // หน่วยงานภายใน
       { wch: 6 },  // จำนวน (วัน)
     );
@@ -533,6 +541,7 @@ const handleExportExcel = () => {
       { wch: 22 }, // เรื่อง
       { wch: 10 }, // วันที่รับงาน
       { wch: 10 }, // วันที่เสนองาน ผอ.สรร.
+      { wch: 12 }, // วันที่หนังสือ
       { wch: 12 }, // สถานะ
       { wch: 6 },  // จำนวน (วัน)
     );

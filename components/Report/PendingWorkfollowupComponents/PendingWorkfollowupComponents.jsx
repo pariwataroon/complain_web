@@ -118,6 +118,7 @@ const PendingWorkfollowupComponents = () => {
       return {
         id: item.id,
         complaint_id: item.complaint_id,
+        complaint_reference_number: item.complaint_reference_number || "",
         assigned_officer_name: item.assigned_officer_name || "-",
         receive_reference_number: item.receive_reference_number || "-",
         complaint_number: item.complaint_number || item.receive_reference_number || "-",
@@ -132,6 +133,8 @@ const PendingWorkfollowupComponents = () => {
         agency,
         _rawAgency: agency,
         document_number: item.document_number || "-",
+        document_date: item.document_date || null,
+        internal_register_date: item.internal_register_date || null,
         status: STATUS_LABELS[(item.status || "").toLowerCase()] || item.status || "-",
         status_original: item.status,
         days_in_progress: item.days_in_progress || 0,
@@ -265,6 +268,26 @@ const PendingWorkfollowupComponents = () => {
     // แปลงข้อมูลและใช้เป็นฐานการกรอง
     const transformedData = transformComplaintsData(allComplaints);
     let result = [...transformedData];
+
+    // filter เลข สรน. (MOF)
+    if (filterData.receiptNumber && filterData.receiptNumber.trim() !== "") {
+      const searchVal = filterData.receiptNumber.trim().toLowerCase();
+      result = result.filter((item) => {
+        const refNum = (item.receive_reference_number || "").toString().toLowerCase();
+        const compRefNum = (item.complaint_reference_number || "").toString().toLowerCase();
+        return refNum.includes(searchVal) || compRefNum.includes(searchVal);
+      });
+    }
+
+    // filter รหัสเรื่อง (นร.)
+    if (filterData.complaintNumber && filterData.complaintNumber.trim() !== "") {
+      const searchVal = filterData.complaintNumber.trim().toLowerCase();
+      result = result.filter((item) => {
+        const compNum = (item.complaint_number || "").toString().toLowerCase();
+        const compId = (item.complaint_id || "").toString().toLowerCase();
+        return compNum.includes(searchVal) || compId.includes(searchVal);
+      });
+    }
 
     // filter วันที่ (assigned_date หรือ received_date)
     if (filterData.receiveDateFrom) {
@@ -524,6 +547,13 @@ const PendingWorkfollowupComponents = () => {
         : undefined,
       agency: item._rawAgency || item.outside_department_name || item.department_name || "-",
       letterNumber: item.document_number || "-",
+      // วันที่หนังสือล่าสุด: ใช้ internal_register_date ก่อน, fallback เป็น document_date
+      documentDate: (() => {
+        const docDate = item.internal_register_date || item.document_date;
+        if (!docDate) return "-";
+        const d = new Date(docDate);
+        return isNaN(d.getTime()) ? "-" : d.toLocaleDateString("th-TH");
+      })(),
       status: STATUS_LABELS[(item.status || "").toLowerCase()] || item.status || "-",
       elapsedDays: item.days_in_progress,
       issueType: item.subject,
@@ -609,6 +639,18 @@ const PendingWorkfollowupComponents = () => {
         onActionClick={handleSummaryByIssueType}
         onClearSearch={handleClearSearch}
         filterFields={[
+          {
+            name: "receiptNumber",
+            label: "เลข สรน. (MOF)",
+            type: "text",
+            placeholder: "กรอกเลข สรน.",
+          },
+          {
+            name: "complaintNumber",
+            label: "รหัสเรื่อง (นร.)",
+            type: "text",
+            placeholder: "กรอกรหัสเรื่อง",
+          },
           {
             name: "receiveDateFrom",
             label: "ตั้งแต่วันที่",

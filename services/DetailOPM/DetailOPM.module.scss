@@ -104,7 +104,7 @@
 
 
 .cardContent {
-    padding: 40px !important;
+    padding: 28px !important;
 }
 
 .headerSection {
@@ -131,15 +131,15 @@
 .headerIcon {
     background: linear-gradient(to bottom, #0a2cbd, #3c7bff);
     color: white;
-    width: 56px;
-    height: 56px;
+    width: 44px;
+    height: 44px;
     box-shadow: 0 4px 20px rgba(10, 44, 189, 0.3);
 }
 
 .sectionTitle {
     color: #2c3e50;
     font-weight: 700;
-    font-size: 1.4rem;
+    font-size: 1.1rem;
 }
 
 .infoGrid {
@@ -147,8 +147,8 @@
 }
 
 .infoItem {
-    padding: 24px;
-    border-radius: 16px;
+    padding: 16px;
+    border-radius: 12px;
     background: linear-gradient(135deg, #f8fbff 0%, #f1f8ff 100%);
     border: 2px solid #e3f2fd;
     transition: all 0.4s ease;
@@ -188,7 +188,7 @@
 
 .infoIcon {
     color: #0a2cbd;
-    font-size: 1.8rem;
+    font-size: 1.4rem;
     margin-top: 4px;
     flex-shrink: 0;
 }
@@ -205,7 +205,7 @@
 .value {
     color: #2c3e50;
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     word-break: break-word;
     line-height: 1.6;
 }
@@ -213,7 +213,7 @@
 .valuetime {
     color: white;
     font-weight: 600;
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     word-break: break-word;
     line-height: 1.6;
 }
@@ -306,6 +306,66 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
+// Org List Styles (table-like rows)
+.orgList {
+    border: 1px solid #e3f2fd;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.orgListHeader {
+    display: grid;
+    grid-template-columns: 60px 1fr 180px 1fr;
+    background: linear-gradient(to bottom, #0a2cbd, #3c7bff);
+    padding: 10px 16px;
+    align-items: center;
+}
+
+.orgListHeaderText {
+    color: white;
+    font-weight: 700;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.orgListRow {
+    display: grid;
+    grid-template-columns: 60px 1fr 180px 1fr;
+    padding: 12px 16px;
+    align-items: center;
+    border-bottom: 1px solid #e3f2fd;
+    transition: background 0.2s ease;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &:hover {
+        background: #f8fbff;
+    }
+
+    &:nth-child(even) {
+        background: #fafcff;
+
+        &:hover {
+            background: #f0f6ff;
+        }
+    }
+}
+
+.orgListCell {
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+}
+
+.orgListValue {
+    color: #2c3e50;
+    font-weight: 500;
+    font-size: 0.85rem;
+    word-break: break-word;
+}
+
 // Timeline Styles
 .timeline {
     padding-left: 0;
@@ -366,7 +426,7 @@
 .stepTitle {
     color: #2c3e50;
     font-weight: 700;
-    font-size: 1.2rem;
+    font-size: 1rem;
 }
 
 .stepInfo {
@@ -456,7 +516,7 @@
 .summaryText {
     color: #2c3e50;
     line-height: 1.8;
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     margin: 0;
 }
 
