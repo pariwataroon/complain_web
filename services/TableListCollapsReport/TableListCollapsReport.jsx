@@ -25,7 +25,6 @@ import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
-import { exportExcel } from "@utils/exportExcel";
 import * as XLSX from "xlsx-js-style";
 const TableListCollapsReport = ({
   data = [],
@@ -275,7 +274,7 @@ const TableListCollapsReport = ({
 
         if (!ws[cellAddress].s) ws[cellAddress].s = {};
 
-        // แถวที่ 0 (หัวข้อรายงาน): ตัวหนา 16pt, จัดกลาง, ไม่มีกรอบ
+        // แถวที่ 0 (หัวข้อรายงาน): ตัวหนา 14pt, จัดกลาง, ไม่มีกรอบ
         if (R === 0) {
           ws[cellAddress].s.alignment = {
             horizontal: "center",
@@ -283,12 +282,11 @@ const TableListCollapsReport = ({
             wrapText: true
           };
           ws[cellAddress].s.font = {
-            name: "TH Sarabun",
-            bold: true,
-            sz: 16
+            name: "Cordia New",
+            sz: 14
           };
         }
-        // แถวที่ 1 (หัวคอลัมน์): ตัวหนา 11pt, จัดกลาง, มีกรอบ, พื้นหลังเทา
+        // แถวที่ 1 (หัวคอลัมน์): ตัวหนา 14pt, จัดกลาง, มีกรอบ, พื้นหลังเทา
         else if (R === 1) {
           ws[cellAddress].s.alignment = {
             horizontal: "center",
@@ -296,9 +294,9 @@ const TableListCollapsReport = ({
             wrapText: true
           };
           ws[cellAddress].s.font = {
-            name: "TH Sarabun",
+            name: "Cordia New",
             bold: true,
-            sz: 11
+            sz: 14
           };
           ws[cellAddress].s.fill = {
             fgColor: { rgb: "D9D9D9" }
@@ -316,29 +314,30 @@ const TableListCollapsReport = ({
             wrapText: true
           };
           ws[cellAddress].s.font = {
-            name: "TH Sarabun",
-            sz: 11
+            name: "Cordia New",
+            sz: 14
           };
         }
       }
     }
 
-    // ตั้งค่า Page Setup เป็น A4
+    // ตั้งค่า Page Setup เป็น A4 พอดีหน้า
     ws['!pageSetup'] = {
       paperSize: 9, // A4 = 9
       orientation: "portrait",
-      fitToPage: false,
-      scale: 100,
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
     };
 
     // ตั้งค่า margins
     ws['!margins'] = {
-      left: 0.5,
-      right: 0.5,
-      top: 0.5,
-      bottom: 0.5,
-      header: 0.3,
-      footer: 0.3,
+      left: 0.4,
+      right: 0.4,
+      top: 0.4,
+      bottom: 0.4,
+      header: 0.2,
+      footer: 0.2,
     };
 
     const wb = XLSX.utils.book_new();

@@ -23,7 +23,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { exportElementToPDF } from "@utils/exportPDF";
-import { exportExcel } from "@utils/exportExcel";
+import * as XLSX from "xlsx-js-style";
 
 const TableNewAddComp = ({
   data = [],
@@ -92,26 +92,141 @@ const TableNewAddComp = ({
       label: "เจ้าหน้าที่ผู้รับผิดชอบ",
       width: 200,
     },
-    { name: "agency", label: "หน่วยงาน", width: 180 },
     { name: "issueType", label: "ประเภทเรื่อง", width: 200 },
     { name: "note", label: "หมายเหตุ", width: 250 },
   ];
 
   // --- Excel Export Handler ---
   const handleExportExcel = () => {
+    if (!data || data.length === 0) {
+      alert("ไม่มีข้อมูลสำหรับ export");
+      return;
+    }
+
     const today = new Date().toLocaleDateString("th-TH", {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
     });
     const filename = `รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม_${today}.xlsx`;
-    const exportLabel = `วันที่ export: ${today}`;
-    exportExcel(excelRef, {
-      filename,
-      sheetName: "Sheet1",
-      title,
-      exportDate: exportLabel,
+
+    // สร้าง array สำหรับ worksheet
+    const wsData = [];
+
+    // แถวที่ 1: หัวข้อรายงาน
+    wsData.push([title || "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่มทั้งหมด"]);
+
+    // แถวที่ 2: วันที่
+    wsData.push([`ข้อมูล ณ วันที่ ${today}`]);
+
+    // แถวที่ 3: หน่วยงาน
+    wsData.push(["หน่วยงาน กระทรวงการคลัง"]);
+
+    // แถวว่าง
+    wsData.push([]);
+
+    // แถวที่ 5: Header ตาราง
+    const headers = ["ลำดับ", ...columns.map((col) => col.label)];
+    wsData.push(headers);
+
+    // แถวข้อมูล
+    data.forEach((item, idx) => {
+      const row = [idx + 1];
+      columns.forEach((col) => {
+        row.push(item[col.name] ?? "-");
+      });
+      wsData.push(row);
     });
+
+    // สร้าง worksheet
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+    // จำนวนคอลัมน์
+    const numCols = headers.length;
+
+    // Merge cells สำหรับหัวข้อ (แถว 0-2)
+    if (!ws['!merges']) ws['!merges'] = [];
+    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } });
+    ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
+    ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
+
+    // กำหนดความกว้างคอลัมน์
+    ws['!cols'] = [
+      { wch: 6 },  // ลำดับ
+      { wch: 14 }, // วันที่รับเรื่อง
+      { wch: 14 }, // เลข สรร.
+      { wch: 22 }, // ชื่อ - สกุล
+      { wch: 22 }, // เจ้าหน้าที่
+      { wch: 18 }, // ประเภทเรื่อง
+      { wch: 22 }, // หมายเหตุ
+    ];
+
+    // จัดรูปแบบเซลล์
+    const borderStyle = {
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
+    };
+
+    const range = XLSX.utils.decode_range(ws['!ref']);
+
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) {
+          ws[cellAddress] = { t: 's', v: '' };
+        }
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+
+        // แถว 0-2: หัวข้อรายงาน
+        if (R >= 0 && R <= 2) {
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+        }
+        // แถวที่ 4: Header ตาราง
+        else if (R === 4) {
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 14, bold: true };
+          ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+          ws[cellAddress].s.fill = { fgColor: { rgb: "D9D9D9" } };
+          ws[cellAddress].s.border = borderStyle;
+        }
+        // แถวข้อมูล
+        else if (R > 4) {
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.border = borderStyle;
+          const centerColumns = [0, 1, 2]; // ลำดับ, วันที่, เลข สรร.
+          ws[cellAddress].s.alignment = {
+            horizontal: centerColumns.includes(C) ? "center" : "left",
+            vertical: "center",
+            wrapText: true,
+          };
+        }
+      }
+    }
+
+    // ตั้งค่า Page Setup เป็น A4 Landscape พอดีหน้า
+    ws['!pageSetup'] = {
+      paperSize: 9, // A4 = 9
+      orientation: "landscape",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+    };
+
+    // ตั้งค่า margins
+    ws['!margins'] = {
+      left: 0.4,
+      right: 0.4,
+      top: 0.4,
+      bottom: 0.4,
+      header: 0.2,
+      footer: 0.2,
+    };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, filename);
   };
   return (
     <Container

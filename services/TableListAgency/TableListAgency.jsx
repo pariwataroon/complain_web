@@ -24,7 +24,7 @@ import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPicke
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
-import { exportExcel } from "@utils/exportExcel";
+import * as XLSX from "xlsx-js-style";
 import {
   GetDepartments,
 } from "@pages/api/complaint/complaint";
@@ -115,9 +115,19 @@ const TableListAgency = ({
     setPage(0);
   }, [data]);
 
+  const sortedData = useMemo(
+    () =>
+      [...data].sort((a, b) => {
+        const dateA = a.receiveDate ? new Date(a.receiveDate) : new Date(0);
+        const dateB = b.receiveDate ? new Date(b.receiveDate) : new Date(0);
+        return dateB - dateA;
+      }),
+    [data]
+  );
+
   const pagedData = useMemo(
-    () => data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-    [data, page, rowsPerPage]
+    () => sortedData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
+    [sortedData, page, rowsPerPage]
   );
   const handlePageChange = (_, newPage) => setPage(newPage);
   const handleRowsPerPageChange = (e) => {
@@ -165,7 +175,12 @@ const TableListAgency = ({
   ];
 
   // --- Excel Export Handler ---
-  const handleExportExcel = async () => {
+  const handleExportExcel = () => {
+    if (!data || data.length === 0) {
+      alert("ไม่มีข้อมูลสำหรับ export");
+      return;
+    }
+
     const now = new Date();
     const thaiDate = now.toLocaleDateString("th-TH", {
       year: "numeric",
@@ -211,19 +226,16 @@ const TableListAgency = ({
       dateRangeText = `ข้อมูล ณ วันที่ ${thaiDate}`;
     }
 
-    // ใช้ dynamic import เพื่อโหลด xlsx-js-style
-    const XLSXStyle = await import("xlsx-js-style");
-
     // สร้างข้อมูลแถวต่อแถว
     const exportData = [];
 
-    // แถวที่ 1: หัวข้อรายงาน (จัดกึ่งกลาง)
+    // แถวที่ 1: หัวข้อรายงาน
     exportData.push(["สรุปเรื่องร้องเรียนของหน่วยงาน"]);
 
-    // แถวที่ 2: ช่วงวันที่ (จัดกึ่งกลาง)
+    // แถวที่ 2: ช่วงวันที่
     exportData.push([dateRangeText]);
 
-    // แถวที่ 3: หน่วยงาน (จัดกึ่งกลาง)
+    // แถวที่ 3: หน่วยงาน
     exportData.push(["หน่วยงาน กระทรวงการคลัง"]);
 
     // แถวว่าง
@@ -240,7 +252,6 @@ const TableListAgency = ({
     data.forEach((item, idx) => {
       const row = [idx + 1];
       columns.forEach((col) => {
-        // สำหรับคอลัมน์สถานะเรื่อง ให้ใช้ค่าจาก statusOptions ถ้ามี
         let value = item[col.name] ?? "-";
         if (col.name === "status" && statusOptions.length > 0) {
           const statusOption = statusOptions.find(opt => opt.value === value);
@@ -254,104 +265,98 @@ const TableListAgency = ({
     });
 
     // สร้าง worksheet
-    const ws = XLSXStyle.utils.aoa_to_sheet(exportData);
+    const ws = XLSX.utils.aoa_to_sheet(exportData);
 
     // จำนวนคอลัมน์ทั้งหมด
     const numCols = headerRow.length;
 
     // Merge cells สำหรับหัวข้อ (แถว 0-2)
-    ws["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } }, // หัวข้อ
-      { s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } }, // วันที่
-      { s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } }, // หน่วยงาน
-    ];
+    if (!ws['!merges']) ws['!merges'] = [];
+    ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } });
+    ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
+    ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
 
     // กำหนดความกว้างคอลัมน์
-    ws["!cols"] = [
-      { wch: 8 },  // ลำดับ
+    ws['!cols'] = [
+      { wch: 6 },  // ลำดับ
       { wch: 20 }, // ชื่อผู้ร้อง
-      { wch: 15 }, // เลข สรร.
-      { wch: 15 }, // ลงวันที่
-      { wch: 25 }, // หน่วยงาน
-      { wch: 30 }, // ชื่อเรื่อง
-      { wch: 20 }, // ประเภทเรื่อง
-      { wch: 30 }, // หนังสือส่งหน่วยงาน
-      { wch: 25 }, // เจ้าหน้าที่
-      { wch: 20 }, // สถานะ
+      { wch: 12 }, // เลข สรร.
+      { wch: 14 }, // ลงวันที่
+      { wch: 22 }, // หน่วยงาน
+      { wch: 28 }, // ชื่อเรื่อง
+      { wch: 18 }, // ประเภทเรื่อง
+      { wch: 28 }, // หนังสือส่งหน่วยงาน
+      { wch: 22 }, // เจ้าหน้าที่
+      { wch: 18 }, // สถานะ
     ];
 
-    // จัดรูปแบบ style
-    const range = XLSXStyle.utils.decode_range(ws["!ref"]);
-
-    // Border style เดียวกันทั้งหมด
+    // จัดรูปแบบเซลล์
     const borderStyle = {
-      top: { style: "thin", color: { rgb: "000000" } },
-      bottom: { style: "thin", color: { rgb: "000000" } },
-      left: { style: "thin", color: { rgb: "000000" } },
-      right: { style: "thin", color: { rgb: "000000" } },
+      top: { style: "thin" },
+      bottom: { style: "thin" },
+      left: { style: "thin" },
+      right: { style: "thin" },
     };
 
-    for (let R = range.s.r; R <= range.e.r; R++) {
-      for (let C = range.s.c; C <= range.e.c; C++) {
-        const cellAddress = XLSXStyle.utils.encode_cell({ r: R, c: C });
-        if (!ws[cellAddress]) continue;
+    const range = XLSX.utils.decode_range(ws['!ref']);
 
-        // สร้าง style object
-        let style = {
-          font: { name: "TH Sarabun", sz: 11 },
-          alignment: { vertical: "center", wrapText: true },
-        };
-
-        // แถว 0-2: หัวข้อรายงาน (ตัวหนา 16pt, จัดกลาง, ไม่มีกรอบ)
-        if (R <= 2) {
-          style.font = { name: "TH Sarabun", sz: 16, bold: true };
-          style.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) {
+          ws[cellAddress] = { t: 's', v: '' };
         }
-        // แถวที่ 4: Header ตาราง (ตัวหนา 11pt, จัดกลาง, มีกรอบ, พื้นหลังเทา)
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+
+        // แถว 0-2: หัวข้อรายงาน
+        if (R >= 0 && R <= 2) {
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+        }
+        // แถวที่ 4: Header ตาราง
         else if (R === 4) {
-          style.font = { name: "TH Sarabun", sz: 11, bold: true };
-          style.alignment = { horizontal: "center", vertical: "center", wrapText: true };
-          style.fill = { fgColor: { rgb: "D9D9D9" } };
-          style.border = borderStyle;
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 14, bold: true };
+          ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+          ws[cellAddress].s.fill = { fgColor: { rgb: "D9D9D9" } };
+          ws[cellAddress].s.border = borderStyle;
         }
-        // แถวข้อมูล (มีกรอบ, คอลัมน์ตัวเลข/วันที่จัดกลาง, อื่นๆ จัดซ้าย)
+        // แถวข้อมูล
         else if (R > 4) {
-          // คอลัมน์ที่จัดกลาง: ลำดับ(0), เลข สรร.(1), ลงวันที่(2)
-          const centerColumns = [0, 1, 2];
-          style.alignment = {
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.border = borderStyle;
+          const centerColumns = [0, 2, 3]; // ลำดับ, เลข สรร., ลงวันที่
+          ws[cellAddress].s.alignment = {
             horizontal: centerColumns.includes(C) ? "center" : "left",
             vertical: "center",
-            wrapText: true
+            wrapText: true,
           };
-          style.border = borderStyle;
         }
-
-        ws[cellAddress].s = style;
       }
     }
 
-    // ตั้งค่า Page Setup เป็น A4
-    ws["!pageSetup"] = {
+    // ตั้งค่า Page Setup เป็น A4 Landscape พอดีหน้า
+    ws['!pageSetup'] = {
       paperSize: 9, // A4 = 9
-      orientation: "portrait",
-      fitToPage: false,
-      scale: 100,
+      orientation: "landscape",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
     };
 
     // ตั้งค่า margins
-    ws["!margins"] = {
-      left: 0.5,
-      right: 0.5,
-      top: 0.5,
-      bottom: 0.5,
-      header: 0.3,
-      footer: 0.3,
+    ws['!margins'] = {
+      left: 0.4,
+      right: 0.4,
+      top: 0.4,
+      bottom: 0.4,
+      header: 0.2,
+      footer: 0.2,
     };
 
     // Export file
-    const wb = XLSXStyle.utils.book_new();
-    XLSXStyle.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSXStyle.writeFile(wb, filename);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(wb, filename);
   };
 
   return (
