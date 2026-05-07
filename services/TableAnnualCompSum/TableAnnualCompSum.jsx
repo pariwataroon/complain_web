@@ -29,6 +29,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportReportToPDF } from "@utils/exportReportPDF";
 import * as XLSX from "xlsx-js-style";
 
 // สร้าง component แยกสำหรับ date picker เพื่อป้องกัน hooks issue
@@ -216,13 +217,13 @@ const handleExportExcel = () => {
   ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
   ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
 
-  // กำหนดความกว้างคอลัมน์
+  // กำหนดความกว้างคอลัมน์ (ลดให้พอดี A4 portrait)
   ws['!cols'] = [
-    { wch: 6 },  // ลำดับ
-    { wch: 35 }, // หน่วยงาน
-    { wch: 10 }, // จำนวน
-    { wch: 10 }, // ยุติ
-    { wch: 18 }, // อยู่ระหว่างดำเนินการ
+    { wch: 4 },  // ลำดับ
+    { wch: 30 }, // หน่วยงาน
+    { wch: 8 },  // จำนวน
+    { wch: 8 },  // ยุติ
+    { wch: 14 }, // อยู่ระหว่างดำเนินการ
   ];
 
   // จัดรูปแบบเซลล์
@@ -245,19 +246,19 @@ const handleExportExcel = () => {
 
       // แถว 0-2: หัวข้อรายงาน
       if (R >= 0 && R <= 2) {
-        ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
         ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
       }
       // แถวที่ 4: Header ตาราง
       else if (R === 4) {
-        ws[cellAddress].s.font = { name: "Cordia New", sz: 14, bold: true };
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11, bold: true };
         ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
         ws[cellAddress].s.fill = { fgColor: { rgb: "D9D9D9" } };
         ws[cellAddress].s.border = borderStyle;
       }
       // แถวข้อมูล
       else if (R > 4) {
-        ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
         ws[cellAddress].s.border = borderStyle;
         const centerColumns = [0, 2, 3, 4]; // ลำดับ, จำนวน, ยุติ, อยู่ระหว่างดำเนินการ
         ws[cellAddress].s.alignment = {
@@ -280,18 +281,27 @@ const handleExportExcel = () => {
 
   // ตั้งค่า margins
   ws['!margins'] = {
-    left: 0.4,
-    right: 0.4,
-    top: 0.4,
-    bottom: 0.4,
-    header: 0.2,
-    footer: 0.2,
+    left: 0.2,
+    right: 0.2,
+    top: 0.3,
+    bottom: 0.3,
+    header: 0.1,
+    footer: 0.1,
   };
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
   XLSX.writeFile(wb, filename);
 };
+
+  const handleExportPDF = async () => {
+    if (!data || data.length === 0) {
+      alert("ไม่มีข้อมูลสำหรับ export PDF");
+      return;
+    }
+    const today = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit" });
+    await exportElementToPDF(pdfRef, `รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ_${today}.pdf`, "p");
+  };
 
 
   return (
@@ -423,11 +433,7 @@ const handleExportExcel = () => {
             <Box display="flex" justifyContent="center" gap={1} flexWrap="wrap">
               <ExportButton
                 label="Export PDF"
-                onClick={() =>
-                  exportElementToPDF(
-                    pdfRef,
-                    "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ.pdf"
-                  )
+                onClick={() => handleExportPDF()
                 }
                 disabled={hasNoData}
                 size="medium" // ขนาดเท่า desktop
@@ -586,11 +592,7 @@ const handleExportExcel = () => {
             <Box display="flex" justifyContent="center" gap={1} flexWrap="wrap">
               <ExportButton
                 label="Export PDF"
-                onClick={() =>
-                  exportElementToPDF(
-                    pdfRef,
-                    "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ.pdf"
-                  )
+                onClick={() => handleExportPDF()
                 }
                 disabled={hasNoData}
                 size="medium" // ขนาดเท่า desktop
@@ -764,11 +766,7 @@ const handleExportExcel = () => {
             >
               <ExportButton
                 label="Export PDF"
-                onClick={() =>
-                  exportElementToPDF(
-                    pdfRef,
-                    "รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ.pdf"
-                  )
+                onClick={() => handleExportPDF()
                 }
                 disabled={hasNoData}
                 size="medium"

@@ -7,9 +7,10 @@ const PREFIX = "";
 // ฟังก์ชันดึงรายงานผู้ตรวจสอบ (inspector) ตามปี, แผนก, ผู้ตรวจ, สถานะ, วันที่
 const GetAllReportsInspector = async (year = "", department_id = "", inspector_id = "", status = "", date_from = "", date_to = "", include_details = false) => {
   try {
-    const { data } = await axiosInstance.get(`${API}${PREFIX}/reports/inspector`, {
-      params: { year, department_id, inspector_id, status, date_from, date_to, include_details }
-    });
+    const params = { department_id, inspector_id, status, date_from, date_to, include_details, skip: 0, limit: 1000, _t: Date.now() };
+    // Only send year when specified — backend returns ALL data when year is absent
+    if (year) params.year = year;
+    const { data } = await axiosInstance.get(`${API}${PREFIX}/reports/inspector`, { params });
     return data;
   } catch (error) {
     console.error("Error fetching GetAllReportsInspector:", error);
@@ -20,9 +21,9 @@ const GetAllReportsInspector = async (year = "", department_id = "", inspector_i
 // ฟังก์ชันดึงรายงานผู้ตรวจสอบที่รอดำเนินการ (inspector-pending) ตามปี, แผนก, ผู้ตรวจ, วันที่
 const GetAllReportsInspectorPending = async (year = "", department_id = "", inspector_id = "", date_from = "", date_to = "") => {
   try {
-    const { data } = await axiosInstance.get(`${API}${PREFIX}/reports/inspector-pending`, {
-      params: { year, department_id, inspector_id, date_from, date_to }
-    });
+    const params = { department_id, inspector_id, date_from, date_to, skip: 0, limit: 1000, _t: Date.now() };
+    if (year) params.year = year;
+    const { data } = await axiosInstance.get(`${API}${PREFIX}/reports/inspector-pending`, { params });
     return data;
   } catch (error) {
     console.error("Error fetching GetAllReportsInspectorPending:", error);

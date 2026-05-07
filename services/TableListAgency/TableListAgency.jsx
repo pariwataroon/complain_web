@@ -24,6 +24,7 @@ import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPicke
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportReportToPDF } from "@utils/exportReportPDF";
 import * as XLSX from "xlsx-js-style";
 import {
   GetDepartments,
@@ -115,11 +116,38 @@ const TableListAgency = ({
     setPage(0);
   }, [data]);
 
+  // แปลงวันที่ไทย เช่น "30 ต.ค. 2568" -> Date object
+  const parseThaiDate = (str) => {
+    if (!str) return new Date(0);
+    const thaiMonths = {
+      "ม.ค.": 0, "ก.พ.": 1, "มี.ค.": 2, "เม.ย.": 3,
+      "พ.ค.": 4, "มิ.ย.": 5, "ก.ค.": 6, "ส.ค.": 7,
+      "ก.ย.": 8, "ต.ค.": 9, "พ.ย.": 10, "ธ.ค.": 11,
+      "มกราคม": 0, "กุมภาพันธ์": 1, "มีนาคม": 2, "เมษายน": 3,
+      "พฤษภาคม": 4, "มิถุนายน": 5, "กรกฎาคม": 6, "สิงหาคม": 7,
+      "กันยายน": 8, "ตุลาคม": 9, "พฤศจิกายน": 10, "ธันวาคม": 11,
+    };
+    // ลอง parse เป็น ISO format ก่อน (เผื่อ API เปลี่ยน format)
+    const isoDate = new Date(str);
+    if (!isNaN(isoDate.getTime())) return isoDate;
+    // parse Thai format: "DD MMM YYYY" เช่น "30 ต.ค. 2568"
+    const parts = str.trim().split(/\s+/);
+    if (parts.length >= 3) {
+      const day = parseInt(parts[0], 10);
+      const month = thaiMonths[parts[1]];
+      const year = parseInt(parts[2], 10) - 543; // แปลง พ.ศ. เป็น ค.ศ.
+      if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+        return new Date(year, month, day);
+      }
+    }
+    return new Date(0);
+  };
+
   const sortedData = useMemo(
     () =>
       [...data].sort((a, b) => {
-        const dateA = a.receiveDate ? new Date(a.receiveDate) : new Date(0);
-        const dateB = b.receiveDate ? new Date(b.receiveDate) : new Date(0);
+        const dateA = parseThaiDate(a.receiveDate);
+        const dateB = parseThaiDate(b.receiveDate);
         return dateB - dateA;
       }),
     [data]
@@ -276,18 +304,18 @@ const TableListAgency = ({
     ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
     ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
 
-    // กำหนดความกว้างคอลัมน์
+    // กำหนดความกว้างคอลัมน์ (ลดให้พอดี A4 landscape)
     ws['!cols'] = [
-      { wch: 6 },  // ลำดับ
-      { wch: 20 }, // ชื่อผู้ร้อง
-      { wch: 12 }, // เลข สรร.
-      { wch: 14 }, // ลงวันที่
-      { wch: 22 }, // หน่วยงาน
-      { wch: 28 }, // ชื่อเรื่อง
-      { wch: 18 }, // ประเภทเรื่อง
-      { wch: 28 }, // หนังสือส่งหน่วยงาน
-      { wch: 22 }, // เจ้าหน้าที่
-      { wch: 18 }, // สถานะ
+      { wch: 4 },  // ลำดับ
+      { wch: 16 }, // ชื่อผู้ร้อง
+      { wch: 10 }, // เลข สรร.
+      { wch: 12 }, // ลงวันที่
+      { wch: 18 }, // หน่วยงาน
+      { wch: 22 }, // ชื่อเรื่อง
+      { wch: 14 }, // ประเภทเรื่อง
+      { wch: 22 }, // หนังสือส่งหน่วยงาน
+      { wch: 18 }, // เจ้าหน้าที่
+      { wch: 14 }, // สถานะ
     ];
 
     // จัดรูปแบบเซลล์
@@ -310,19 +338,19 @@ const TableListAgency = ({
 
         // แถว 0-2: หัวข้อรายงาน
         if (R >= 0 && R <= 2) {
-          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
           ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
         }
         // แถวที่ 4: Header ตาราง
         else if (R === 4) {
-          ws[cellAddress].s.font = { name: "Cordia New", sz: 14, bold: true };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11, bold: true };
           ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
           ws[cellAddress].s.fill = { fgColor: { rgb: "D9D9D9" } };
           ws[cellAddress].s.border = borderStyle;
         }
         // แถวข้อมูล
         else if (R > 4) {
-          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
           ws[cellAddress].s.border = borderStyle;
           const centerColumns = [0, 2, 3]; // ลำดับ, เลข สรร., ลงวันที่
           ws[cellAddress].s.alignment = {
@@ -345,18 +373,26 @@ const TableListAgency = ({
 
     // ตั้งค่า margins
     ws['!margins'] = {
-      left: 0.4,
-      right: 0.4,
-      top: 0.4,
-      bottom: 0.4,
-      header: 0.2,
-      footer: 0.2,
+      left: 0.2,
+      right: 0.2,
+      top: 0.3,
+      bottom: 0.3,
+      header: 0.1,
+      footer: 0.1,
     };
 
     // Export file
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     XLSX.writeFile(wb, filename);
+  };
+
+  const handleExportPDF = async () => {
+    if (!data || data.length === 0) {
+      alert("ไม่มีข้อมูลสำหรับ export PDF");
+      return;
+    }
+    await exportElementToPDF(pdfRef, `รายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf`, "l");
   };
 
   return (
@@ -407,7 +443,7 @@ const TableListAgency = ({
               >
                 <ExportButton
                   label="Export PDF"
-                  onClick={() => exportElementToPDF(pdfRef, "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf")}
+                  onClick={() => handleExportPDF()}
                   size={isXs ? "small" : "medium"}
                   sx={{ minWidth: { xs: "200px", sm: "140px" }, width: { xs: "100%", sm: "auto" } }}
                 />
@@ -426,7 +462,7 @@ const TableListAgency = ({
           >
             <Box sx={{ fontWeight: "bold", color: HEADER_COLOR }}>{title}</Box>
             <Box display="flex" alignItems="center" gap={1}>
-              <ExportButton label="Export PDF" onClick={() => exportElementToPDF(pdfRef, "รายงานสรุปเรื่องร้องเรียนของหน่วยงาน.pdf")} size="medium" />
+              <ExportButton label="Export PDF" onClick={() => handleExportPDF()} size="medium" />
               <ExportButton label="Export Excel" onClick={handleExportExcel} size="medium" />
             </Box>
           </Box>

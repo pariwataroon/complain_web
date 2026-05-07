@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollapsReport from "@services/TableListCollapsReport/TableListCollapsReport";
 import { GetAllReportsInspector } from "@pages/api/report/report";
@@ -220,6 +220,7 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
   const [loading, setLoading] = useState(false);
 
   const [inspectors, setInspectors] = useState([]);
+  const inspectorsRef = useRef([]);
   const [claimantOptions, setClaimantOptions] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [dateRange, setDateRange] = useState("");
@@ -230,58 +231,35 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
   });
 
   useEffect(() => {
-    loadInitial();
+    const init = async () => {
+      try {
+        const sig = await getSignatureAuthorities();
+        const inspectorList = flattenToInspectors(sig?.res_data ?? sig);
+        inspectorsRef.current = inspectorList;
+        setInspectors(inspectorList);
+
+        const fromSig = inspectorList.map((x) => ({
+          value: x.id,
+          label: x.position ? `${x.position}(${x.name})` : x.name
+        }));
+        setClaimantOptions(withAllOption(fromSig));
+      } catch (e) {
+        console.error("init inspectors error:", e);
+        inspectorsRef.current = [];
+        setInspectors([]);
+        setClaimantOptions(withAllOption([]));
+      }
+      // ไม่กรอง — ส่ง filter ว่างเพื่อดึงข้อมูลทั้งหมด
+      handleSearch({ claimantName: "", receiveDateFrom: "", receiveDateTo: "" });
+    };
+    init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const yearFrom = (filters = {}) =>
     filters.receiveDateFrom
       ? new Date(filters.receiveDateFrom).getFullYear().toString()
-      : new Date().getFullYear().toString();
-
-  const loadInitial = async (filters = {}) => {
-    setLoading(true);
-    try {
-      const year = yearFrom(filters);
-      const dateFrom = filters.receiveDateFrom || "";
-      const dateTo = filters.receiveDateTo || "";
-
-      const [sig, rep] = await Promise.all([
-        getSignatureAuthorities(),
-        GetAllReportsInspector(year, "", "", "", dateFrom, dateTo, true),
-      ]);
-
-      // รายชื่อผู้ตรวจ “ทุกคน”
-      const inspectorList = flattenToInspectors(sig?.res_data ?? sig);
-      setInspectors(inspectorList);
-
-      const reportItems = rep?.res_data?.items || [];
-
-      // ตัวเลือกดรอปดาวน์ = (ผู้ตรวจจากสิทธิ์) ∪ (ผู้ตรวจที่เจอในรายงาน) + "ทั้งหมด"
-      const fromSig = inspectorList.map((x) => ({
-        value: x.id,
-        label: x.position ? `${x.position}(${x.name})` : x.name
-      }));
-      const fromReport = Array.from(
-        new Map(
-          reportItems.map((i) => [
-            i.signature_authority_user_id,
-            { value: i.signature_authority_user_id, label: i.signature_authority_user_name },
-          ])
-        ).values()
-      );
-      setClaimantOptions(withAllOption([...fromSig, ...fromReport]));
-
-      // rows สำหรับตาราง
-      setFilteredComplaints(buildRows(inspectorList, reportItems, filters.claimantName || ""));
-    } catch (e) {
-      console.error("loadInitial error:", e);
-      setInspectors([]);
-      setClaimantOptions(withAllOption([]));
-      setFilteredComplaints([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+      : ""; // No year = backend returns ALL data
 
   const handleSearch = async (filters) => {
     setSearchFilters(filters);
@@ -317,8 +295,8 @@ const AnnualInspectorComplaintsSummaryComponents = () => {
       );
       setClaimantOptions((prev) => withAllOption([...(prev || []), ...extraOptions]));
 
-      // อัปเดตตาราง
-      setFilteredComplaints(buildRows(inspectors, reportItems, filters.claimantName || ""));
+      // อัปเดตตาราง — ใช้ inspectorsRef เพื่อให้ initial load กับ search ได้ข้อมูลเดียวกันเป๊ะ
+      setFilteredComplaints(buildRows(inspectorsRef.current, reportItems, filters.claimantName || ""));
     } catch (e) {
       console.error("search error:", e);
       setFilteredComplaints([]);

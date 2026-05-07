@@ -24,6 +24,7 @@ import SelectField from "@services/SelectField/SelectField";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportReportToPDF } from "@utils/exportReportPDF";
 import * as XLSX from "xlsx-js-style";
 import dayjs from "dayjs";
 const TableListCollaps = ({
@@ -192,16 +193,16 @@ const TableListCollaps = ({
     ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
     ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
 
-    // กำหนดความกว้างคอลัมน์
+    // กำหนดความกว้างคอลัมน์ (ลดให้พอดี A4 landscape)
     ws['!cols'] = [
-      { wch: 6 },  // ลำดับ
+      { wch: 4 },  // ลำดับ
       { wch: 22 }, // ชื่อเรื่อง
-      { wch: 18 }, // หน่วยงาน
-      { wch: 22 }, // เจ้าหน้าที่
-      { wch: 14 }, // เลข สรร.
-      { wch: 14 }, // เลขที่อ้างอิง
-      { wch: 14 }, // ระยะเวลา
-      { wch: 16 }, // สถานะ
+      { wch: 14 }, // หน่วยงาน
+      { wch: 16 }, // เจ้าหน้าที่
+      { wch: 10 }, // เลข สรร.
+      { wch: 12 }, // เลขที่อ้างอิง
+      { wch: 10 }, // ระยะเวลา
+      { wch: 12 }, // สถานะ
     ];
 
     // จัดรูปแบบเซลล์
@@ -222,24 +223,23 @@ const TableListCollaps = ({
         }
         if (!ws[cellAddress].s) ws[cellAddress].s = {};
 
-        // แถว 0-2: หัวข้อรายงาน (ตัวหนา 14pt, จัดกลาง, ไม่มีกรอบ)
+        // แถว 0-2: หัวข้อรายงาน
         if (R >= 0 && R <= 2) {
-          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
           ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
         }
-        // แถวที่ 4: Header ตาราง (ตัวหนา 14pt, จัดกลาง, มีกรอบ, พื้นหลังเทา)
+        // แถวที่ 4: Header ตาราง
         else if (R === 4) {
-          ws[cellAddress].s.font = { name: "Cordia New", sz: 14, bold: true };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11, bold: true };
           ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
           ws[cellAddress].s.fill = { fgColor: { rgb: "D9D9D9" } };
           ws[cellAddress].s.border = borderStyle;
         }
         // แถวข้อมูล
         else if (R > 4) {
-          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
           ws[cellAddress].s.border = borderStyle;
-          // คอลัมน์ลำดับ(0) จัดกลาง
-          const centerColumns = [0];
+          const centerColumns = [0, 4, 5, 6, 7]; // ลำดับ, เลขสรร, เลขที่อ้างอิง, ระยะเวลา, สถานะ
           ws[cellAddress].s.alignment = {
             horizontal: centerColumns.includes(C) ? "center" : "left",
             vertical: "center",
@@ -258,19 +258,28 @@ const TableListCollaps = ({
       fitToHeight: 0,
     };
 
-    // ตั้งค่า margins
+    // ตั้งค่า margins (ลดให้แคบที่สุด)
     ws['!margins'] = {
-      left: 0.4,
-      right: 0.4,
-      top: 0.4,
-      bottom: 0.4,
-      header: 0.2,
-      footer: 0.2,
+      left: 0.2,
+      right: 0.2,
+      top: 0.3,
+      bottom: 0.3,
+      header: 0.1,
+      footer: 0.1,
     };
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     XLSX.writeFile(wb, filename);
+  };
+
+  const handleExportPDF = async () => {
+    if (!data || data.length === 0) {
+      alert("ไม่มีข้อมูลสำหรับ export PDF");
+      return;
+    }
+    const today = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit" });
+    await exportElementToPDF(pdfRef, `รายงานติดตามสถานะ_${today}.pdf`, "l");
   };
 
   const columns = [
@@ -341,7 +350,7 @@ const TableListCollaps = ({
               <ExportButton
                 label="Export PDF"
                 onClick={() =>
-                  exportElementToPDF(pdfRef, "รายงานติดตามสถานะ.pdf")
+                  handleExportPDF()
                 }
                 size={isXs ? "small" : "medium"}
                 sx={{
@@ -380,7 +389,7 @@ const TableListCollaps = ({
             <ExportButton
               label="Export PDF"
               onClick={() =>
-                exportElementToPDF(pdfRef, "รายงานติดตามสถานะ.pdf")
+                handleExportPDF()
               }
               size="medium"
             />

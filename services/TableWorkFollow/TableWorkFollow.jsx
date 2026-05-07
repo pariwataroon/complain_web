@@ -34,6 +34,7 @@ import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportReportToPDF } from "@utils/exportReportPDF";
 import { exportExcel } from "@utils/exportExcel";
 import * as XLSX from "xlsx-js-style";
 // --- Thai Date formatter helper (full month) ---
@@ -214,7 +215,6 @@ const TableWorkFollow = ({
   // Pagination
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const flatData = groupKeys.flatMap((key) => groupedData[key]);
   const pagedGroups = groupKeys.slice(
     page * rowsPerPage,
     page * rowsPerPage + rowsPerPage
@@ -587,7 +587,7 @@ const handleExportExcel = () => {
         };
         ws[cellAddress].s.font = {
           name: "Cordia New",
-          sz: 14
+          sz: 11
         };
       }
       // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์) - ใส่เส้นตาราง
@@ -600,7 +600,7 @@ const handleExportExcel = () => {
         };
         ws[cellAddress].s.font = {
           name: "Cordia New",
-          sz: 14
+          sz: 11
         };
       }
       // แถวข้อมูล - ใส่เส้นตาราง
@@ -612,7 +612,7 @@ const handleExportExcel = () => {
           // แถวเจ้าหน้าที่
           ws[cellAddress].s.font = {
             name: "Cordia New",
-            sz: 14
+            sz: 11
           };
           ws[cellAddress].s.alignment = {
             horizontal: "left",
@@ -628,7 +628,7 @@ const handleExportExcel = () => {
           };
           ws[cellAddress].s.font = {
             name: "Cordia New",
-            sz: 14
+            sz: 11
           };
         }
       }
@@ -646,12 +646,12 @@ const handleExportExcel = () => {
 
   // ตั้งค่า margins แคบลง
   ws['!margins'] = {
-    left: 0.4,
-    right: 0.4,
-    top: 0.4,
-    bottom: 0.4,
-    header: 0.2,
-    footer: 0.2,
+    left: 0.2,
+    right: 0.2,
+    top: 0.3,
+    bottom: 0.3,
+    header: 0.1,
+    footer: 0.1,
   };
 
   // เพิ่ม worksheet เข้า workbook
@@ -660,6 +660,28 @@ const handleExportExcel = () => {
   // บันทึกไฟล์
   XLSX.writeFile(wb, filename);
 };
+
+  const handleExportPDF = async () => {
+    const getFieldValue = (name) => {
+      const field = filterFields.find(f => f.name.includes(name));
+      return field ? filters[field.name] : filters[name];
+    };
+    const reportType = getFieldValue("dataType") || "";
+    let reportName = "ทั้งหมด";
+    if (reportType === "new_complaint") reportName = "เรื่องร้องเรียนใหม่";
+    else if (reportType === "additional_complaint") reportName = "ร้องเรียนเพิ่มเติม";
+    else if (reportType === "department_decision") reportName = "ผลการพิจารณาจากหน่วยงาน";
+
+    const exportResult = getFlatExportData(reportType);
+    const dataRows = exportResult.rows.filter(r => r.type === "data");
+    if (dataRows.length === 0) {
+      alert("ไม่มีข้อมูลให้ Export PDF");
+      return;
+    }
+
+    const today = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit" });
+    await exportElementToPDF(pdfRef, `${reportName}_${today}.pdf`, "l");
+  };
 
   const getDatePickerProps = () => {
     if (!isMounted || typeof window === "undefined") {
@@ -879,7 +901,7 @@ const handleExportExcel = () => {
                   <ExportButton
                     label="Export PDF"
                     onClick={() =>
-                      exportElementToPDF(pdfRef, "รายงานการติดตามงานค้าง.pdf")
+                      handleExportPDF()
                     }
                     size="small"
                     sx={{ width: "100%", maxWidth: "300px" }}
@@ -909,7 +931,7 @@ const handleExportExcel = () => {
                   <ExportButton
                     label="Export PDF"
                     onClick={() =>
-                      exportElementToPDF(pdfRef, "รายงานการติดตามงานค้าง.pdf")
+                      handleExportPDF()
                     }
                     size="medium"
                     sx={{ flex: 1, maxWidth: "150px" }}
@@ -1039,7 +1061,7 @@ const handleExportExcel = () => {
               <ExportButton
                 label="Export PDF"
                 onClick={() =>
-                  exportElementToPDF(pdfRef, "รายงานการติดตามงานค้าง.pdf")
+                  handleExportPDF()
                 }
                 size="medium"
               />
@@ -1210,7 +1232,7 @@ const handleExportExcel = () => {
                                       }}
                                       onClick={() => handleSubRowClick(item.id)}
                                     >
-                                      {page * rowsPerPage + idx + 1}
+                                      {idx + 1}
                                     </TableCell>
                                     {columns.slice(1).map((col, i) => {
                                       // ถ้าเป็นคอลัมน์หมายเหตุ (แก้ไขได้ทุกแถว)
@@ -1292,7 +1314,7 @@ const handleExportExcel = () => {
           <TablePagination
             component="div"
             rowsPerPageOptions={[5, 10, 25]}
-            count={flatData.length}
+            count={groupKeys.length}
             rowsPerPage={rowsPerPage}
             page={page}
             onPageChange={handlePageChange}

@@ -279,14 +279,12 @@ const PendingWorkfollowupComponents = () => {
       });
     }
 
-    // filter รหัสเรื่อง (นร.) - receive_reference_number, parent_complaint_number, id
+    // filter รหัสเรื่อง (นร.) - document_number เช่น "นร02690025427"
     if (filterData.complaintNumber && filterData.complaintNumber.trim() !== "") {
       const searchVal = filterData.complaintNumber.trim().toLowerCase();
       result = result.filter((item) => {
-        const recRefNum = (item.receive_reference_number || "").toString().toLowerCase();
-        const parentNum = (item.parent_complaint_number || "").toString().toLowerCase();
-        const itemId = (item.id || "").toString().toLowerCase();
-        return recRefNum.includes(searchVal) || parentNum.includes(searchVal) || itemId.includes(searchVal);
+        const docNum = (item.document_number || "").toString().toLowerCase();
+        return docNum.includes(searchVal);
       });
     }
 
@@ -565,7 +563,19 @@ const PendingWorkfollowupComponents = () => {
         return isNaN(d.getTime()) ? "-" : d.toLocaleDateString("th-TH");
       })(),
       status: STATUS_LABELS[(item.status || "").toLowerCase()] || item.status || "-",
-      elapsedDays: item.days_in_progress,
+      elapsedDays: (() => {
+        // คำนวณจำนวนวันจากวันที่รับงาน (assigned_date) ถึงวันนี้
+        if (item.assigned_date) {
+          const start = new Date(item.assigned_date);
+          const now = new Date();
+          if (!isNaN(start.getTime())) {
+            const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+            const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            return Math.floor((todayDay - startDay) / (1000 * 60 * 60 * 24));
+          }
+        }
+        return item.days_in_progress || 0;
+      })(),
       issueType: item.subject,
       source: item.source || "pending",
       complainantName: item.complainant_name || "-",

@@ -21,6 +21,7 @@ import SelectField from "@services/SelectField/SelectField";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportReportToPDF } from "@utils/exportReportPDF";
 import * as XLSX from "xlsx-js-style";
 const TableListStaffNoti = ({
   data = [],
@@ -246,16 +247,16 @@ const handleExportExcel = () => {
   ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
   ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
 
-  // กำหนดความกว้างคอลัมน์
+  // กำหนดความกว้างคอลัมน์ (ลดให้พอดี A4 landscape)
   ws['!cols'] = [
-    { wch: 6 },  // ลำดับ
-    { wch: 22 }, // เจ้าหน้าที่ผู้รับผิดชอบ
-    { wch: 22 }, // ชื่อ - สกุล
-    { wch: 22 }, // ชื่อเรื่อง
-    { wch: 14 }, // เลข สรร.
-    { wch: 18 }, // วันที่เจ้าหน้าที่รับเรื่อง
-    { wch: 22 }, // หัวข้อ
-    { wch: 12 }, // จำนวนครั้ง
+    { wch: 4 },  // ลำดับ
+    { wch: 18 }, // เจ้าหน้าที่ผู้รับผิดชอบ
+    { wch: 18 }, // ชื่อ - สกุล
+    { wch: 18 }, // ชื่อเรื่อง
+    { wch: 12 }, // เลข สรร.
+    { wch: 14 }, // วันที่เจ้าหน้าที่รับเรื่อง
+    { wch: 18 }, // หัวข้อ
+    { wch: 10 }, // จำนวนครั้ง
   ];
 
   // จัดรูปแบบเซลล์
@@ -278,19 +279,19 @@ const handleExportExcel = () => {
 
       // แถว 0-2: หัวข้อรายงาน
       if (R >= 0 && R <= 2) {
-        ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
         ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
       }
       // แถวที่ 4: Header ตาราง
       else if (R === 4) {
-        ws[cellAddress].s.font = { name: "Cordia New", sz: 14, bold: true };
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11, bold: true };
         ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
         ws[cellAddress].s.fill = { fgColor: { rgb: "D9D9D9" } };
         ws[cellAddress].s.border = borderStyle;
       }
       // แถวข้อมูล
       else if (R > 4) {
-        ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
         ws[cellAddress].s.border = borderStyle;
         const centerColumns = [0, 4, 7]; // ลำดับ, เลข สรร., จำนวนครั้ง
         ws[cellAddress].s.alignment = {
@@ -313,18 +314,27 @@ const handleExportExcel = () => {
 
   // ตั้งค่า margins
   ws['!margins'] = {
-    left: 0.4,
-    right: 0.4,
-    top: 0.4,
-    bottom: 0.4,
-    header: 0.2,
-    footer: 0.2,
+    left: 0.2,
+    right: 0.2,
+    top: 0.3,
+    bottom: 0.3,
+    header: 0.1,
+    footer: 0.1,
   };
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
   XLSX.writeFile(wb, filename);
 };
+
+  const handleExportPDF = async () => {
+    if (!data || data.length === 0) {
+      alert("ไม่มีข้อมูลสำหรับ export PDF");
+      return;
+    }
+    const today = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit" });
+    await exportElementToPDF(pdfRef, `รายงานการแจ้งเตือนเจ้าหน้าที่_${today}.pdf`, "l");
+  };
 
   return (
     <Container
@@ -429,11 +439,7 @@ const handleExportExcel = () => {
             <Box display="flex" justifyContent="center" gap={1} flexWrap="wrap">
               <ExportButton
                 label="Export PDF"
-                onClick={() =>
-                  exportElementToPDF(
-                    pdfRef,
-                    "รายงานการแจ้งเตือนเจ้าหน้าที่.pdf"
-                  )
+                onClick={() => handleExportPDF()
                 }
                 size={layoutConfig.buttonSize}
                 sx={{
@@ -548,10 +554,7 @@ const handleExportExcel = () => {
                 <ExportButton
                   label="Export PDF"
                   onClick={() =>
-                    exportElementToPDF(
-                      pdfRef,
-                      "รายงานการแจ้งเตือนเจ้าหน้าที่.pdf"
-                    )
+                    handleExportPDF()
                   }
                   size={layoutConfig.buttonSize}
                   sx={{
@@ -663,11 +666,7 @@ const handleExportExcel = () => {
             >
               <ExportButton
                 label="Export PDF"
-                onClick={() =>
-                  exportElementToPDF(
-                    pdfRef,
-                    "รายงานการแจ้งเตือนเจ้าหน้าที่.pdf"
-                  )
+                onClick={() => handleExportPDF()
                 }
                 size={layoutConfig.buttonSize}
                 sx={{

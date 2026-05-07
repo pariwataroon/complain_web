@@ -129,8 +129,11 @@ const StaffProfile = ({ staff }) => {
 
 const AccountBoxComponents = () => {
   const today = new Date();
-  const yearStart = new Date(today.getFullYear(), 0, 1).toISOString();
-  const yearEnd = new Date(today.getFullYear(), 11, 31).toISOString();
+  // ปีงบประมาณไทย: 1 ต.ค. ถึง 30 ก.ย.
+  const currentYear = today.getFullYear();
+  const fiscalYear = today.getMonth() >= 9 ? currentYear : currentYear - 1; // เดือน 0-indexed, 9 = ต.ค.
+  const yearStart = `${fiscalYear}-10-01T00:00:00`;       // 1 ต.ค. ของปีงบ
+  const yearEnd = `${fiscalYear + 1}-09-30T00:00:00`;     // 30 ก.ย. ของปีถัดไป
 
   const [dateFrom, setDateFrom] = useState(yearStart);
   const [dateTo, setDateTo] = useState(yearEnd);

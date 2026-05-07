@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FormControl, Typography } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { createPortal } from "react-dom";
 import { Controller } from "react-hook-form";
 import styles from "./DateThaiPickerService.module.scss";
@@ -799,7 +799,7 @@ const generateYearOptions = () => {
   };
 
   return (
-    <FormControl fullWidth variant="outlined" sx={{ mb: 2 }}>
+    <Box fullWidth sx={{ mb: 2 }}>
       {label && (
         <Typography
           variant="subtitle2"
@@ -862,7 +862,7 @@ const generateYearOptions = () => {
 
         {renderPopupCalendar()}
       </div>
-    </FormControl>
+    </Box>
   );
 };
 

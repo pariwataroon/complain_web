@@ -58,6 +58,7 @@ try {
 const TableListTab = ({
   summaryData = [],
   pendingData = [],
+  loading = false,
   onSearch = () => {},
   filterFields = [],
   navigateTo = "",
@@ -562,7 +563,18 @@ const TableListTab = ({
               </TableRow>
             </TableHead>
             <TableBody>
-              {pagedData.map((row) => (
+              {loading ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={currentColumns.length}
+                    align="center"
+                    sx={{ py: 6, fontSize: isMobile ? "14px" : "16px", color: "#888" }}
+                  >
+                    กำลังโหลดข้อมูล...
+                  </TableCell>
+                </TableRow>
+              ) : (
+              pagedData.map((row) => (
                 <TableRow
                   key={row.id}
                   hover
@@ -584,9 +596,10 @@ const TableListTab = ({
                     </TableCell>
                   ))}
                 </TableRow>
-              ))}
+              )))}
 
               {/* summary row */}
+              {!loading && (
               <TableRow sx={{ backgroundColor: "#e3f2fd", fontWeight: "bold" }}>
                 {currentColumns.map((col) =>
                   col.field === "claimantName" ? (
@@ -613,6 +626,7 @@ const TableListTab = ({
                   )
                 )}
               </TableRow>
+              )}
             </TableBody>
           </Table>
 

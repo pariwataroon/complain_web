@@ -23,6 +23,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import ButtonService from "@services/ButtonService/ButtonService";
 import { exportElementToPDF } from "@utils/exportPDF";
+import { exportReportToPDF } from "@utils/exportReportPDF";
 import * as XLSX from "xlsx-js-style";
 
 const TableNewAddComp = ({
@@ -150,15 +151,15 @@ const TableNewAddComp = ({
     ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
     ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
 
-    // กำหนดความกว้างคอลัมน์
+    // กำหนดความกว้างคอลัมน์ (ลดให้พอดี A4 landscape)
     ws['!cols'] = [
-      { wch: 6 },  // ลำดับ
-      { wch: 14 }, // วันที่รับเรื่อง
-      { wch: 14 }, // เลข สรร.
-      { wch: 22 }, // ชื่อ - สกุล
-      { wch: 22 }, // เจ้าหน้าที่
-      { wch: 18 }, // ประเภทเรื่อง
-      { wch: 22 }, // หมายเหตุ
+      { wch: 4 },  // ลำดับ
+      { wch: 10 }, // วันที่รับเรื่อง
+      { wch: 10 }, // เลข สรร.
+      { wch: 16 }, // ชื่อ - สกุล
+      { wch: 14 }, // เจ้าหน้าที่
+      { wch: 12 }, // ประเภทเรื่อง
+      { wch: 20 }, // หมายเหตุ
     ];
 
     // จัดรูปแบบเซลล์
@@ -181,19 +182,19 @@ const TableNewAddComp = ({
 
         // แถว 0-2: หัวข้อรายงาน
         if (R >= 0 && R <= 2) {
-          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
           ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
         }
         // แถวที่ 4: Header ตาราง
         else if (R === 4) {
-          ws[cellAddress].s.font = { name: "Cordia New", sz: 14, bold: true };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11, bold: true };
           ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
           ws[cellAddress].s.fill = { fgColor: { rgb: "D9D9D9" } };
           ws[cellAddress].s.border = borderStyle;
         }
         // แถวข้อมูล
         else if (R > 4) {
-          ws[cellAddress].s.font = { name: "Cordia New", sz: 14 };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
           ws[cellAddress].s.border = borderStyle;
           const centerColumns = [0, 1, 2]; // ลำดับ, วันที่, เลข สรร.
           ws[cellAddress].s.alignment = {
@@ -216,18 +217,28 @@ const TableNewAddComp = ({
 
     // ตั้งค่า margins
     ws['!margins'] = {
-      left: 0.4,
-      right: 0.4,
-      top: 0.4,
-      bottom: 0.4,
-      header: 0.2,
-      footer: 0.2,
+      left: 0.2,
+      right: 0.2,
+      top: 0.3,
+      bottom: 0.3,
+      header: 0.1,
+      footer: 0.1,
     };
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
     XLSX.writeFile(wb, filename);
   };
+
+  const handleExportPDF = async () => {
+    if (!data || data.length === 0) {
+      alert("ไม่มีข้อมูลสำหรับ export PDF");
+      return;
+    }
+    const today = new Date().toLocaleDateString("th-TH", { year: "numeric", month: "2-digit", day: "2-digit" });
+    await exportElementToPDF(pdfRef, `รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม_${today}.pdf`, "l");
+  };
+
   return (
     <Container
       maxWidth={false}
@@ -319,11 +330,7 @@ const TableNewAddComp = ({
                 <>
                   <ExportButton
                     label="Export PDF"
-                    onClick={() =>
-                      exportElementToPDF(
-                        pdfRef,
-                        "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม.pdf"
-                      )
+                    onClick={() => handleExportPDF()
                     }
                     size="small"
                     sx={{
@@ -355,11 +362,7 @@ const TableNewAddComp = ({
                 >
                   <ExportButton
                     label="Export PDF"
-                    onClick={() =>
-                      exportElementToPDF(
-                        pdfRef,
-                        "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม.pdf"
-                      )
+                    onClick={() => handleExportPDF()
                     }
                     size="medium"
                     sx={{
@@ -429,11 +432,7 @@ const TableNewAddComp = ({
             {/* Export Buttons - แถวเดียวกันใน Desktop */}
             <ExportButton
               label="Export PDF"
-              onClick={() =>
-                exportElementToPDF(
-                  pdfRef,
-                  "รายงานสรุปเรื่องเข้าใหม่และร้องเพิ่ม.pdf"
-                )
+              onClick={() => handleExportPDF()
               }
               size="medium"
             />

@@ -1,7 +1,7 @@
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
-export const exportElementToPDF = async (target, filename = "document.pdf") => {
+export const exportElementToPDF = async (target, filename = "document.pdf", orientation = "p") => {
   let root = null;
   if (target && typeof target === "object" && "current" in target) {
     root = target.current;
@@ -15,48 +15,54 @@ export const exportElementToPDF = async (target, filename = "document.pdf") => {
     return;
   }
 
-  // หา pages ทีละหน้า
-  const pages = Array.from(root.querySelectorAll("[data-pdf-page]"));
-  if (pages.length === 0) {
-    pages.push(root);
-  }
+  const pdf = new jsPDF(orientation, "mm", "a4");
+  const pdfW = pdf.internal.pageSize.getWidth();
+  const pdfH = pdf.internal.pageSize.getHeight();
 
-  const pdf = new jsPDF("p", "mm", "a4");
-  const pdfW = pdf.internal.pageSize.getWidth(); 
-  const pdfH = pdf.internal.pageSize.getHeight(); 
+  const marginMM = 5;
+  const usableW = pdfW - marginMM * 2;
+  const usableH = pdfH - marginMM * 2;
 
-  // ฟังก์ชันแคปเจอร์ 1 หน้า
-  const capture = async (el) => {
-    const canvas = await html2canvas(el, {
-      scale: Math.max(window.devicePixelRatio || 1, 2),
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: "#ffffff",
-      windowWidth: el.scrollWidth,
-      windowHeight: el.scrollHeight,
-      logging: false,
-    });
-    return canvas;
-  };
+  const canvas = await html2canvas(root, {
+    scale: Math.max(window.devicePixelRatio || 1, 2),
+    useCORS: true,
+    allowTaint: false,
+    backgroundColor: "#ffffff",
+    windowWidth: root.scrollWidth,
+    windowHeight: root.scrollHeight,
+    logging: false,
+  });
 
   try {
-    for (let i = 0; i < pages.length; i++) {
-      const pageEl = pages[i];
-      const canvas = await capture(pageEl);
+    const mmPerPx = usableW / canvas.width;
+    const pageHeightPx = Math.floor(usableH / mmPerPx);
 
-      const imgW = pdfW;
-      const imgH = (canvas.height * imgW) / canvas.width;
+    let currentTopPx = 0;
+    let pageIndex = 0;
 
-      const imgData = canvas.toDataURL("image/png");
+    while (currentTopPx < canvas.height) {
+      const sliceHeightPx = Math.min(pageHeightPx, canvas.height - currentTopPx);
 
-      if (i > 0) pdf.addPage();
+      const sliceCanvas = document.createElement("canvas");
+      sliceCanvas.width = canvas.width;
+      sliceCanvas.height = sliceHeightPx;
+      const sctx = sliceCanvas.getContext("2d");
+      sctx.imageSmoothingEnabled = true;
+      if ("imageSmoothingQuality" in sctx) sctx.imageSmoothingQuality = "high";
+      sctx.drawImage(
+        canvas,
+        0, currentTopPx, canvas.width, sliceHeightPx,
+        0, 0, canvas.width, sliceHeightPx
+      );
 
-      const h = Math.min(imgH, pdfH);
-      const w = (canvas.width * h) / canvas.height; 
-      const x = (pdfW - w) / 2;
-      const y = 0;
+      const sliceData = sliceCanvas.toDataURL("image/png");
+      const sliceHeightMM = Math.min(sliceHeightPx * mmPerPx, usableH);
 
-      pdf.addImage(imgData, "PNG", x, y, w, h);
+      if (pageIndex > 0) pdf.addPage();
+      pdf.addImage(sliceData, "PNG", marginMM, marginMM, usableW, sliceHeightMM);
+
+      currentTopPx += sliceHeightPx;
+      pageIndex++;
     }
 
     pdf.save(filename);
