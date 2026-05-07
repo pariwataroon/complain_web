@@ -1,13 +1,18 @@
 from typing import Optional, Dict
 from datetime import datetime
 
-from sqlalchemy import func, or_, case, and_
+from sqlalchemy import func, or_, case
 from sqlalchemy.orm import Session
 
 from models.outgoing_reports4 import OutgoingReport4
 from models.outgoing_reports import OutgoingReport
 from models.departments import Department
 from models.user import User
+
+from app.api.v1.services.complaint_stats_service import (
+    get_department_complaint_stats,
+    get_utc_range,
+)
 
 
 def get_annual_complaint_summary(
@@ -17,84 +22,20 @@ def get_annual_complaint_summary(
     date_to: Optional[datetime] = None,
 ) -> Dict:
     """
-    รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ (Hierarchical)
-    แสดงหน่วยงานหลักและหน่วยงานย่อย พร้อมจำนวนเรื่อง
+    รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ
+    ใช้ service กลาง (complaint_stats_service) เพื่อให้ตัวเลขตรงกับ Dashboard
     """
-    if year is None:
-        year = datetime.now().year
+    # คำนวณช่วง UTC
+    date_from_str = date_from.isoformat() if date_from else None
+    date_to_str = date_to.isoformat() if date_to else None
+    utc_start, utc_end = get_utc_range(year, date_from_str, date_to_str)
 
-    # ใช้ช่วงเวลา
-    if date_from is None:
-        date_from = datetime(year, 1, 1)
-    if date_to is None:
-        date_to = datetime(year + 1, 1, 1)
+    # เรียก service กลาง
+    items = get_department_complaint_stats(db, utc_start, utc_end)
 
-    # ใช้วันที่อ้างอิง
-    date_expr = func.coalesce(
-        OutgoingReport4.reference_date,
-        OutgoingReport4.document_date,
-        OutgoingReport4.created_at
-    )
-
-    # Query นับจำนวนต่อหน่วยงาน
-    q = (
-        db.query(
-            OutgoingReport.department_id,
-            Department.name.label("department_name"),
-            func.count(OutgoingReport4.id).label("total"),
-            func.sum(
-                case(
-                    (OutgoingReport4.consideration_result.ilike("%ยุติ%"), 1),
-                    else_=0,
-                )
-            ).label("closed"),
-            func.sum(
-                case(
-                    (
-                        or_(
-                            OutgoingReport4.consideration_result.is_(None),
-                            ~OutgoingReport4.consideration_result.ilike("%ยุติ%")
-                        ),
-                        1,
-                    ),
-                    else_=0,
-                )
-            ).label("ongoing"),
-        )
-        .join(
-            OutgoingReport,
-            OutgoingReport4.complaint_number == OutgoingReport.complaint_number,
-        )
-        .outerjoin(
-            Department,
-            OutgoingReport.department_id == Department.id,
-        )
-        .filter(
-            date_expr >= date_from,
-            date_expr < date_to
-        )
-        .group_by(
-            OutgoingReport.department_id,
-            Department.name,
-        )
-        .order_by(
-            Department.name.asc(),
-        )
-    )
-
-    rows = q.all()
-
-    # จัดเตรียมข้อมูล hierarchical
-    items = []
-    for r in rows:
-        items.append({
-            "id": str(r.department_id) if r.department_id else None,
-            "agency": r.department_name or "ไม่ระบุหน่วยงาน",
-            "total": int(r.total or 0),
-            "closed": int(r.closed or 0),
-            "ongoing": int(r.ongoing or 0),
-            "children": []  # TODO: ถ้าต้องการหน่วยงานย่อยต้องเพิ่ม logic
-        })
+    # เพิ่ม children placeholder (frontend ต้องการ field นี้)
+    for item in items:
+        item["children"] = []
 
     return {
         "items": items,

@@ -1849,60 +1849,34 @@ def get_department_ranking_by_date(
 ) -> Dict[str, Any]:
     """
     จัดอันดับหน่วยงานที่ 'มีเรื่องร้องทุกข์มากที่สุด' และ 'จังหวัดที่มีเรื่องร้องทุกข์มากที่สุด'
-    - Top Departments: อิงเรื่องที่ถูก 'มอบหมาย' ผ่าน outgoing_reports(1–4)
-    - Top Provinces: อิงจากจังหวัดเหตุการณ์ของเรื่องร้องทุกข์ (Complaint.incident_province_id)
-    - รับช่วงวันที่ (เวลาไทย) -> แปลงเป็น UTC ก่อนคิวรี
-    - กันการซ้ำฝั่งหน่วยงานด้วย distinct(complaint_id, department_id)
+    ใช้ service กลาง (complaint_stats_service) เพื่อให้ตัวเลขตรงกับรายงานสรุปประจำปี
     """
+    from app.api.v1.services.complaint_stats_service import (
+        get_department_complaint_ranking,
+        parse_bkk_date_to_utc,
+    )
+
     # 1) ทำช่วงวันที่ (BKK -> UTC)
     bkk_from = _parse_bkk_date(date_from, end_of_day=False)
     bkk_to   = _parse_bkk_date(date_to,   end_of_day=True)
     bkk_from, bkk_to, utc_from, utc_to = _bkk_to_utc_range(bkk_from, bkk_to)
 
-    # 2) รวม mapping complaint_id ↔ department_id จาก report 1–4
-    r1 = select(OutgoingReport.complaint_id.label("complaint_id"),
-                OutgoingReport.department_id.label("department_id"))
-    r2 = select(OutgoingReport2.complaint_id.label("complaint_id"),
-                OutgoingReport2.department_id.label("department_id"))
-    r3 = select(OutgoingReport3.complaint_id.label("complaint_id"),
-                OutgoingReport3.department_id.label("department_id"))
-    r4 = select(OutgoingReport4.complaint_id.label("complaint_id"),
-                OutgoingReport4.department_id.label("department_id"))
+    # 2) เรียก service กลางสำหรับ department ranking
+    dept_ranking = get_department_complaint_ranking(db, utc_from, utc_to)
 
-    union_q = union_all(r1, r2, r3, r4).subquery("rep_union")
-    link_q = select(
-        distinct(union_q.c.complaint_id).label("complaint_id"),
-        union_q.c.department_id.label("department_id")
-    ).subquery("link_distinct")
+    # 3) รวมยอดทั้งหมด + เรียงมากสุด/น้อยสุด
+    total_complaints_departments = sum(r["count"] for r in dept_ranking)
+    top_sorted = dept_ranking  # already sorted desc by count
+    bottom_sorted = sorted(dept_ranking, key=lambda r: (r["count"], r["department_name"]))
 
-    # 3) นับจำนวนเรื่องต่อ department (ภายในช่วงเวลา)
-    rows = (
-        db.query(
-            link_q.c.department_id.label("dept_id"),
-            Department.name.label("dept_name"),
-            func.count(distinct(Complaint.id)).label("cnt")
-        )
-        .join(Complaint, Complaint.id == link_q.c.complaint_id)
-        .outerjoin(Department, Department.id == link_q.c.department_id)
-        .filter(Complaint.created_at.between(utc_from, utc_to))
-        .group_by(link_q.c.department_id, Department.name)
-        .all()
-    )
-
-    # 4) รวมยอดทั้งหมด + เรียงมากสุด/น้อยสุดสำหรับหน่วยงาน
-    total_complaints_departments = sum(int(r.cnt or 0) for r in rows)
-    top_sorted = sorted(rows, key=lambda r: (int(r.cnt or 0), r.dept_name or ""), reverse=True)
-    bottom_sorted = sorted(rows, key=lambda r: (int(r.cnt or 0), r.dept_name or ""))
-
-    # 4.1) นับจำนวนเรื่องต่อจังหวัด (ภายในช่วงเวลา) โดยดูจาก incident_province_id
-    # นับเฉพาะรายการที่มี province.id จริง (incident_province_id ไม่เป็น NULL และต้องแมปกับ Province ได้)
+    # 4) นับจำนวนเรื่องต่อจังหวัด (ภายในช่วงเวลา)
     prov_rows = (
         db.query(
             Complaint.incident_province_id.label("province_id"),
             Province.name_th.label("province_name"),
             func.count(Complaint.id).label("cnt"),
         )
-        .join(Province, Province.id == Complaint.incident_province_id)  # inner join เพื่อตัด NULL/ไม่พบจังหวัดทิ้ง
+        .join(Province, Province.id == Complaint.incident_province_id)
         .filter(
             Complaint.created_at.between(utc_from, utc_to),
             Complaint.incident_province_id.isnot(None)
@@ -1917,10 +1891,11 @@ def get_department_ranking_by_date(
     def _pack(lst, take, desc=True):
         out: List[Dict[str, Any]] = []
         for idx, r in enumerate(lst[:max(0, take)], start=1):
+            dept_id = r["department_id"]
             out.append({
                 "rank": idx,
-                "department": {"id": str(r.dept_id) if r.dept_id else None, "name": r.dept_name or "ไม่ระบุ"},
-                "count": int(r.cnt or 0)
+                "department": {"id": str(dept_id) if dept_id else None, "name": r["department_name"]},
+                "count": r["count"]
             })
         return out
 
@@ -1942,14 +1917,13 @@ def get_department_ranking_by_date(
             "date_to_utc": utc_to.isoformat(),
             "limit_top": int(limit_top),
             "limit_bottom": int(limit_bottom),
-            # explicit mapping for clarity/backward-compat
             "limit_top_departments": int(limit_top),
             "limit_bottom_departments": int(limit_bottom),
             "limit_top_provinces": int(limit_top),
         },
         "totals": {
             "total_complaints_by_departments": int(total_complaints_departments),
-            "departments_with_complaints": len(rows),
+            "departments_with_complaints": len(dept_ranking),
             "total_complaints_by_provinces": int(total_complaints_provinces),
             "provinces_with_complaints": len(prov_rows),
         },

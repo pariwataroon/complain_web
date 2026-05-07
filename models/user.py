@@ -45,7 +45,7 @@ class User(Base):
     profile_image = Column(NVARCHAR(255), nullable=True)
     sync_address = Column(Boolean, default=False)
     group_type = Column(NVARCHAR(50), nullable=True)  # officer, people, etc.
-    
+
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
@@ -53,6 +53,7 @@ class User(Base):
     # Relationships
     tokens = relationship("Token", back_populates="users", cascade="all, delete-orphan")
     title = relationship("Title", back_populates="users", foreign_keys=[title_id])
+
     roles = relationship("UserRole", back_populates="user", lazy="selectin")
     positions = relationship("UserPosition", back_populates="user", lazy="selectin")
 

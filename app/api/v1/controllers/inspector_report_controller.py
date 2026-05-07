@@ -46,21 +46,25 @@ def get_inspector_report(
         include_details: ถ้า True จะ return รายละเอียดทุกเรื่องด้วย
     """
     # Determine date range: date_from/date_to take precedence over year
-    if date_from:
-        start_date = datetime.fromisoformat(date_from.replace('Z', '+00:00').replace('+00:00', ''))
-        start_date = datetime(start_date.year, start_date.month, start_date.day)
-    elif year is not None:
-        start_date = datetime(year, 1, 1)
-    else:
-        start_date = datetime(datetime.utcnow().year, 1, 1)
+    # If no year, no date_from, and no date_to are provided → skip date filter (show all data)
+    apply_date_filter = year is not None or bool(date_from) or bool(date_to)
 
-    if date_to:
-        end_date = datetime.fromisoformat(date_to.replace('Z', '+00:00').replace('+00:00', ''))
-        end_date = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
-    elif year is not None:
-        end_date = datetime(year + 1, 1, 1)
-    else:
-        end_date = datetime(datetime.utcnow().year + 1, 1, 1)
+    if apply_date_filter:
+        if date_from:
+            start_date = datetime.fromisoformat(date_from.replace('Z', '+00:00').replace('+00:00', ''))
+            start_date = datetime(start_date.year, start_date.month, start_date.day)
+        elif year is not None:
+            start_date = datetime(year, 1, 1)
+        else:
+            start_date = datetime(2000, 1, 1)
+
+        if date_to:
+            end_date = datetime.fromisoformat(date_to.replace('Z', '+00:00').replace('+00:00', ''))
+            end_date = datetime(end_date.year, end_date.month, end_date.day, 23, 59, 59)
+        elif year is not None:
+            end_date = datetime(year + 1, 1, 1)
+        else:
+            end_date = datetime(2100, 1, 1)
 
     # ใช้วันที่อ้างอิงจาก OutgoingReport (ไม่ใช่ OutgoingReport4)
     date_expr = func.coalesce(
@@ -151,8 +155,13 @@ def get_inspector_report(
             sa_group_pick_subq.c.user_id == OutgoingReport.signature_authority_user_id,
         )
         .filter(OutgoingReport.signature_authority_user_id.isnot(None))
-        .filter(date_expr >= start_date, date_expr < end_date)
-        .group_by(
+    )
+
+    # Apply date filter only when year or date range is specified
+    if apply_date_filter:
+        q = q.filter(date_expr >= start_date, date_expr < end_date)
+
+    q = q.group_by(
             OutgoingReport.department_id,
             Department.name,
             OutgoingReport.signature_authority_user_id,
@@ -160,8 +169,7 @@ def get_inspector_report(
             User.last_name,
             sa_group_pick_subq.c.group_order_index,
             sa_group_pick_subq.c.group_name,
-        )
-        .order_by(
+        ).order_by(
             # nulls last: ถ้าไม่มีค่า order ให้ไปท้ายสุด
             case((sa_group_pick_subq.c.group_order_index.is_(None), 1), else_=0).asc(),
             sa_group_pick_subq.c.group_order_index.asc(),
@@ -169,7 +177,6 @@ def get_inspector_report(
             User.first_name.asc(),
             User.last_name.asc(),
         )
-    )
 
     if search:
         like = f"%{search}%"
@@ -226,9 +233,13 @@ def get_inspector_report(
                 )
                 .filter(OutgoingReport.signature_authority_user_id == r.signature_authority_user_id)
                 .filter(OutgoingReport.department_id == r.department_id)
-                .filter(date_expr >= start_date, date_expr < end_date)
-                .order_by(OutgoingReport.created_at.desc())
             )
+
+            # Apply date filter to details only when date filtering is active
+            if apply_date_filter:
+                detail_query = detail_query.filter(date_expr >= start_date, date_expr < end_date)
+
+            detail_query = detail_query.order_by(OutgoingReport.created_at.desc())
 
             # Apply status filter to details as well
             if status == "closed":
