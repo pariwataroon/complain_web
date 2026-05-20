@@ -84,6 +84,11 @@ const ReportResultsComponents = () => {
       setFilteredComplaints(items);
     } catch (error) {
       console.error("Error fetching annual complaint details:", error);
+      console.error("Backend error detail:", error?.response?.data?.detail || error?.response?.data || "N/A");
+      console.error("Request config:", {
+        url: error?.config?.url,
+        params: error?.config?.params,
+      });
       setAllComplaints([]);
       setFilteredComplaints([]);
     }

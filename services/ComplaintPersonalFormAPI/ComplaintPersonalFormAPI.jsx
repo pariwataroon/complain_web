@@ -23,9 +23,25 @@ const ComplaintPersonalFormAPI = ({
   // ถ้ามี data prop แต่ไม่มี form context ให้แสดงแบบ read-only
   const isReadOnly = !control && data && Object.keys(data).length > 0;
 
-  // สำหรับ government form ให้ใช้ fullName แทน name
-  const nameFieldKey = formType === "government" ? "fullName" : "name";
-  const nameValue = formType === "government" ? data?.fullName : data?.name;
+  const isCorporate = formType === "corporate";
+  const isGovernment = formType === "government";
+  const isSigner = formType === "signer";
+
+  const nameFieldKey = isGovernment ? "fullName"
+    : isCorporate ? "companyName"
+    : isSigner ? "signatoryName"
+    : "name";
+
+  const nameLabel = isCorporate ? "ชื่อบริษัท"
+    : isSigner ? "ชื่อผู้มีอำนาจลงนาม"
+    : "ชื่อ - นามสกุล";
+
+  const nameValue = isGovernment ? data?.fullName
+    : isCorporate ? data?.companyName
+    : isSigner ? data?.signatoryName
+    : data?.name;
+
+  const idCardLabel = isCorporate ? "เลขทะเบียนนิติบุคคล" : "เลขบัตรประจำตัวประชาชน";
 
   if (isReadOnly) {
     // แสดงข้อมูลแบบ read-only
@@ -37,14 +53,25 @@ const ComplaintPersonalFormAPI = ({
             <IDCardInput
               value={data.idCard || ""}
               disabled={true}
-              label="เลขบัตรประจำตัวประชาชน"
+              label={idCardLabel}
             />
           </Grid>
 
+          {isGovernment && (
+            <Grid item xs={12} sm={6}>
+              <InputText
+                label="หน่วยงาน"
+                placeholder="หน่วยงาน"
+                value={data.agencyName || ""}
+                disabled={true}
+              />
+            </Grid>
+          )}
+
           <Grid item xs={12} sm={6}>
             <InputText
-              label="ชื่อ - นามสกุล"
-              placeholder="ชื่อ - นามสกุล"
+              label={nameLabel}
+              placeholder={nameLabel}
               value={nameValue || ""}
               disabled={true}
             />
@@ -123,10 +150,28 @@ const ComplaintPersonalFormAPI = ({
             name="idCard"
             control={control}
             render={({ field }) => (
-              <IDCardInput {...field} required disabled={dis} />
+              <IDCardInput {...field} required disabled={dis} label={idCardLabel} />
             )}
           />
         </Grid>
+
+        {isGovernment && (
+          <Grid item xs={12} sm={6}>
+            <Controller
+              name="agencyName"
+              control={control}
+              render={({ field }) => (
+                <InputText
+                  label="หน่วยงาน"
+                  placeholder="หน่วยงาน"
+                  {...field}
+                  required
+                  disabled={dis}
+                />
+              )}
+            />
+          </Grid>
+        )}
 
         <Grid item xs={12} sm={6}>
           <Controller
@@ -134,8 +179,8 @@ const ComplaintPersonalFormAPI = ({
             control={control}
             render={({ field }) => (
               <InputText
-                label="ชื่อ - นามสกุล"
-                placeholder="ชื่อ - นามสกุล"
+                label={nameLabel}
+                placeholder={nameLabel}
                 {...field}
                 required
                 disabled={dis}

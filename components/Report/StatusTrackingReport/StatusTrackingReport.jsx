@@ -84,10 +84,9 @@ const guessRefFromSubject = (subject) => {
 const getReferenceNumber = (item) => {
   const c = item?.complaint ?? {};
   const latest = item?.latest ?? {};
-  const direct = latest?.sent?.reference_number || c.reference_number || latest?.decision?.reference_number;
+  const direct = latest?.sent?.reference_number || c.reference_number || c.reference_number4 || latest?.decision?.reference_number;
   if (direct) return String(direct);
-  const fromSubject = guessRefFromSubject(c.subject);
-  return fromSubject || c.complaint_number || c.id || "-";
+  return c.complaint_number || c.id || "-";
 };
 
 const buildHistoryRows = (item) => {

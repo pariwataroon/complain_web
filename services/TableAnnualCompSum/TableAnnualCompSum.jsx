@@ -17,8 +17,6 @@ import {
   useMediaQuery,
 } from "@mui/material";
 import {
-  ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon,
   Search as SearchIcon,
   SearchOff as SearchOffIcon,
 } from "@mui/icons-material";
@@ -98,11 +96,6 @@ const TableAnnualCompSum = ({
     setPage(0);
   };
 
-  // Collapse state per row
-  const [expanded, setExpanded] = useState({});
-  const toggleRow = (id) =>
-    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
-
   // Columns config
   const columns = [
     { label: "ลำดับ", width: "80px" },
@@ -115,35 +108,6 @@ const TableAnnualCompSum = ({
   // แยก date fields และ non-date fields
   const dateFields = filterFields.filter((f) => f.type === "date");
   const nonDateFields = filterFields.filter((f) => f.type !== "date");
-
-  // สร้าง flat list ของ rows รวมทั้ง parent และ child
-  const createFlatRows = (data) => {
-    const flatRows = [];
-    data.forEach((parentRow, parentIndex) => {
-      // เพิ่ม parent row
-      flatRows.push({
-        ...parentRow,
-        isParent: true,
-        level: 0,
-        displayIndex: page * rowsPerPage + parentIndex + 1,
-      });
-
-      // เพิ่ม child rows ถ้า expanded
-      if (expanded[parentRow.id] && parentRow.children) {
-        parentRow.children.forEach((childRow) => {
-          flatRows.push({
-            ...childRow,
-            isParent: false,
-            level: 1,
-            parentId: parentRow.id,
-          });
-        });
-      }
-    });
-    return flatRows;
-  };
-
-  const flatRows = createFlatRows(pagedData);
 
   // ตรวจสอบว่าไม่มีข้อมูล
   const hasNoData = data.length === 0;
@@ -172,10 +136,10 @@ const handleExportExcel = () => {
   });
   const filename = `รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ_${today}.xlsx`;
 
-  // สร้าง array สำหรับ worksheet
+  // สร้าง array สำหรับ worksheet (เพิ่มคอลัมน์ A ว่างเป็น spacer ด้านซ้าย)
   const wsData = [];
 
-  // แถวที่ 1: หัวข้อรายงาน
+  // แถวที่ 1: หัวข้อรายงาน (วางใน col A เพื่อ merge A→F ครอบทั้งหน้า)
   wsData.push(["รายงานสรุปเรื่องร้องเรียนประจำปีงบประมาณ"]);
 
   // แถวที่ 2: ช่วงวันที่
@@ -188,15 +152,16 @@ const handleExportExcel = () => {
   wsData.push(["หน่วยงาน กระทรวงการคลัง"]);
 
   // แถวว่าง
-  wsData.push([]);
+  wsData.push(["", ""]);
 
   // แถวที่ 5: Header ตาราง
   const headers = ["ลำดับ", "หน่วยงาน", "จำนวน", "ยุติ", "อยู่ระหว่างดำเนินการ"];
-  wsData.push(headers);
+  wsData.push(["", ...headers]);
 
   // แถวข้อมูล
   data.forEach((item, idx) => {
     wsData.push([
+      "",
       idx + 1,
       item.agency || "-",
       item.total || 0,
@@ -208,22 +173,23 @@ const handleExportExcel = () => {
   // สร้าง worksheet
   const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-  // จำนวนคอลัมน์
-  const numCols = headers.length;
+  // จำนวนคอลัมน์รวม spacer (6 คอลัมน์)
+  const totalCols = headers.length + 1;
 
-  // Merge cells สำหรับหัวข้อ
+  // Merge cells สำหรับหัวข้อ (merge ตั้งแต่ col A → F ให้ครอบทั้งหน้า)
   if (!ws['!merges']) ws['!merges'] = [];
-  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } });
-  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
-  ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
+  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: totalCols - 1 } });
+  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: totalCols - 1 } });
+  ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: totalCols - 1 } });
 
-  // กำหนดความกว้างคอลัมน์ (ลดให้พอดี A4 portrait)
+  // กำหนดความกว้างคอลัมน์ (col A = spacer, col B-F = ข้อมูล)
   ws['!cols'] = [
-    { wch: 4 },  // ลำดับ
-    { wch: 30 }, // หน่วยงาน
-    { wch: 8 },  // จำนวน
-    { wch: 8 },  // ยุติ
-    { wch: 14 }, // อยู่ระหว่างดำเนินการ
+    { wch: 3 },  // A: spacer ว่างด้านซ้าย
+    { wch: 5 },  // B: ลำดับ
+    { wch: 55 }, // C: หน่วยงาน
+    { wch: 10 }, // D: จำนวน
+    { wch: 10 }, // E: ยุติ
+    { wch: 20 }, // F: อยู่ระหว่างดำเนินการ
   ];
 
   // จัดรูปแบบเซลล์
@@ -244,10 +210,18 @@ const handleExportExcel = () => {
       }
       if (!ws[cellAddress].s) ws[cellAddress].s = {};
 
-      // แถว 0-2: หัวข้อรายงาน
+      // แถว 0-2: หัวข้อรายงาน (merge ทั้งหน้า ให้ center ทุก cell)
       if (R >= 0 && R <= 2) {
-        ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 14, bold: true };
         ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+      }
+      // แถว 3: ว่าง
+      else if (R === 3) {
+        continue;
+      }
+      // col A (C=0): spacer ว่าง ไม่ต้องมี border (เฉพาะแถว header/data)
+      else if (C === 0) {
+        continue;
       }
       // แถวที่ 4: Header ตาราง
       else if (R === 4) {
@@ -260,7 +234,7 @@ const handleExportExcel = () => {
       else if (R > 4) {
         ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
         ws[cellAddress].s.border = borderStyle;
-        const centerColumns = [0, 2, 3, 4]; // ลำดับ, จำนวน, ยุติ, อยู่ระหว่างดำเนินการ
+        const centerColumns = [1, 3, 4, 5];
         ws[cellAddress].s.alignment = {
           horizontal: centerColumns.includes(C) ? "center" : "left",
           vertical: "center",
@@ -279,10 +253,10 @@ const handleExportExcel = () => {
     fitToHeight: 0,
   };
 
-  // ตั้งค่า margins
+  // ตั้งค่า margins (กว้างข้างเพื่อให้ตารางอยู่กลางหน้า)
   ws['!margins'] = {
-    left: 0.2,
-    right: 0.2,
+    left: 0.5,
+    right: 0.5,
     top: 0.3,
     bottom: 0.3,
     header: 0.1,
@@ -929,20 +903,18 @@ const handleExportExcel = () => {
                 </TableRow>
               ) : (
                 // แสดงข้อมูลปกติ
-                flatRows.map((row, idx) => (
+                pagedData.map((row, idx) => (
                   <TableRow
-                    key={`${row.id}-${row.level}`}
+                    key={row.id}
                     hover
                     sx={{
-                      cursor: row.isParent ? "pointer" : "default",
-                      backgroundColor: row.isParent ? "white" : "#FEFAEF",
+                      cursor: navigateTo ? "pointer" : "default",
                       "&:hover": {
-                        backgroundColor: row.isParent ? "#f5f5f5" : "#FEF8E7",
+                        backgroundColor: "#f5f5f5",
                       },
                     }}
                     onClick={() => {
-                      if (row.isParent && navigateTo) {
-                        // ส่ง department_id ไปด้วยถ้ามี
+                      if (navigateTo) {
                         const query = {};
                         if (row.department_id || row.id) {
                           query.department_id = row.department_id || row.id;
@@ -963,20 +935,14 @@ const handleExportExcel = () => {
                       align="center"
                       sx={{
                         width: columns[0].width,
-                        fontWeight: row.isParent ? 600 : 400,
-                        color: row.isParent ? "#1120A3" : "#333",
+                        fontWeight: 600,
+                        color: "#1120A3",
                         fontSize: isMobile ? "12px" : "14px",
                         border: "1px solid #e0e0e0",
-                        padding: row.isParent
-                          ? isMobile
-                            ? "8px 4px"
-                            : "14px 12px"
-                          : isMobile
-                          ? "6px 4px"
-                          : "8px 12px",
+                        padding: isMobile ? "8px 4px" : "14px 12px",
                       }}
                     >
-                      {row.isParent ? row.displayIndex : ""}
+                      {page * rowsPerPage + idx + 1}
                     </TableCell>
 
                     {/* Column 2 - หน่วยงาน */}
@@ -985,60 +951,18 @@ const handleExportExcel = () => {
                         width: columns[1].width,
                         fontSize: isMobile ? "12px" : "14px",
                         border: "1px solid #e0e0e0",
-                        padding: row.isParent
-                          ? isMobile
-                            ? "8px 4px"
-                            : "14px 12px"
-                          : isMobile
-                          ? "6px 4px 6px 16px"
-                          : "8px 12px 8px 40px",
+                        padding: isMobile ? "8px 4px" : "14px 12px",
                       }}
                     >
-                      {row.isParent ? (
-                        <Box display="flex" alignItems="center">
-                          <IconButton
-                            size="small"
-                            sx={{
-                              p: 0,
-                              mr: isMobile ? 0.5 : 1,
-                              minWidth: isMobile ? 16 : 24,
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleRow(row.id);
-                            }}
-                          >
-                            {expanded[row.id] ? (
-                              <ExpandLessIcon
-                                fontSize={isMobile ? "small" : "medium"}
-                              />
-                            ) : (
-                              <ExpandMoreIcon
-                                fontSize={isMobile ? "small" : "medium"}
-                              />
-                            )}
-                          </IconButton>
-                          <Box
-                            sx={{
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: isMobile ? "nowrap" : "normal",
-                            }}
-                          >
-                            {row.agency}
-                          </Box>
-                        </Box>
-                      ) : (
-                        <Box
-                          sx={{
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: isMobile ? "nowrap" : "normal",
-                          }}
-                        >
-                          {row.agency}
-                        </Box>
-                      )}
+                      <Box
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: isMobile ? "nowrap" : "normal",
+                        }}
+                      >
+                        {row.agency}
+                      </Box>
                     </TableCell>
 
                     {/* Column 3 - จำนวน */}
@@ -1048,13 +972,7 @@ const handleExportExcel = () => {
                         width: columns[2].width,
                         fontSize: isMobile ? "12px" : "14px",
                         border: "1px solid #e0e0e0",
-                        padding: row.isParent
-                          ? isMobile
-                            ? "8px 4px"
-                            : "14px 12px"
-                          : isMobile
-                          ? "6px 4px"
-                          : "8px 12px",
+                        padding: isMobile ? "8px 4px" : "14px 12px",
                       }}
                     >
                       {row.total ?? "-"}
@@ -1067,13 +985,7 @@ const handleExportExcel = () => {
                         width: columns[3].width,
                         fontSize: isMobile ? "12px" : "14px",
                         border: "1px solid #e0e0e0",
-                        padding: row.isParent
-                          ? isMobile
-                            ? "8px 4px"
-                            : "14px 12px"
-                          : isMobile
-                          ? "6px 4px"
-                          : "8px 12px",
+                        padding: isMobile ? "8px 4px" : "14px 12px",
                       }}
                     >
                       {row.closed ?? "-"}
@@ -1086,13 +998,7 @@ const handleExportExcel = () => {
                         width: columns[4].width,
                         fontSize: isMobile ? "12px" : "14px",
                         border: "1px solid #e0e0e0",
-                        padding: row.isParent
-                          ? isMobile
-                            ? "8px 4px"
-                            : "14px 12px"
-                          : isMobile
-                          ? "6px 4px"
-                          : "8px 12px",
+                        padding: isMobile ? "8px 4px" : "14px 12px",
                       }}
                     >
                       {row.ongoing ?? "-"}

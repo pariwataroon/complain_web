@@ -560,12 +560,32 @@ const handleSubmit = async () => {
     created_at,
   } = formData;
 
-  // ข้อมูลจาก step1 (ผู้ร้องทุกข์)
-  const complainant = step1.general?.general || {};
+  // ข้อมูลจาก step1 (ผู้ร้องทุกข์) - รองรับทั้ง 3 ประเภท
+  const step1General = step1.general || {};
+  const hasRealData = (obj) => obj && typeof obj === "object" && Object.keys(obj).length > 0 && Object.values(obj).some(v => v !== null && v !== undefined && v !== "");
+  let complainantType = "individual";
+  let complainant = {};
+  let delegate = {};
 
-  // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)
-  const delegate = step1.general?.delegate || {};
-  const respondent = step2.general?.individual || {};
+  if (hasRealData(step1General.government)) {
+    complainant = step1General.government;
+    complainantType = "government";
+    delegate = {};
+  } else if (hasRealData(step1General.corporate)) {
+    complainant = step1General.corporate;
+    complainantType = "corporate";
+    delegate = step1General.signer || {};
+  } else {
+    complainant = step1General.general || {};
+    complainantType = "individual";
+    delegate = step1General.delegate || {};
+  }
+  const respondentActiveType = step2.general?.activeType;
+  const respondent = respondentActiveType === "corporate"
+    ? step2.general?.corporate || {}
+    : respondentActiveType === "government"
+    ? step2.general?.government || {}
+    : step2.general?.individual || step2.general?.corporate || step2.general?.government || {};
 
   // ข้อมูลจาก step3 (เรื่องร้องทุกข์)
   const complaint = step3.general || {};
@@ -638,7 +658,11 @@ const handleSubmit = async () => {
     return { title, firstName, lastName };
   }
 
-  const complainantName = splitThaiName(complainant.name);
+  const complainantName = complainantType === "government"
+    ? { title: "-", firstName: complainant.fullName || "-", lastName: "-" }
+    : complainantType === "corporate"
+    ? { title: "-", firstName: complainant.companyName || "-", lastName: "-" }
+    : splitThaiName(complainant.name);
   const delegateName = splitThaiName(delegate?.name);
   const respondentName = splitThaiName(respondent?.name);
   return (
@@ -719,15 +743,26 @@ const handleSubmit = async () => {
             </Typography>
             <Grid container spacing={2} mb={3}>
               <InfoItem
-                label="หมายเลขประจำตัวประชาชน"
+                label={complainantType === "corporate" ? "เลขทะเบียนนิติบุคคล" : "หมายเลขประจำตัวประชาชน"}
                 value={formatCitizenId_null(complainant.idCard)}
               />
-              <InfoItem label="คำนำหน้า" value={complainantName.title || "-"} />
-              <InfoItem label="ชื่อ" value={complainantName.firstName || "-"} />
-              <InfoItem
-                label="นามสกุล"
-                value={complainantName.lastName || "-"}
-              />
+              {complainantType === "corporate" ? (
+                <InfoItem label="ชื่อบริษัท" value={complainantName.firstName || "-"} />
+              ) : complainantType === "government" ? (
+                <>
+                  <InfoItem label="หน่วยงาน" value={complainant.agencyName || "-"} />
+                  <InfoItem label="ชื่อ - นามสกุล" value={complainant.fullName || "-"} />
+                </>
+              ) : (
+                <>
+                  <InfoItem label="คำนำหน้า" value={complainantName.title || "-"} />
+                  <InfoItem label="ชื่อ" value={complainantName.firstName || "-"} />
+                  <InfoItem
+                    label="นามสกุล"
+                    value={complainantName.lastName || "-"}
+                  />
+                </>
+              )}
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
                 value={complainant.address || "-"}

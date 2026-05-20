@@ -22,7 +22,7 @@ import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import styles from "./TableAnnualResults.module.scss";
-import { exportExcel } from "@utils/exportExcel";
+import * as XLSX from "xlsx-js-style";
 import { exportElementToPDF } from "@utils/exportPDF";
 const TableAnnualResults = ({
   data = [],
@@ -312,23 +312,16 @@ const handleExportExcel = () => {
 
   const today = new Date().toLocaleDateString("th-TH", {
     year: "numeric",
-    month: "long",
-    day: "numeric",
+    month: "2-digit",
+    day: "2-digit",
   });
 
-  // คำนิยาม columns (ใช้ชื่อคอลัมน์ตามต้องการ)
-  const columns = [
-    "ลำดับ",
-    "เลข สรร.",
-    "ลงวันที่",
-    "ชื่อ-สกุล (ผู้ร้อง)",
-    "ชื่อเรื่อง",
-    "ประเภทเรื่อง",
-    "หนังสือส่งหน่วยงาน/ติดตามผล",
-    "เจ้าหน้าที่ผู้รับผิดชอบ",
-    "สถานะเรื่อง",
-    "ระยะเวลาในการดำเนินงาน",
+  const headers = [
+    "ลำดับ", "เลข สรร.", "ลงวันที่", "ชื่อ-สกุล (ผู้ร้อง)",
+    "ชื่อเรื่อง", "ประเภทเรื่อง", "หนังสือส่งหน่วยงาน/ติดตามผล",
+    "เจ้าหน้าที่ผู้รับผิดชอบ", "สถานะเรื่อง", "ระยะเวลาในการดำเนินงาน",
   ];
+  const numCols = headers.length;
 
   const completed = filteredData.filter((d) => d.status === "ยุติ");
   const inProgress = filteredData.filter((d) => d.status !== "ยุติ");
@@ -340,32 +333,140 @@ const handleExportExcel = () => {
     row.complainant || row.claimant_name || "-",
     row.complaint || row.complaint_title || "-",
     row.issueType || row.issue_type || "-",
-    (row.letterRef || row.letter_ref) ? `${row.letterRef || row.letter_ref} (${formatThaiDate(row.letterDate || row.letter_date)})` : "-",
+    (row.letterRef || row.letter_ref)
+      ? `${row.letterRef || row.letter_ref} (${formatThaiDate(row.letterDate || row.letter_date)})`
+      : "-",
     row.responsibleOfficer || row.responsible_officer || "-",
     row.status || "-",
     row.elapsedTime || row.elapsed_time || "-",
   ];
 
-  const completedRows = completed.map(mapRow);
-  const inProgressRows = inProgress.map(mapRow);
+  // ช่วงวันที่สำหรับหัวรายงาน
+  const dateRangeText = dateFrom || dateTo
+    ? `ตั้งแต่วันที่ ${dateFrom ? formatThaiDate(dateFrom) : "-"} ถึงวันที่ ${dateTo ? formatThaiDate(dateTo) : "-"}`
+    : `ประจำปีงบประมาณ 2568 ตั้งแต่วันที่ 1 ตุลาคม 2567 - 31 ธันวาคม 2567`;
 
-  // สร้าง exportData
-  const exportData = [
-    [`รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี สถานะ: ยุติแล้ว (${completed.length} รายการ)`],
-    columns,
-    ...completedRows,
-    [], // เว้นบรรทัด
-    [`รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี สถานะ: อยู่ระหว่างดำเนินการ (${inProgress.length} รายการ)`],
-    columns,
-    ...inProgressRows,
+  const wsData = [];
+
+  // ===== ส่วนยุติแล้ว =====
+  wsData.push(["รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี  สถานะ: ยุติแล้ว (" + completed.length + " รายการ)"]);
+  wsData.push([dateRangeText]);
+  wsData.push([]);
+  wsData.push(headers);
+  completed.forEach((row, idx) => wsData.push(mapRow(row, idx)));
+
+  wsData.push([]); // คั่น
+  wsData.push([]); // คั่น
+
+  // ===== ส่วนอยู่ระหว่างดำเนินการ =====
+  wsData.push(["รายงานสรุปเรื่องร้องเรียนสำนักงานปลัดกระทรวงการคลัง / สำนักงานรัฐมนตรี  สถานะ: อยู่ระหว่างดำเนินการ (" + inProgress.length + " รายการ)"]);
+  wsData.push([dateRangeText]);
+  wsData.push([]);
+  wsData.push(headers);
+  inProgress.forEach((row, idx) => wsData.push(mapRow(row, idx)));
+
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Merge title rows
+  if (!ws['!merges']) ws['!merges'] = [];
+  // ยุติแล้ว: แถว 0, 1
+  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } });
+  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
+  // อยู่ระหว่างดำเนินการ
+  const section2Start = 4 + completed.length + 2; // header(3) + completed + gap(2)
+  ws['!merges'].push({ s: { r: section2Start, c: 0 }, e: { r: section2Start, c: numCols - 1 } });
+  ws['!merges'].push({ s: { r: section2Start + 1, c: 0 }, e: { r: section2Start + 1, c: numCols - 1 } });
+
+  // ความกว้างคอลัมน์ (รวม ~116 พอดี A4 landscape)
+  ws['!cols'] = [
+    { wch: 4 },   // ลำดับ
+    { wch: 9 },   // เลข สรร.
+    { wch: 9 },   // ลงวันที่
+    { wch: 12 },  // ชื่อ-สกุล (ผู้ร้อง)
+    { wch: 20 },  // ชื่อเรื่อง
+    { wch: 12 },  // ประเภทเรื่อง
+    { wch: 18 },  // หนังสือส่งหน่วยงาน/ติดตามผล
+    { wch: 14 },  // เจ้าหน้าที่ผู้รับผิดชอบ
+    { wch: 8 },   // สถานะเรื่อง
+    { wch: 10 },  // ระยะเวลาในการดำเนินงาน
   ];
 
-  exportExcel(exportData, {
-    filename: `รายงานสรุปเรื่องร้องเรียน_${today}.xlsx`,
-    sheetName: "รายงาน",
-    title: "", // ไม่ต้องใช้ title ซ้ำ
-    exportDate: `วันที่ ${today}`,
-  });
+  // จัดรูปแบบเซลล์
+  const borderStyle = {
+    top: { style: "thin" },
+    bottom: { style: "thin" },
+    left: { style: "thin" },
+    right: { style: "thin" },
+  };
+
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const headerRows = new Set([3]); // แถว header ของส่วนแรก
+  headerRows.add(section2Start + 2); // แถว header ของส่วนที่สอง
+  const titleRows1 = new Set([0, 1]);
+  const titleRows2 = new Set([section2Start, section2Start + 1]);
+  const dataStart1 = 4;
+  const dataStart2 = section2Start + 3;
+
+  for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[cellAddress]) {
+        ws[cellAddress] = { t: 's', v: '' };
+      }
+      if (!ws[cellAddress].s) ws[cellAddress].s = {};
+
+      if (titleRows1.has(R) || titleRows2.has(R)) {
+        // หัวข้อรายงาน
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
+        ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+      } else if (headerRows.has(R)) {
+        // แถว header ตาราง
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11, bold: true };
+        ws[cellAddress].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+        ws[cellAddress].s.fill = { fgColor: { rgb: "D9D9D9" } };
+        ws[cellAddress].s.border = borderStyle;
+      } else if (R >= dataStart1 && R < dataStart1 + completed.length) {
+        // ข้อมูลส่วนยุติแล้ว
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
+        ws[cellAddress].s.border = borderStyle;
+        ws[cellAddress].s.alignment = {
+          horizontal: [0, 2, 8, 9].includes(C) ? "center" : "left",
+          vertical: "center",
+          wrapText: true,
+        };
+      } else if (R >= dataStart2 && R < dataStart2 + inProgress.length) {
+        // ข้อมูลส่วนอยู่ระหว่างดำเนินการ
+        ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
+        ws[cellAddress].s.border = borderStyle;
+        ws[cellAddress].s.alignment = {
+          horizontal: [0, 2, 8, 9].includes(C) ? "center" : "left",
+          vertical: "center",
+          wrapText: true,
+        };
+      }
+    }
+  }
+
+  // Page setup A4 landscape
+  ws['!pageSetup'] = {
+    paperSize: 9,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+  };
+  ws['!margins'] = {
+    left: 0.1,
+    right: 0.1,
+    top: 0.2,
+    bottom: 0.2,
+    header: 0.05,
+    footer: 0.05,
+  };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "รายงาน");
+  XLSX.writeFile(wb, `รายงานสรุปเรื่องร้องเรียน_${today}.xlsx`);
 };
 
 

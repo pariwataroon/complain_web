@@ -10,11 +10,18 @@ import {
   TablePagination,
   Container,
   IconButton,
+  Chip,
+  Tooltip,
   useTheme,
   useMediaQuery,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import CancelIcon from "@mui/icons-material/Cancel";
+import ScheduleIcon from "@mui/icons-material/Schedule";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import styles from "./TableListStaffNoti.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
@@ -23,12 +30,111 @@ import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportReportToPDF } from "@utils/exportReportPDF";
 import * as XLSX from "xlsx-js-style";
+const ConfirmStatusBadge = ({ status }) => {
+  if (status === true) {
+    return (
+      <Chip
+        icon={<CheckCircleIcon sx={{ fontSize: 16 }} />}
+        label="ยืนยันแล้ว"
+        size="small"
+        sx={{ backgroundColor: "#e8f5e9", color: "#2e7d32", fontWeight: 600, fontSize: "12px" }}
+      />
+    );
+  }
+  if (status === false) {
+    return (
+      <Chip
+        icon={<CancelIcon sx={{ fontSize: 16 }} />}
+        label="ปฏิเสธ"
+        size="small"
+        sx={{ backgroundColor: "#ffebee", color: "#d32f2f", fontWeight: 600, fontSize: "12px" }}
+      />
+    );
+  }
+  return (
+    <Chip
+      icon={<ScheduleIcon sx={{ fontSize: 16 }} />}
+      label="รอยืนยัน"
+      size="small"
+      sx={{ backgroundColor: "#fff3e0", color: "#ed6c02", fontWeight: 600, fontSize: "12px" }}
+    />
+  );
+};
+
+const TimeAlertBadge = ({ timeStatus, daysRemaining, timeLimitLabel }) => {
+  if (!timeStatus || daysRemaining === null) {
+    return <Box sx={{ color: "#999", fontSize: "13px" }}>-</Box>;
+  }
+
+  const config = {
+    normal: {
+      color: "#2e7d32",
+      bgColor: "#e8f5e9",
+      icon: <CheckCircleIcon sx={{ fontSize: 16 }} />,
+      label: `เหลือ ${daysRemaining} วัน`,
+    },
+    warning: {
+      color: "#ed6c02",
+      bgColor: "#fff3e0",
+      icon: <WarningAmberIcon sx={{ fontSize: 16 }} />,
+      label: daysRemaining > 0 ? `เหลือ ${daysRemaining} วัน` : "ครบกำหนดวันนี้",
+    },
+    overdue: {
+      color: "#d32f2f",
+      bgColor: "#ffebee",
+      icon: <ErrorOutlineIcon sx={{ fontSize: 16 }} />,
+      label: `เกิน ${Math.abs(daysRemaining)} วัน`,
+    },
+  };
+
+  const c = config[timeStatus] || config.normal;
+
+  return (
+    <Tooltip title={timeLimitLabel || ""} arrow>
+      <Chip
+        icon={c.icon}
+        label={c.label}
+        size="small"
+        sx={{
+          backgroundColor: c.bgColor,
+          color: c.color,
+          fontWeight: 600,
+          fontSize: "12px",
+        }}
+      />
+    </Tooltip>
+  );
+};
+
+const StatCard = ({ label, value, color, bgColor }) => (
+  <Box
+    sx={{
+      backgroundColor: bgColor,
+      borderRadius: 2,
+      padding: "12px 16px",
+      textAlign: "center",
+      borderLeft: `4px solid ${color}`,
+    }}
+  >
+    <Box sx={{ fontSize: "22px", fontWeight: 700, color }}>
+      {value ?? 0}
+    </Box>
+    <Box sx={{ fontSize: "12px", color: "#555", mt: 0.5 }}>
+      {label}
+    </Box>
+  </Box>
+);
+
 const TableListStaffNoti = ({
   data = [],
   title = "",
   navigateTo = "",
   onSearch = () => {},
   filterFields = [],
+  loading = false,
+  statistics = null,
+  alertsOnly = true,
+  onToggleAlerts = () => {},
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
@@ -92,6 +198,8 @@ const TableListStaffNoti = ({
     },
     { name: "issueType", label: "หัวข้อ", width: 250 },
     { name: "countTimes", label: "จำนวนครั้ง", width: 120 },
+    { name: "confirmStatus", label: "สถานะการยืนยัน", width: 140, isCustom: true },
+    { name: "timeAlert", label: "สถานะเวลา", width: 160, isCustom: true },
   ];
 
   // Dynamic layout calculation with consistent sizing
@@ -230,7 +338,17 @@ const handleExportExcel = () => {
   data.forEach((item, idx) => {
     const row = [idx + 1];
     columns.forEach((col) => {
-      row.push(item[col.name] ?? "-");
+      if (col.name === "confirmStatus") {
+        if (item.confirmAssignedStatus === true) row.push("ยืนยันแล้ว");
+        else if (item.confirmAssignedStatus === false) row.push("ปฏิเสธ");
+        else row.push("รอยืนยัน");
+      } else if (col.name === "timeAlert") {
+        if (!item.timeStatus) row.push("-");
+        else if (item.timeStatus === "overdue") row.push(`เกิน ${Math.abs(item.daysRemaining)} วัน`);
+        else row.push(`เหลือ ${item.daysRemaining} วัน`);
+      } else {
+        row.push(item[col.name] ?? "-");
+      }
     });
     wsData.push(row);
   });
@@ -247,16 +365,18 @@ const handleExportExcel = () => {
   ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
   ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
 
-  // กำหนดความกว้างคอลัมน์ (ลดให้พอดี A4 landscape)
+  // กำหนดความกว้างคอลัมน์ (พอดี A4 landscape)
   ws['!cols'] = [
-    { wch: 4 },  // ลำดับ
-    { wch: 18 }, // เจ้าหน้าที่ผู้รับผิดชอบ
-    { wch: 18 }, // ชื่อ - สกุล
-    { wch: 18 }, // ชื่อเรื่อง
-    { wch: 12 }, // เลข สรร.
-    { wch: 14 }, // วันที่เจ้าหน้าที่รับเรื่อง
-    { wch: 18 }, // หัวข้อ
-    { wch: 10 }, // จำนวนครั้ง
+    { wch: 5 },  // ลำดับ
+    { wch: 14 }, // เจ้าหน้าที่ผู้รับผิดชอบ
+    { wch: 14 }, // ชื่อ - สกุล
+    { wch: 14 }, // ชื่อเรื่อง
+    { wch: 10 }, // เลข สรร.
+    { wch: 12 }, // วันที่เจ้าหน้าที่รับเรื่อง
+    { wch: 14 }, // หัวข้อ
+    { wch: 8 },  // จำนวนครั้ง
+    { wch: 14 }, // สถานะการยืนยัน
+    { wch: 16 }, // สถานะเวลา
   ];
 
   // จัดรูปแบบเซลล์
@@ -293,7 +413,7 @@ const handleExportExcel = () => {
       else if (R > 4) {
         ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
         ws[cellAddress].s.border = borderStyle;
-        const centerColumns = [0, 4, 7]; // ลำดับ, เลข สรร., จำนวนครั้ง
+        const centerColumns = [0, 4, 7, 8, 9]; // ลำดับ, เลข สรร., จำนวนครั้ง, สถานะการยืนยัน, สถานะเวลา
         ws[cellAddress].s.alignment = {
           horizontal: centerColumns.includes(C) ? "center" : "left",
           vertical: "center",
@@ -371,6 +491,60 @@ const handleExportExcel = () => {
       >
         <Box>{title}</Box>
       </Box>
+
+      {/* Statistics Summary Cards */}
+      <Box sx={{ px: 2.5, pt: 1.5, pb: 0 }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between">
+          <Box sx={{ fontSize: "14px", fontWeight: 600, color: alertsOnly ? "#d32f2f" : "#333" }}>
+            {alertsOnly ? "แสดงเฉพาะรายการที่ต้องเตือน" : "แสดงทุกรายการ"}
+          </Box>
+          <Box
+            onClick={onToggleAlerts}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              cursor: "pointer",
+              px: 2,
+              py: 0.75,
+              borderRadius: 2,
+              border: `2px solid ${alertsOnly ? "#d32f2f" : "#bdbdbd"}`,
+              backgroundColor: alertsOnly ? "#fff5f5" : "#f5f5f5",
+              transition: "all 0.2s ease-in-out",
+              "&:hover": {
+                borderColor: alertsOnly ? "#b71c1c" : "#999",
+                backgroundColor: alertsOnly ? "#ffebee" : "#eeeeee",
+              },
+            }}
+          >
+            <WarningAmberIcon sx={{ fontSize: 20, color: alertsOnly ? "#d32f2f" : "#999" }} />
+            <span style={{ fontSize: "13px", fontWeight: 600, color: alertsOnly ? "#d32f2f" : "#666" }}>
+              {alertsOnly ? "เปิดการแจ้งเตือน" : "ปิดการแจ้งเตือน"}
+            </span>
+          </Box>
+        </Box>
+      </Box>
+      {statistics && (
+        <Box
+          display="grid"
+          gridTemplateColumns={{
+            xs: "repeat(2, 1fr)",
+            sm: "repeat(4, 1fr)",
+            md: "repeat(7, 1fr)",
+          }}
+          gap={1.5}
+          px={2.5}
+          py={1.5}
+        >
+          <StatCard label="ทั้งหมด" value={statistics.total} color="#1120A3" bgColor="#e8e9f6" />
+          <StatCard label="ยืนยันแล้ว" value={statistics.confirmed} color="#2e7d32" bgColor="#e8f5e9" />
+          <StatCard label="รอยืนยัน" value={statistics.pending} color="#ed6c02" bgColor="#fff3e0" />
+          <StatCard label="ปฏิเสธ" value={statistics.rejected} color="#d32f2f" bgColor="#ffebee" />
+          <StatCard label="ปกติ" value={statistics.normal} color="#2e7d32" bgColor="#e8f5e9" />
+          <StatCard label="ใกล้ถึงกำหนด" value={statistics.warning} color="#ed6c02" bgColor="#fff3e0" />
+          <StatCard label="เกินกำหนด" value={statistics.overdue} color="#d32f2f" bgColor="#ffebee" />
+        </Box>
+      )}
 
       {/* Dynamic Responsive Filters */}
       <Box
@@ -719,7 +893,7 @@ const handleExportExcel = () => {
         >
           <Table
             sx={{
-              minWidth: needsScrollbar ? 1400 : "100%",
+              minWidth: needsScrollbar ? 1700 : "100%",
               width: "100%",
               tableLayout: needsScrollbar ? "auto" : "fixed",
             }}
@@ -803,27 +977,64 @@ const handleExportExcel = () => {
                   >
                     {page * rowsPerPage + idx + 1}
                   </TableCell>
-                  {columns.map((col) => (
-                    <TableCell
-                      key={col.name}
-                      sx={{
-                        width: needsScrollbar ? col.width : "auto",
-                        minWidth: needsScrollbar ? col.width : "auto",
-                        border: "1px solid #e0e0e0",
+                  {columns.map((col) => {
+                    if (col.name === "confirmStatus") {
+                      return (
+                        <TableCell
+                          key={col.name}
+                          sx={{
+                            width: needsScrollbar ? col.width : "auto",
+                            minWidth: needsScrollbar ? col.width : "auto",
+                            border: "1px solid #e0e0e0",
+                            padding: "14px 12px",
+                            "@media (max-width: 599px)": { padding: "6px 4px" },
+                          }}
+                        >
+                          <ConfirmStatusBadge status={item.confirmAssignedStatus} />
+                        </TableCell>
+                      );
+                    }
+                    if (col.name === "timeAlert") {
+                      return (
+                        <TableCell
+                          key={col.name}
+                          sx={{
+                            width: needsScrollbar ? col.width : "auto",
+                            minWidth: needsScrollbar ? col.width : "auto",
+                            border: "1px solid #e0e0e0",
+                            padding: "14px 12px",
+                            "@media (max-width: 599px)": { padding: "6px 4px" },
+                          }}
+                        >
+                          <TimeAlertBadge
+                            timeStatus={item.timeStatus}
+                            daysRemaining={item.daysRemaining}
+                            timeLimitLabel={item.timeLimitLabel}
+                          />
+                        </TableCell>
+                      );
+                    }
+                    return (
+                      <TableCell
+                        key={col.name}
+                        sx={{
+                          width: needsScrollbar ? col.width : "auto",
+                          minWidth: needsScrollbar ? col.width : "auto",
+                          border: "1px solid #e0e0e0",
 
-                        padding: "14px 12px", // Keep consistent padding
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        // Add responsive styles only for very small screens if needed
-                        "@media (max-width: 599px)": {
-                          padding: "6px 4px",
-                        },
-                      }}
-                    >
-                      {item[col.name] ?? "-"}
-                    </TableCell>
-                  ))}
+                          padding: "14px 12px",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          "@media (max-width: 599px)": {
+                            padding: "6px 4px",
+                          },
+                        }}
+                      >
+                        {item[col.name] ?? "-"}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               ))}
             </TableBody>

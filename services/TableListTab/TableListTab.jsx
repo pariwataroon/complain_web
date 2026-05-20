@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -21,39 +22,13 @@ import SearchOffIcon from "@mui/icons-material/SearchOff";
 
 import styles from "./TableListTab.module.scss";
 import { exportElementToPDF } from "@utils/exportPDF";
-import { exportExcel } from "@utils/exportExcel";
+import ExportButton from "@services/ExportButton/ExportButton";
+import * as XLSX from "xlsx-js-style";
 
-// ← เพิ่ม try-catch และ fallback สำหรับ imports
-let InputText, SelectField, ExportButton, DateThaiPickerService;
-
-try {
-  InputText = require("@services/InputText/InputText").default;
-} catch (e) {
-  console.warn("InputText import failed:", e);
-  InputText = null;
-}
-
-try {
-  SelectField = require("@services/SelectField/SelectField").default;
-} catch (e) {
-  console.warn("SelectField import failed:", e);
-  SelectField = null;
-}
-
-try {
-  ExportButton = require("@services/ExportButton/ExportButton").default;
-} catch (e) {
-  console.warn("ExportButton import failed:", e);
-  ExportButton = null;
-}
-
-try {
-  DateThaiPickerService =
-    require("@services/DateThaiPickerService/DateThaiPickerService").default;
-} catch (e) {
-  console.warn("DateThaiPickerService import failed:", e);
-  DateThaiPickerService = null;
-}
+const DateThaiPickerService = dynamic(
+  () => import("@services/DateThaiPickerService/DateThaiPickerService"),
+  { ssr: false }
+);
 
 const TableListTab = ({
   summaryData = [],
@@ -209,32 +184,17 @@ const TableListTab = ({
     return acc;
   }, {});
 
-  // ← ปรับปรุงฟังก์ชัน renderFilterField ให้มี fallback และ debug
   const renderFilterField = (field) => {
     switch (field.type) {
       case "date":
-        if (DateThaiPickerService) {
-          return (
-            <DateThaiPickerService
-              label={field.label}
-              value={filters[field.name]}
-              onChange={handleChangeFilter(field.name)}
-              placeholder={field.placeholder || "กรุณาเลือกวันที่"}
-              minDate={field.minDate}
-              maxDate={field.maxDate}
-            />
-          );
-        }
         return (
-          <TextField
-            fullWidth
+          <DateThaiPickerService
             label={field.label}
-            type="date"
-            value={filters[field.name] || ""}
+            value={filters[field.name]}
             onChange={handleChangeFilter(field.name)}
-            placeholder={field.placeholder}
-            InputLabelProps={{ shrink: true }}
-            sx={{ mb: 2 }}
+            placeholder={field.placeholder || "กรุณาเลือกวันที่"}
+            minDate={field.minDate}
+            maxDate={field.maxDate}
           />
         );
 
@@ -292,12 +252,10 @@ const TableListTab = ({
     const columns = columnsByTab[tabIndex];
     const data = tabIndex === 0 ? summaryData : pendingData;
 
-    // ✅ สร้างชื่อหัวตาราง (headerName) ให้เป็น string ทั้งหมด
     const exportColumns = columns.map((col, idx) => {
       return col.headerName?.toString() || col.field?.toString() || `คอลัมน์ ${idx + 1}`;
     });
 
-    // ✅ แปลงข้อมูลแต่ละแถวเป็น array of string
     const exportData = data.map((row) =>
       columns.map((col) => {
         const value = row?.[col.field];
@@ -311,23 +269,136 @@ const TableListTab = ({
       return val !== undefined && val !== null ? val.toString() : "-";
     });
 
-    const finalExportData = [
-      Array(columns.length).fill(""),
-      Array(columns.length).fill(""),
+    const titleText =
+      tabIndex === 0
+        ? "ผลการดำเนินการและเรื่องค้างพิจารณา"
+        : "เรื่องค้างพิจารณาตามปีงบประมาณ";
+
+    const exportDate = `วันที่ส่งออก: ${today}`;
+
+    const wsData = [
+      [titleText],
+      [exportDate],
       exportColumns,
       ...exportData,
       totalRow,
     ];
 
-    exportExcel(finalExportData, {
-      filename: `ผลการดำเนินการและเรื่องค้างพิจารณา_${today}.xlsx`,
-      sheetName: "Sheet1",
-      title:
-        tabIndex === 0
-          ? "ผลการดำเนินการและเรื่องค้างพิจารณา"
-          : "เรื่องค้างพิจารณาตามปีงบประมาณ",
-      exportDate: `วันที่ส่งออก: ${today}`,
-    });
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const numCols = columns.length;
+
+    // Merge title & date rows
+    if (!ws["!merges"]) ws["!merges"] = [];
+    ws["!merges"].push({ s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } });
+    ws["!merges"].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
+
+    const borderStyle = {
+      top: { style: "thin", color: { rgb: "000000" } },
+      bottom: { style: "thin", color: { rgb: "000000" } },
+      left: { style: "thin", color: { rgb: "000000" } },
+      right: { style: "thin", color: { rgb: "000000" } },
+    };
+
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[cellAddress]) {
+          ws[cellAddress] = { t: "s", v: "" };
+        }
+        if (!ws[cellAddress].s) ws[cellAddress].s = {};
+
+        if (R === 0) {
+          ws[cellAddress].s.alignment = {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
+        } else if (R === 1) {
+          ws[cellAddress].s.alignment = {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          };
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
+        } else if (R === 2) {
+          ws[cellAddress].s.alignment = {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          };
+          ws[cellAddress].s.font = {
+            name: "Cordia New",
+            bold: true,
+            sz: 11,
+          };
+          ws[cellAddress].s.fill = { fgColor: { rgb: "D9D9D9" } };
+          ws[cellAddress].s.border = borderStyle;
+        } else if (R === range.e.r) {
+          ws[cellAddress].s.border = borderStyle;
+          ws[cellAddress].s.font = {
+            name: "Cordia New",
+            bold: true,
+            sz: 11,
+          };
+          ws[cellAddress].s.alignment = {
+            horizontal: C === 0 ? "left" : "center",
+            vertical: "center",
+            wrapText: true,
+          };
+        } else {
+          ws[cellAddress].s.border = borderStyle;
+          ws[cellAddress].s.font = { name: "Cordia New", sz: 11 };
+          ws[cellAddress].s.alignment = {
+            horizontal: C === 0 ? "left" : "center",
+            vertical: "center",
+            wrapText: true,
+          };
+        }
+      }
+    }
+
+    // Fixed column widths พอดี A4 portrait
+    ws["!cols"] =
+      tabIndex === 0
+        ? [
+            { wch: 30 }, // ผู้ตรวจราชการกระทรวงการคลัง
+            { wch: 10 }, // จำนวน
+            { wch: 14 }, // อยู่ระหว่างดำเนินการ
+            { wch: 8 },  // ยุติ
+          ]
+        : [
+            { wch: 30 }, // ผู้ตรวจราชการกระทรวงการคลัง
+            { wch: 14 }, // ค้างพิจารณาระหว่าง
+            { wch: 14 }, // อยู่ระหว่างดำเนินการ
+            { wch: 8 },  // รวม
+          ];
+
+    ws["!pageSetup"] = {
+      paperSize: 9,
+      orientation: "portrait",
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+    };
+
+    ws["!margins"] = {
+      left: 0.2,
+      right: 0.2,
+      top: 0.3,
+      bottom: 0.3,
+      header: 0.1,
+      footer: 0.1,
+    };
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+    XLSX.writeFile(
+      wb,
+      `ผลการดำเนินการและเรื่องค้างพิจารณา_${today}.xlsx`
+    );
   };
 
   const renderExportButton = (label, onClick) => {

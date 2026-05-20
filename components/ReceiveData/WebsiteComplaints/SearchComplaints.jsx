@@ -671,6 +671,31 @@ useEffect(() => {
   const defaultStep3Ref = useRef({});
   const defaultStep4Ref = useRef({});
 
+  const [complainantType, setComplainantType] = useState("individual");
+  const [delegateType, setDelegateType] = useState("delegate");
+  const [respondentType, setRespondentType] = useState("individual");
+
+  const handleComplainantTabChange = (newType) => {
+    const currentData = generalMethods.getValues();
+    setComplainantType(newType);
+    generalMethods.reset(packPerson(currentData));
+    if (newType === "corporate") {
+      setDelegateType("signer");
+      const currentDelegateData = delegateMethods.getValues();
+      delegateMethods.reset(packPerson(currentDelegateData));
+    } else {
+      setDelegateType("delegate");
+      const currentDelegateData = delegateMethods.getValues();
+      delegateMethods.reset(packPerson(currentDelegateData));
+    }
+  };
+
+  const handleRespondentTabChange = (newType) => {
+    const currentData = step2Methods.getValues();
+    setRespondentType(newType);
+    step2Methods.reset(packPerson(currentData));
+  };
+
   useEffect(() => {
     if (id) {
       fetchComplaints(id);
@@ -868,6 +893,7 @@ useEffect(() => {
           Object.keys(data.step1.general.general.government).length > 0
         ) {
           generalData = data.step1.general.general.government;
+          setComplainantType("government");
           console.log(
             "Fallback: ใช้ข้อมูลจาก government แทน general",
             generalData
@@ -880,9 +906,36 @@ useEffect(() => {
         console.log("ใช้ข้อมูลจาก general", generalData);
       }
 
-      defaultGeneralRef.current = generalData;
-      defaultDelegateRef.current = data?.step1?.general?.delegate || null;
-      defaultStep2Ref.current = data?.step2?.general?.individual || {};
+      // ตรวจสอบประเภทผู้ร้องทุกข์จากข้อมูล
+      const step1Inner = data?.step1?.general?.general || {};
+      if (step1Inner.corporate && Object.keys(step1Inner.corporate).length > 0) {
+        setComplainantType("corporate");
+        setDelegateType("signer");
+        defaultDelegateRef.current = data?.step1?.general?.signer || null;
+      } else if (step1Inner.government && Object.keys(step1Inner.government).length > 0) {
+        setComplainantType("government");
+        defaultDelegateRef.current = null;
+      } else {
+        setComplainantType("individual");
+        setDelegateType("delegate");
+        defaultDelegateRef.current = data?.step1?.general?.delegate || null;
+      }
+
+      // ตรวจสอบประเภทผู้ถูกร้องเรียนจากข้อมูล
+      const step2General = data?.step2?.general || {};
+      if (step2General.activeType) {
+        setRespondentType(step2General.activeType);
+        defaultStep2Ref.current = step2General[step2General.activeType] || {};
+      } else if (step2General.corporate && Object.keys(step2General.corporate).length > 0) {
+        setRespondentType("corporate");
+        defaultStep2Ref.current = step2General.corporate;
+      } else if (step2General.government && Object.keys(step2General.government).length > 0) {
+        setRespondentType("government");
+        defaultStep2Ref.current = step2General.government;
+      } else {
+        setRespondentType("individual");
+        defaultStep2Ref.current = step2General.individual || {};
+      }
       defaultStep3Ref.current = data?.step3?.general || {};
       defaultStep4Ref.current = data?.step4?.general || {};
 
@@ -910,9 +963,10 @@ useEffect(() => {
   const handleReset = () => {
   clearSubTypes();
 
-  generalMethods.reset(defaultData?.step1?.general?.general || {});
-  delegateMethods.reset(defaultData?.step1?.general?.delegate || {});
-  step2Methods.reset(defaultData?.step2?.general?.individual || {});
+  generalMethods.reset(defaultGeneralRef.current);
+  if (defaultDelegateRef.current)
+    delegateMethods.reset(defaultDelegateRef.current);
+  step2Methods.reset(defaultStep2Ref.current);
   const step3General = defaultData?.step3?.general || {};
   const assignmentForm = defaultData?.assignment_form || {};
   const typeId =
@@ -927,6 +981,17 @@ useEffect(() => {
       step3General.complaint_channel_id || assignmentForm.complaint_channel_id || "",
   });
   step4Methods.reset(defaultData?.step4?.general || {});
+
+  // Restore original type states from loaded data
+  const step1Inner = defaultData?.step1?.general?.general || {};
+  const cType = step1Inner.government && Object.keys(step1Inner.government).length > 0
+    ? "government"
+    : step1Inner.corporate && Object.keys(step1Inner.corporate).length > 0
+    ? "corporate"
+    : "individual";
+  setComplainantType(cType);
+  setDelegateType(cType === "corporate" ? "signer" : "delegate");
+  setRespondentType(defaultData?.step2?.general?.activeType || "individual");
 
   // Reset file attachments
   setUploadedFiles([]);
@@ -1009,7 +1074,11 @@ useEffect(() => {
 
   const packPerson = (p = {}) => ({
     idCard: p.idCard || "",
-    name: p.name || "",
+    name: p.name || p.fullName || "",
+    fullName: p.fullName || p.name || "",
+    agencyName: p.agencyName || "",
+    companyName: p.companyName || "",
+    signatoryName: p.signatoryName || "",
     address: p.address || "",
     phone: p.phone || "",
     province: p.province ?? null,
@@ -1023,8 +1092,10 @@ useEffect(() => {
     obj && typeof obj === "object" && Object.values(obj).some(v => v !== "" && v !== null && v !== undefined);
 
   /**
-   * delegateType: 'delegate' | 'signer'  (ไฟล์นี้คุณยังไม่มี toggle ก็ส่ง 'delegate' ไป)
-   * respondentType: 'individual' | 'corporate' | 'government' (ไฟล์นี้ใช้ฟอร์มบุคคลเดียว -> 'individual')
+   * สร้าง payload สำหรับ step1 และ step2
+   * complainantType: 'individual' | 'corporate' | 'government'
+   * delegateType: 'delegate' | 'signer'
+   * respondentType: 'individual' | 'corporate' | 'government'
    */
   const buildStep12Payload = ({
     generalData,
@@ -1032,15 +1103,31 @@ useEffect(() => {
     delegateType = "delegate",
     step2Data,
     respondentType = "individual",
+    complainantType = "individual",
   }) => {
-    const step1 = {
-      general: {
+    let step1General;
+
+    if (complainantType === "government") {
+      step1General = {
+        government: packPerson(generalData || {}),
+      };
+    } else if (complainantType === "corporate") {
+      step1General = {
+        corporate: packPerson(generalData || {}),
+        ...(hasAnyValue(delegateData)
+          ? { signer: packPerson(delegateData) }
+          : {}),
+      };
+    } else {
+      step1General = {
         general: packPerson(generalData || {}),
         ...(hasAnyValue(delegateData)
           ? { [delegateType]: packPerson(delegateData) }
           : {}),
-      },
-    };
+      };
+    }
+
+    const step1 = { general: step1General };
 
     const step2 = {
       general: {
@@ -1063,13 +1150,14 @@ useEffect(() => {
     const delegateData = delegateMethods.getValues();  // ผู้รับมอบอำนาจ
     const step2Data    = step2Methods.getValues();     // ผู้ถูกร้องเรียน
 
-    // หน้านี้ยังไม่มีตัวสลับประเภท -> ยึด 'delegate' และ 'individual' ไปก่อน
+    // ส่ง type ที่ถูกต้องตามที่เลือกจาก tab
     const payload = buildStep12Payload({
       generalData,
       delegateData,
-      delegateType: "delegate",
+      delegateType,
       step2Data,
-      respondentType: "individual",
+      respondentType,
+      complainantType,
     });
 
     // Include updated attachments in payload
@@ -1298,13 +1386,20 @@ const handleSubmit = async () => {
     id: defaultData?.id,
     step1: {
       general: {
-        general: generalData,
-        delegate: defaultDelegateRef.current ? delegateData : null,
+        ...(complainantType === "government"
+          ? { government: generalData }
+          : complainantType === "corporate"
+          ? { corporate: generalData }
+          : { general: generalData }),
+        ...(complainantType === "corporate"
+          ? { signer: defaultDelegateRef.current ? delegateData : null }
+          : { delegate: defaultDelegateRef.current ? delegateData : null }),
       },
     },
     step2: {
       general: {
-        individual: step2Data,
+        activeType: respondentType,
+        [respondentType]: step2Data,
       },
     },
     step3: {
@@ -1548,15 +1643,6 @@ const handleSubmit = async () => {
   const currentComplaintFilingType =
     step3Methods.watch("complaint_filing_type") || "new";
 
-  // สมมติว่า defaultData คือข้อมูลที่โหลดมาแล้ว
-  const hasGovernment = !!(
-    defaultData?.step1?.general?.general?.government &&
-    Object.keys(defaultData.step1.general.general.government).length > 0
-  );
-
-  // กำหนด index ของ tab ที่ active
-  const activeTabIndex = hasGovernment ? 2 : 0;
-
   useEffect(() => {
     console.log(
       "showPreview",
@@ -1662,28 +1748,40 @@ const handleSubmit = async () => {
             <div className={styles.tabNav}>
               <div
                 className={`${styles.tab} ${styles.tab0} ${
-                  activeTabIndex === 0 ? styles.active : ""
+                  complainantType === "individual" ? styles.active : ""
                 }`}
+                onClick={() => handleComplainantTabChange("individual")}
+                style={{ cursor: "pointer" }}
               >
                 บุคคลทั่วไป
               </div>
               <div
                 className={`${styles.tab} ${styles.tab1} ${
-                  activeTabIndex === 1 ? styles.active : ""
+                  complainantType === "corporate" ? styles.active : ""
                 }`}
+                onClick={() => handleComplainantTabChange("corporate")}
+                style={{ cursor: "pointer" }}
               >
                 นิติบุคคล
               </div>
               <div
                 className={`${styles.tab} ${styles.tab2} ${
-                  activeTabIndex === 2 ? styles.active : ""
+                  complainantType === "government" ? styles.active : ""
                 }`}
+                onClick={() => handleComplainantTabChange("government")}
+                style={{ cursor: "pointer" }}
               >
                 หน่วยงานของรัฐ
               </div>
               <div
                 className={styles.underlineBar}
-                style={{ backgroundColor: "#0B1F8F" }}
+                style={{
+                  left: complainantType === "corporate"
+                    ? "calc(33.33%)"
+                    : complainantType === "government"
+                    ? "calc(66.66%)"
+                    : "0",
+                }}
               />
             </div>
 
@@ -1697,8 +1795,13 @@ const handleSubmit = async () => {
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
                       data={defaultGeneralRef.current}
-                      formType="complainant"
-                      // dis={false}
+                      formType={
+                        complainantType === "government"
+                          ? "government"
+                          : complainantType === "corporate"
+                          ? "corporate"
+                          : "individual"
+                      }
                     />
                   </div>
                 </div>
@@ -1709,14 +1812,15 @@ const handleSubmit = async () => {
                 <div className={styles.formSection}>
                   <div className={styles.sectionHeader}>
                     <h3 className={styles.sectionTitle}>
-                      ข้อมูลผู้รับมอบอำนาจร้องทุกข์
+                      {delegateType === "signer"
+                        ? "ข้อมูลผู้มีอำนาจลงนาม"
+                        : "ข้อมูลผู้รับมอบอำนาจร้องทุกข์"}
                     </h3>
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
                       data={defaultDelegateRef.current}
-                      formType="delegate"
-                      // dis={false}
+                      formType={delegateType === "signer" ? "signer" : "delegate"}
                     />
                   </div>
                 </div>
@@ -1724,20 +1828,43 @@ const handleSubmit = async () => {
 
               {/* Tab Navigation for Step 2 */}
               <div className={styles.tabNav}>
-                <div className={`${styles.tab} ${styles.tab0}`}>
+                <div
+                  className={`${styles.tab} ${styles.tab0} ${
+                    respondentType === "individual" ? styles.active : ""
+                  }`}
+                  onClick={() => handleRespondentTabChange("individual")}
+                  style={{ cursor: "pointer" }}
+                >
                   บุคคลทั่วไป
                 </div>
                 <div
-                  className={`${styles.tab} ${styles.tab1} ${styles.active}`}
+                  className={`${styles.tab} ${styles.tab1} ${
+                    respondentType === "corporate" ? styles.active : ""
+                  }`}
+                  onClick={() => handleRespondentTabChange("corporate")}
+                  style={{ cursor: "pointer" }}
                 >
                   นิติบุคคล
                 </div>
-                <div className={`${styles.tab} ${styles.tab2}`}>
+                <div
+                  className={`${styles.tab} ${styles.tab2} ${
+                    respondentType === "government" ? styles.active : ""
+                  }`}
+                  onClick={() => handleRespondentTabChange("government")}
+                  style={{ cursor: "pointer" }}
+                >
                   หน่วยงานของรัฐ
                 </div>
                 <div
                   className={styles.underlineBar}
-                  style={{ backgroundColor: "#3FA9F5" }}
+                  style={{
+                    left:
+                      respondentType === "corporate"
+                        ? "calc(33.33%)"
+                        : respondentType === "government"
+                        ? "calc(66.66%)"
+                        : "0",
+                  }}
                 />
               </div>
 
@@ -1752,8 +1879,7 @@ const handleSubmit = async () => {
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
                       data={defaultStep2Ref.current}
-                      formType="complainee"
-                      // dis={false}
+                      formType={respondentType}
                     />
                   </div>
                 </div>
@@ -1897,7 +2023,6 @@ const handleSubmit = async () => {
                         <label>เลข สป.สร.</label>
                         <input
                           type="text"
-                          defaultValue="16-4925-56"
                           {...step3Methods.register("referenceNumber2")}
                         />
                       </div>

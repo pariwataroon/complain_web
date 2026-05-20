@@ -151,15 +151,15 @@ const TableNewAddComp = ({
     ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
     ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
 
-    // กำหนดความกว้างคอลัมน์ (ลดให้พอดี A4 landscape)
+    // กำหนดความกว้างคอลัมน์ (พอดี A4 landscape)
     ws['!cols'] = [
-      { wch: 4 },  // ลำดับ
-      { wch: 10 }, // วันที่รับเรื่อง
-      { wch: 10 }, // เลข สรร.
-      { wch: 16 }, // ชื่อ - สกุล
-      { wch: 14 }, // เจ้าหน้าที่
-      { wch: 12 }, // ประเภทเรื่อง
-      { wch: 20 }, // หมายเหตุ
+      { wch: 6 },  // ลำดับ
+      { wch: 14 }, // วันที่รับเรื่อง
+      { wch: 20 }, // เลข สรร.
+      { wch: 22 }, // ชื่อ - สกุล
+      { wch: 18 }, // เจ้าหน้าที่
+      { wch: 16 }, // ประเภทเรื่อง
+      { wch: 22 }, // หมายเหตุ
     ];
 
     // จัดรูปแบบเซลล์
@@ -213,6 +213,7 @@ const TableNewAddComp = ({
       fitToPage: true,
       fitToWidth: 1,
       fitToHeight: 0,
+      horizontalCentered: true,
     };
 
     // ตั้งค่า margins

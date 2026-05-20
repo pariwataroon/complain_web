@@ -559,7 +559,12 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
   })();
 
   // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)
-  const respondent = step2.general?.individual || {};
+  const respondentActiveType = step2.general?.activeType;
+  const respondent = respondentActiveType === "corporate"
+    ? step2.general?.corporate || {}
+    : respondentActiveType === "government"
+    ? step2.general?.government || {}
+    : step2.general?.individual || step2.general?.corporate || step2.general?.government || {};
 
   const { title: respondentTitle, firstName: respondentFirstName, lastName: respondentLastName } = (() => {
     const t = resolveTitleFromList(
