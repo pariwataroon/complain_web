@@ -1147,6 +1147,8 @@ def get_user_related_complaints_with_tracking(
                 "id": _safe_str(getattr(c, "id", None)),
                 "complaint_number": getattr(c, "complaint_number", None),
                 "subject": getattr(c, "subject", None),
+                "reference_number": getattr(c, "reference_number", None),
+                "reference_number4": getattr(c, "reference_number4", None),
                 "status": current_status,
                 "status_label": status_th_map.get(current_status, current_status),
                 "created_at": _iso(getattr(c, "created_at", None)),

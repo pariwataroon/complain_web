@@ -24,6 +24,7 @@ async def get_staff_notifications(
     date_from: Optional[datetime] = Query(None, description="Start date (ISO format)"),
     date_to: Optional[datetime] = Query(None, description="End date (ISO format)"),
     search: Optional[str] = Query(None, description="Search by complaint number or subject"),
+    show_alerts_only: bool = Query(False, description="Show only warning/overdue items"),
     skip: int = Query(0, ge=0, description="Skip records"),
     limit: int = Query(100, ge=1, le=1000, description="Limit records"),
     db: Session = Depends(get_db),
@@ -76,6 +77,7 @@ async def get_staff_notifications(
         date_from=date_from,
         date_to=date_to,
         search=search,
+        show_alerts_only=show_alerts_only,
         skip=skip,
         limit=limit
     )

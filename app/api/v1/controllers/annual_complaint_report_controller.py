@@ -1,3 +1,4 @@
+import uuid
 from typing import Optional, Dict
 from datetime import datetime
 
@@ -98,9 +99,13 @@ def get_annual_complaint_details(
         )
     )
 
-    # Filter by department
+    # Filter by department (รับทั้ง UUID และชื่อหน่วยงาน)
     if department_id:
-        q = q.filter(OutgoingReport.department_id == department_id)
+        try:
+            uuid.UUID(department_id)
+            q = q.filter(OutgoingReport.department_id == department_id)
+        except (ValueError, AttributeError):
+            q = q.filter(Department.name == department_id)
 
     # Filter by status
     if status:
