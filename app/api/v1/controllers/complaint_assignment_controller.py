@@ -145,50 +145,52 @@ def update_complaint_assignment_data(
             complaint.new_complaint = True
             complaint.add_more_complaint_to_ref = False
             complaint.group_work = False
-            
+            complaint.complaint_filing_type = ComplaintFilingType.NEW
+            complaint.parent_complaint_id = None
+
             if not new_status and complaint.status == ComplaintStatus.SUBMITTED:
                 new_status = ComplaintStatus.IN_PROCESS
                 status_change_notes.append("ลงทะเบียนเรื่องร้องเรียนใหม่")
-            
+
             changes.append("ประเภท: เรื่องร้องทุกข์ใหม่")
 
-        # ✅ 2. แนบเรื่องหรือเนื้อหาร้องทุกข์เพิ่มเติม - ต้องมี additional_reference_number1
+        # ✅ 2. แนบเรื่องหรือเนื้อหาร้องทุกข์เพิ่มเติม - additional_reference_number1 กรอกทีหลังได้
         elif complaint_type_flags["add_more_complaint_to_ref"]:
-            # ตรวจสอบว่ามี additional_reference_number1 หรือไม่
-            if not assignment_data.get("additional_reference_number1"):
-                return {
-                    "success": False,
-                    "message": "สำหรับเรื่องร้องทุกข์เพิ่มเติม จำเป็นต้องระบุ additional_reference_number1 เพื่ออ้างอิงเรื่องก่อนหน้า"
-                }
-            
             complaint.new_complaint = False
             complaint.add_more_complaint_to_ref = True
             complaint.group_work = False
-            
+            complaint.complaint_filing_type = ComplaintFilingType.ADDITIONAL
+            complaint.additional_reference_number2 = None
+            complaint.additional_reference_date2 = None
+
+            ref1 = assignment_data.get("additional_reference_number1", "")
+            if ref1:
+                changes.append(f"ประเภท: แนบเรื่องร้องทุกข์เพิ่มเติม (อ้างอิง: {ref1})")
+            else:
+                changes.append("ประเภท: แนบเรื่องร้องทุกข์เพิ่มเติม")
+
             if not new_status:
                 new_status = ComplaintStatus.TRACKING
                 status_change_notes.append("เพิ่มข้อมูลเรื่องร้องเรียนเพิ่มเติม")
-            
-            changes.append(f"ประเภท: แนบเรื่องร้องทุกข์เพิ่มเติม (อ้างอิง: {assignment_data['additional_reference_number1']})")
 
-        # ✅ 3. แนบเรื่องร้องทุกข์ผ่านบัตรสนเท่ห์ - ต้องมี additional_reference_number2
+        # ✅ 3. แนบเรื่องร้องทุกข์ผ่านบัตรสนเท่ห์ - additional_reference_number2 กรอกทีหลังได้
         elif complaint_type_flags["group_work"]:
-            # ตรวจสอบว่ามี additional_reference_number2 หรือไม่
-            if not assignment_data.get("additional_reference_number2"):
-                return {
-                    "success": False,
-                    "message": "สำหรับเรื่องร้องทุกข์ผ่านบัตรสนเท่ห์ จำเป็นต้องระบุ additional_reference_number2 เพื่ออ้างอิงเรื่องก่อนหน้า"
-                }
-            
             complaint.new_complaint = False
             complaint.add_more_complaint_to_ref = False
             complaint.group_work = True
-            
+            complaint.complaint_filing_type = ComplaintFilingType.ANONYMOUS
+            complaint.additional_reference_number1 = None
+            complaint.additional_reference_date1 = None
+
+            ref2 = assignment_data.get("additional_reference_number2", "")
+            if ref2:
+                changes.append(f"ประเภท: แนบเรื่องร้องทุกข์ผ่านบัตรสนเท่ห์ (อ้างอิง: {ref2})")
+            else:
+                changes.append("ประเภท: แนบเรื่องร้องทุกข์ผ่านบัตรสนเท่ห์")
+
             if not new_status:
                 new_status = ComplaintStatus.IN_REVIEW
                 status_change_notes.append("รับเรื่องจากคณะทำงานบัตรสนเท่ห์")
-            
-            changes.append(f"ประเภท: แนบเรื่องร้องทุกข์ผ่านบัตรสนเท่ห์ (อ้างอิง: {assignment_data['additional_reference_number2']})")
 
     # ✅ บันทึก assigned_officer_id และ assigned_date
         if "assigned_officer_id" in assignment_data and assignment_data["assigned_officer_id"]:
