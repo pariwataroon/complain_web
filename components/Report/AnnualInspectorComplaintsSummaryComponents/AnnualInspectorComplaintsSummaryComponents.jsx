@@ -58,7 +58,7 @@ const flattenToInspectors = (resData) => {
     }
   }
 
-  return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
+  return Array.from(map.values());
 };
 
 // รวมสิทธิ์ผู้ตรวจ + ตัวเลขรายงาน + รายการเรื่อง เป็น rows สำหรับ TableListCollapsReport
@@ -124,7 +124,25 @@ const buildRows = (inspectors, reportItems, selectedInspectorId = "") => {
 
   const baseList = selectedInspectorId
     ? [inspectorMap.get(selectedInspectorId)].filter(Boolean)
-    : Array.from(inspectorMap.values()).sort((a, b) => a.name.localeCompare(b.name, "th"));
+    : (() => {
+        const POSITION_RANK = [
+          "หัวหน้าผู้ตรวจราชการกระทรวงการคลัง",
+          "ผู้ตรวจราชการกระทรวงการคลัง",
+          "ผู้อำนวยการสำนักตรวจสอบและประเมินผล",
+          "รักษาราชการแทน ผอ.สตป",
+        ];
+        const rank = (p) => {
+          if (!p) return POSITION_RANK.length;
+          const idx = POSITION_RANK.findIndex((r) => p.includes(r));
+          return idx === -1 ? POSITION_RANK.length : idx;
+        };
+        return Array.from(inspectorMap.values()).sort((a, b) => {
+          const ra = rank(a.position);
+          const rb = rank(b.position);
+          if (ra !== rb) return ra - rb;
+          return 0; // preserve API order within same position
+        });
+      })();
 
   return baseList.map((ins) => {
     const inspectorData = byInspector.get(ins.id);
