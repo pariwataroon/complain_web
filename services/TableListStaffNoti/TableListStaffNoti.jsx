@@ -28,7 +28,6 @@ import SelectField from "@services/SelectField/SelectField";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import ExportButton from "@services/ExportButton/ExportButton";
 import { exportElementToPDF } from "@utils/exportPDF";
-import { exportReportToPDF } from "@utils/exportReportPDF";
 import * as XLSX from "xlsx-js-style";
 const ConfirmStatusBadge = ({ status }) => {
   if (status === true) {
@@ -106,25 +105,6 @@ const TimeAlertBadge = ({ timeStatus, daysRemaining, timeLimitLabel }) => {
   );
 };
 
-const StatCard = ({ label, value, color, bgColor }) => (
-  <Box
-    sx={{
-      backgroundColor: bgColor,
-      borderRadius: 2,
-      padding: "12px 16px",
-      textAlign: "center",
-      borderLeft: `4px solid ${color}`,
-    }}
-  >
-    <Box sx={{ fontSize: "22px", fontWeight: 700, color }}>
-      {value ?? 0}
-    </Box>
-    <Box sx={{ fontSize: "12px", color: "#555", mt: 0.5 }}>
-      {label}
-    </Box>
-  </Box>
-);
-
 const TableListStaffNoti = ({
   data = [],
   title = "",
@@ -133,12 +113,35 @@ const TableListStaffNoti = ({
   filterFields = [],
   loading = false,
   statistics = null,
-  alertsOnly = true,
-  onToggleAlerts = () => {},
+  onStatFilter = () => {},
 }) => {
   const router = useRouter();
   const pdfRef = useRef();
   const theme = useTheme();
+
+  const [activeStatKeys, setActiveStatKeys] = useState([]);
+  const statCardConfig = [
+    { key: "total", label: "ทั้งหมด", valueKey: "total", color: "#1120A3", bgColor: "#e8e9f6" },
+    { key: "confirmed", label: "ยืนยันแล้ว", valueKey: "confirmed", color: "#2e7d32", bgColor: "#e8f5e9" },
+    { key: "pending", label: "รอยืนยัน", valueKey: "pending", color: "#ed6c02", bgColor: "#fff3e0" },
+    { key: "rejected", label: "ปฏิเสธ", valueKey: "rejected", color: "#d32f2f", bgColor: "#ffebee" },
+    { key: "normal", label: "ปกติ", valueKey: "normal", color: "#2e7d32", bgColor: "#e8f5e9" },
+    { key: "warning", label: "ใกล้ถึงกำหนด", valueKey: "warning", color: "#ed6c02", bgColor: "#fff3e0" },
+    { key: "overdue", label: "เกินกำหนด", valueKey: "overdue", color: "#d32f2f", bgColor: "#ffebee" },
+  ];
+
+  const handleStatCardClick = (key) => {
+    let next;
+    if (key === "total") {
+      next = [];
+    } else {
+      next = activeStatKeys.includes(key)
+        ? activeStatKeys.filter((k) => k !== key)
+        : [...activeStatKeys, key];
+    }
+    setActiveStatKeys(next);
+    onStatFilter(next);
+  };
 
   // Dynamic responsive breakpoints
   const isExtraSmall = useMediaQuery("(max-width:640px)");
@@ -171,11 +174,13 @@ const TableListStaffNoti = ({
 
   const handleSearchClick = () => {
     setPage(0);
+    setActiveStatKeys([]);
     onSearch(filters);
   };
   const handleClearSearch = () => {
     setFilters(initialFilters);
     setPage(0);
+    setActiveStatKeys([]);
     onSearch(initialFilters);
   };
 
@@ -492,38 +497,7 @@ const handleExportExcel = () => {
         <Box>{title}</Box>
       </Box>
 
-      {/* Statistics Summary Cards */}
-      <Box sx={{ px: 2.5, pt: 1.5, pb: 0 }}>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box sx={{ fontSize: "14px", fontWeight: 600, color: alertsOnly ? "#d32f2f" : "#333" }}>
-            {alertsOnly ? "แสดงเฉพาะรายการที่ต้องเตือน" : "แสดงทุกรายการ"}
-          </Box>
-          <Box
-            onClick={onToggleAlerts}
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              cursor: "pointer",
-              px: 2,
-              py: 0.75,
-              borderRadius: 2,
-              border: `2px solid ${alertsOnly ? "#d32f2f" : "#bdbdbd"}`,
-              backgroundColor: alertsOnly ? "#fff5f5" : "#f5f5f5",
-              transition: "all 0.2s ease-in-out",
-              "&:hover": {
-                borderColor: alertsOnly ? "#b71c1c" : "#999",
-                backgroundColor: alertsOnly ? "#ffebee" : "#eeeeee",
-              },
-            }}
-          >
-            <WarningAmberIcon sx={{ fontSize: 20, color: alertsOnly ? "#d32f2f" : "#999" }} />
-            <span style={{ fontSize: "13px", fontWeight: 600, color: alertsOnly ? "#d32f2f" : "#666" }}>
-              {alertsOnly ? "เปิดการแจ้งเตือน" : "ปิดการแจ้งเตือน"}
-            </span>
-          </Box>
-        </Box>
-      </Box>
+      {/* Statistics Summary Cards - Clickable Filter */}
       {statistics && (
         <Box
           display="grid"
@@ -536,13 +510,57 @@ const handleExportExcel = () => {
           px={2.5}
           py={1.5}
         >
-          <StatCard label="ทั้งหมด" value={statistics.total} color="#1120A3" bgColor="#e8e9f6" />
-          <StatCard label="ยืนยันแล้ว" value={statistics.confirmed} color="#2e7d32" bgColor="#e8f5e9" />
-          <StatCard label="รอยืนยัน" value={statistics.pending} color="#ed6c02" bgColor="#fff3e0" />
-          <StatCard label="ปฏิเสธ" value={statistics.rejected} color="#d32f2f" bgColor="#ffebee" />
-          <StatCard label="ปกติ" value={statistics.normal} color="#2e7d32" bgColor="#e8f5e9" />
-          <StatCard label="ใกล้ถึงกำหนด" value={statistics.warning} color="#ed6c02" bgColor="#fff3e0" />
-          <StatCard label="เกินกำหนด" value={statistics.overdue} color="#d32f2f" bgColor="#ffebee" />
+          {statCardConfig.map((card) => {
+            const isActive = card.key === "total" ? activeStatKeys.length === 0 : activeStatKeys.includes(card.key);
+            return (
+              <Box
+                key={card.key}
+                onClick={() => handleStatCardClick(card.key)}
+                sx={{
+                  backgroundColor: card.bgColor,
+                  borderRadius: 2,
+                  padding: "12px 16px",
+                  textAlign: "center",
+                  borderLeft: `4px solid ${card.color}`,
+                  cursor: "pointer",
+                  transition: "all 0.2s ease-in-out",
+                  position: "relative",
+                  boxShadow: isActive ? `0 0 0 2px ${card.color}` : "none",
+                  opacity: isActive ? 1 : 0.6,
+                  transform: isActive ? "scale(1.02)" : "scale(1)",
+                  "&:hover": {
+                    opacity: 1,
+                    transform: "scale(1.03)",
+                    boxShadow: `0 0 0 2px ${card.color}`,
+                  },
+                }}
+              >
+                <Box sx={{ fontSize: "22px", fontWeight: 700, color: card.color }}>
+                  {statistics[card.valueKey] ?? 0}
+                </Box>
+                <Box sx={{ fontSize: "12px", color: "#555", mt: 0.5 }}>
+                  {card.label}
+                </Box>
+              </Box>
+            );
+          })}
+        </Box>
+      )}
+      {activeStatKeys.length > 0 && (
+        <Box sx={{ px: 2.5, pb: 0.5 }}>
+          <Box
+            component="span"
+            onClick={() => { setActiveStatKeys([]); onStatFilter([]); }}
+            sx={{
+              fontSize: "12px",
+              color: "#666",
+              cursor: "pointer",
+              textDecoration: "underline",
+              "&:hover": { color: "#1120A3" },
+            }}
+          >
+            ล้างตัวกรอง
+          </Box>
         </Box>
       )}
 

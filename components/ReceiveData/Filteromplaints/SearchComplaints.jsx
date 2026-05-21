@@ -35,7 +35,7 @@ import { ControlledDateThaiPickerService } from "@services/DateThaiPickerService
 import { getDepartments } from "@pages/api/department/department";
 import { GetAllOutsideDepartments } from "@pages/api/allselect/allselect";
 import { FormProvider, useForm } from "react-hook-form";
-import { alertError, alertSuccess } from "@utils/Alerts";
+import { alertError, alertSuccess, alertWarning } from "@utils/Alerts";
 import styles from "./TabNav.module.scss";
 import SearchComplaintsPreview from "@components/ReceiveData/Filteromplaints/SearchComplaintsPreview";
 import SearchIcon from "@mui/icons-material/Search";
@@ -1078,7 +1078,14 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
 
     setValidationErrors({});
     setShowValidation(false);
-    setComplaintFilingType("new");
+    // Restore original filing type
+    const afType = defaultData?.assignment_form?.complaint_filing_type;
+    if (afType) {
+      const typeMap = { new: "new", additional: "additional", anonymous: "committee" };
+      setComplaintFilingType(typeMap[afType] || "new");
+    } else {
+      setComplaintFilingType("new");
+    }
 
     setUploadedFiles([]);
   if (defaultData?.step3?.general?.attachment) {
@@ -1189,6 +1196,25 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       throw new Error(
         res?.res_message || res?.message || "อัปเดต Step 1-2 ไม่สำเร็จ"
       );
+    }
+
+    // 3.5) บันทึก filing type, boolean flags, additional references ผ่าน assignment API
+    const step3PreData = step3Methods.getValues();
+    const filingTypeForAPI = complaintFilingType === "committee" ? "anonymous" : complaintFilingType;
+    const assignmentPayload = {
+      complaint_filing_type: filingTypeForAPI,
+      new_complaint: complaintFilingType === "new",
+      add_more_complaint_to_ref: complaintFilingType === "additional",
+      group_work: complaintFilingType === "committee",
+      additional_reference_number1: step3PreData.additionalReference1 || "",
+      additional_reference_date1: step3PreData.additionalReferenceDate1 || "",
+      additional_reference_number2: step3PreData.additionalReference2 || "",
+      additional_reference_date2: step3PreData.additionalReferenceDate2 || "",
+    };
+    try {
+      await UpdateAssignmentCompleteByAdmin(defaultData.id, assignmentPayload);
+    } catch (assignmentErr) {
+      console.error("Warning: assignment update failed (filing type may not be saved):", assignmentErr);
     }
 
     // 4) อัปโหลดไฟล์ใหม่ (ถ้ามี)
@@ -1354,16 +1380,24 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       });
     }
 
-    // Clear other radio buttons when one is selected
+    // Clear other radio buttons and reference fields when switching type
     if (type === "new") {
       step3Methods.setValue("isAdditionalComplaint", false);
       step3Methods.setValue("isCommitteeComplaint", false);
+      step3Methods.setValue("additionalReference1", "");
+      step3Methods.setValue("additionalReferenceDate1", "");
+      step3Methods.setValue("additionalReference2", "");
+      step3Methods.setValue("additionalReferenceDate2", "");
     } else if (type === "additional") {
       step3Methods.setValue("isNewComplaint", false);
       step3Methods.setValue("isCommitteeComplaint", false);
+      step3Methods.setValue("additionalReference2", "");
+      step3Methods.setValue("additionalReferenceDate2", "");
     } else if (type === "committee") {
       step3Methods.setValue("isNewComplaint", false);
       step3Methods.setValue("isAdditionalComplaint", false);
+      step3Methods.setValue("additionalReference1", "");
+      step3Methods.setValue("additionalReferenceDate1", "");
     }
   };
 

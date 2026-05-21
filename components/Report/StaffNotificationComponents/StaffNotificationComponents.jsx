@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs.jsx";
 import TableListStaffNoti from "@services/TableListStaffNoti/TableListStaffNoti";
 import dayjs from "dayjs";
@@ -9,16 +9,6 @@ const StaffNotificationComponents = () => {
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [statistics, setStatistics] = useState({
-    total: 0,
-    confirmed: 0,
-    pending: 0,
-    rejected: 0,
-    overdue: 0,
-    warning: 0,
-    normal: 0,
-  });
-  const [alertsOnly, setAlertsOnly] = useState(true);
 
   const mapApiData = (apiData) => {
     return apiData.items.map((item) => ({
@@ -40,20 +30,7 @@ const StaffNotificationComponents = () => {
     }));
   };
 
-  const mapStatistics = (apiData) => ({
-    total: apiData.total || 0,
-    confirmed: apiData.total_confirmed || 0,
-    pending: apiData.total_pending || 0,
-    rejected: apiData.total_rejected || 0,
-    overdue: apiData.total_overdue || 0,
-    warning: apiData.total_warning || 0,
-    normal: apiData.total_normal || 0,
-  });
-
-  const buildParams = (extraParams = {}) => ({
-    show_alerts_only: alertsOnly,
-    ...extraParams,
-  });
+  const TERMINAL_STATUSES = new Set(["completed", "reviewed", "cancelled"]);
 
   const processResponse = (response) => {
     const responseData = response.data || response;
@@ -63,9 +40,9 @@ const StaffNotificationComponents = () => {
       return false;
     }
     const mappedData = mapApiData(apiData);
-    setAllComplaints(mappedData);
-    setFilteredComplaints(mappedData);
-    setStatistics(mapStatistics(apiData));
+    const activeData = mappedData.filter((item) => !TERMINAL_STATUSES.has(item.status));
+    setAllComplaints(activeData);
+    setFilteredComplaints(activeData);
     return true;
   };
 
@@ -75,7 +52,7 @@ const StaffNotificationComponents = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await getStaffNotifications(buildParams());
+        const response = await getStaffNotifications({ limit: 1000 });
         processResponse(response);
       } catch (err) {
         setError(err.response?.data?.detail || "เกิดข้อผิดพลาดในการโหลดข้อมูล");
@@ -84,7 +61,43 @@ const StaffNotificationComponents = () => {
       }
     };
     fetchStaffNotifications();
-  }, [alertsOnly]);
+  }, []);
+
+  // คำนวณ statistics จาก allComplaints แบบ real-time
+  const statistics = useMemo(() => {
+    const stats = { total: 0, confirmed: 0, pending: 0, rejected: 0, overdue: 0, warning: 0, normal: 0 };
+    allComplaints.forEach((item) => {
+      stats.total += 1;
+      if (item.confirmAssignedStatus === true) stats.confirmed += 1;
+      else if (item.confirmAssignedStatus === false) stats.rejected += 1;
+      else stats.pending += 1;
+      if (item.timeStatus === "overdue") stats.overdue += 1;
+      else if (item.timeStatus === "warning") stats.warning += 1;
+      else if (item.timeStatus === "normal") stats.normal += 1;
+    });
+    return stats;
+  }, [allComplaints]);
+
+  const handleStatFilter = useCallback((activeKeys) => {
+    if (activeKeys.length === 0) {
+      setFilteredComplaints(allComplaints);
+      return;
+    }
+    const filtered = allComplaints.filter((item) => {
+      return activeKeys.some((key) => {
+        switch (key) {
+          case "confirmed": return item.confirmAssignedStatus === true;
+          case "pending": return item.confirmAssignedStatus === null || item.confirmAssignedStatus === undefined;
+          case "rejected": return item.confirmAssignedStatus === false;
+          case "overdue": return item.timeStatus === "overdue";
+          case "warning": return item.timeStatus === "warning";
+          case "normal": return item.timeStatus === "normal";
+          default: return true;
+        }
+      });
+    });
+    setFilteredComplaints(filtered);
+  }, [allComplaints]);
 
   // สร้าง options ออกมาก่อน
   const responsibleOfficerOptions = useMemo(() => {
@@ -112,7 +125,7 @@ const StaffNotificationComponents = () => {
   const handleSearch = async (filters) => {
     try {
       setLoading(true);
-      const params = {};
+      const params = { limit: 1000 };
 
       const searchParts = [];
       if (filters.claimantName) searchParts.push(filters.claimantName.trim());
@@ -129,17 +142,17 @@ const StaffNotificationComponents = () => {
         params.date_to = dayjs(filters.endDate).format("YYYY-MM-DD");
       }
 
-      const response = await getStaffNotifications(buildParams(params));
+      if (filters.responsibleOfficer) {
+        params.search = [params.search, filters.responsibleOfficer].filter(Boolean).join(" ");
+      }
+
+      const response = await getStaffNotifications(params);
       processResponse(response);
     } catch (err) {
       setError(err.response?.data?.detail || "เกิดข้อผิดพลาดในการค้นหา");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleToggleAlerts = () => {
-    setAlertsOnly((prev) => !prev);
   };
 
   if (loading && allComplaints.length === 0) {
@@ -184,8 +197,7 @@ const StaffNotificationComponents = () => {
         filterFields={filterFields}
         loading={loading}
         statistics={statistics}
-        alertsOnly={alertsOnly}
-        onToggleAlerts={handleToggleAlerts}
+        onStatFilter={handleStatFilter}
       />
     </>
   );

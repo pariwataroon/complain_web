@@ -308,19 +308,15 @@ useEffect(() => {
         securityLevel: assignment.confidentiality_level || "normal",
         urgencyLevel: assignment.urgency_level || "low",
         complaint_filing_type:
-          assignment.complaint_filing_type ||
-          merged?.step3?.general?.complaint_filing_type ||
-          "new",
+          (assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type || "new") === "anonymous"
+            ? "committee"
+            : assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type || "new",
         isNewComplaint:
-          (assignment.complaint_filing_type ||
-            merged?.step3?.general?.complaint_filing_type ||
-            "new") === "new",
+          ["new", null].includes(assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type),
         isAdditionalComplaint:
-          (assignment.complaint_filing_type ||
-            merged?.step3?.general?.complaint_filing_type) === "additional",
+          (assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type) === "additional",
         isCommitteeComplaint:
-          (assignment.complaint_filing_type ||
-            merged?.step3?.general?.complaint_filing_type) === "committee" ||
+          (assignment.complaint_filing_type || merged?.step3?.general?.complaint_filing_type) === "committee" ||
           assignment.complaint_filing_type === "anonymous",
       });
 
@@ -780,6 +776,15 @@ useEffect(() => {
       senderAgency: assignmentForm.agency_sender || "",
       securityLevel: assignmentForm.confidentiality_level || "normal",
       urgencyLevel: assignmentForm.urgency_level || "low",
+
+      // Filing type
+      complaint_filing_type:
+        (assignmentForm.complaint_filing_type || "new") === "anonymous"
+          ? "committee"
+          : assignmentForm.complaint_filing_type || "new",
+      isNewComplaint: assignmentForm.complaint_filing_type !== "additional" && assignmentForm.complaint_filing_type !== "anonymous",
+      isAdditionalComplaint: assignmentForm.complaint_filing_type === "additional",
+      isCommitteeComplaint: assignmentForm.complaint_filing_type === "committee" || assignmentForm.complaint_filing_type === "anonymous",
     });
 
     const officerDate2 = extractOfficerReceivedDate(defaultData, assignmentForm);
@@ -1513,7 +1518,7 @@ const handleSubmit = async () => {
         additional_reference_number2: step3Data.additionalReference2 || defaultData?.assignment_form?.additional_reference_number2 || "",
         additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2 || defaultData?.assignment_form?.additional_reference_date2),
         // Filing type flags
-        complaint_filing_type: complaintFilingType,
+        complaint_filing_type: complaintFilingType === "committee" ? "anonymous" : complaintFilingType,
         new_complaint: complaintFilingType === "new",
         add_more_complaint_to_ref: complaintFilingType === "additional",
         group_work: complaintFilingType === "committee",
@@ -1631,10 +1636,18 @@ const handleSubmit = async () => {
 
     if (type === "new") {
       step3Methods.setValue("isNewComplaint", true);
+      step3Methods.setValue("additionalReference1", "");
+      step3Methods.setValue("additionalReferenceDate1", "");
+      step3Methods.setValue("additionalReference2", "");
+      step3Methods.setValue("additionalReferenceDate2", "");
     } else if (type === "additional") {
       step3Methods.setValue("isAdditionalComplaint", true);
+      step3Methods.setValue("additionalReference2", "");
+      step3Methods.setValue("additionalReferenceDate2", "");
     } else if (type === "committee") {
       step3Methods.setValue("isCommitteeComplaint", true);
+      step3Methods.setValue("additionalReference1", "");
+      step3Methods.setValue("additionalReferenceDate1", "");
     }
 
     step3Methods.setValue("complaint_filing_type", type);
