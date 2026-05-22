@@ -6,16 +6,34 @@ import {
     InputAdornment,
     Stack,
     IconButton,
+    Dialog,
+    DialogContent,
+    DialogTitle,
 } from "@mui/material";
-import { Add, InsertDriveFile, Close } from "@mui/icons-material";
+import { Add, InsertDriveFile, Close, AudioFile as AudioFileIcon } from "@mui/icons-material";
 import FormLabel from "@services/FormLabel/FormLabel";
+
+const AUDIO_EXTS = [".m4a", ".mp3", ".wav", ".ogg", ".aac"];
+
+const getFileIcon = (filename) => {
+    if (!filename) return <InsertDriveFile sx={{ fontSize: 20, mr: 1 }} />;
+    const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+    if (AUDIO_EXTS.includes(ext)) return <AudioFileIcon sx={{ fontSize: 20, mr: 1, color: "#6a1b9a" }} />;
+    return <InsertDriveFile sx={{ fontSize: 20, mr: 1 }} />;
+};
+
+const isAudioFile = (filename) => {
+    if (!filename) return false;
+    const ext = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+    return AUDIO_EXTS.includes(ext);
+};
 
 const InputFile = ({
     label,
     onChange,
     name,
     helperText,
-    accept = ".doc,.docx,.pdf,.jpg,.jpeg,.png",
+    accept = ".doc,.docx,.pdf,.jpg,.jpeg,.png,.m4a",
     maxFiles = 1,
     maxSizeMB = 10,
     error,
@@ -31,13 +49,14 @@ const InputFile = ({
     const [selectedFiles, setSelectedFiles] = useState([]);
     const [errorMsg, setErrorMsg] = useState("");
     const [localExisting, setLocalExisting] = useState([]);
+    const [audioPreview, setAudioPreview] = useState({ open: false, src: "", name: "" });
 
     useEffect(() => {
         setLocalExisting(Array.isArray(existingFiles) ? existingFiles : []);
     }, [existingFiles]);
 
     const isValidFileType = (file) => {
-        const validExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
+        const validExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.m4a'];
         const fileName = file.name.toLowerCase();
         return validExtensions.some(ext => fileName.endsWith(ext));
     };
@@ -63,7 +82,7 @@ const InputFile = ({
 
         const invalidFiles = files.filter(file => !isValidFileType(file));
         if (invalidFiles.length > 0) {
-            setErrorMsg(`ไฟล์ ${invalidFiles.map(f => f.name).join(', ')} ไม่ใช่ประเภทที่รองรับ กรุณาเลือกไฟล์ .pdf, .doc, .docx, .jpg, .jpeg, .png เท่านั้น`);
+            setErrorMsg(`ไฟล์ ${invalidFiles.map(f => f.name).join(', ')} ไม่ใช่ประเภทที่รองรับ กรุณาเลือกไฟล์ .pdf, .doc, .docx, .jpg, .jpeg, .png, .m4a เท่านั้น`);
             return;
         }
 
@@ -114,17 +133,13 @@ const InputFile = ({
 
     const handleDeleteExistingClick = async (att, idx) => {
         if (!allowDeleteExisting) return;
-        // const confirmed = window.confirm("ต้องการลบไฟล์นี้หรือไม่?");
-        // if (!confirmed) return;
         try {
             if (typeof onDeleteExisting === "function") {
                 const res = await onDeleteExisting(att);
-                // If success (truthy), optimistically remove from local list
                 if (res !== false) {
                     setLocalExisting((prev) => prev.filter((_, i) => i !== idx));
                 }
             } else {
-                // No handler provided; just remove locally
                 setLocalExisting((prev) => prev.filter((_, i) => i !== idx));
             }
         } catch (e) {
@@ -133,7 +148,14 @@ const InputFile = ({
         }
     };
 
-    // สร้าง label แบบ custom ที่มี * สีแดง
+    const handleExistingFileClick = (name, href) => {
+        if (isAudioFile(name) && href) {
+            setAudioPreview({ open: true, src: href, name });
+        } else if (href) {
+            window.open(href, "_blank");
+        }
+    };
+
     const renderLabel = () => {
         if (!label) return null;
 
@@ -157,7 +179,6 @@ const InputFile = ({
 
     return (
         <Box>
-            {/* แสดง label แบบ custom แทน FormLabel */}
             {renderLabel()}
 
             <Box
@@ -194,7 +215,7 @@ const InputFile = ({
                             },
                         },
                     }}
-                    {...props} // ส่ง props อื่นๆ ต่อไป
+                    {...props}
                 />
             </Box>
 
@@ -229,17 +250,14 @@ const InputFile = ({
                                         py: 1,
                                         borderRadius: "8px",
                                         color: "#1120A3",
+                                        cursor: href ? "pointer" : "default",
+                                        "&:hover": href ? { background: "#E8EBFF" } : undefined,
                                     }}
+                                    onClick={() => handleExistingFileClick(name, href)}
                                 >
-                                    <InsertDriveFile sx={{ fontSize: 20, mr: 1 }} />
+                                    {getFileIcon(name)}
                                     <Typography fontSize={14} noWrap sx={{ flex: 1 }} title={name}>
-                                        {href ? (
-                                            <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
-                                                {name}
-                                            </a>
-                                        ) : (
-                                            name
-                                        )}
+                                        {name}
                                     </Typography>
                                     {sizeKB && (
                                         <Typography fontSize={12} sx={{ color: "#666", mr: 1 }}>
@@ -247,7 +265,14 @@ const InputFile = ({
                                         </Typography>
                                     )}
                                     {allowDeleteExisting && (
-                                        <IconButton size="small" onClick={() => handleDeleteExistingClick(att, idx)} sx={{ color: "#ff5252" }}>
+                                        <IconButton
+                                            size="small"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteExistingClick(att, idx);
+                                            }}
+                                            sx={{ color: "#ff5252" }}
+                                        >
                                             <Close fontSize="small" />
                                         </IconButton>
                                     )}
@@ -274,7 +299,7 @@ const InputFile = ({
                                     color: "#1120A3",
                                 }}
                             >
-                                <InsertDriveFile sx={{ fontSize: 20, mr: 1 }} />
+                                {getFileIcon(file.name)}
                                 <Typography
                                     fontSize={14}
                                     noWrap
@@ -321,6 +346,21 @@ const InputFile = ({
                     {helperText}
                 </Typography>
             )}
+
+            <Dialog open={audioPreview.open} onClose={() => setAudioPreview({ open: false, src: "", name: "" })} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Typography fontWeight="bold">{audioPreview.name}</Typography>
+                    <IconButton onClick={() => setAudioPreview({ open: false, src: "", name: "" })}>
+                        <Close />
+                    </IconButton>
+                </DialogTitle>
+                <DialogContent>
+                    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, py: 2 }}>
+                        <AudioFileIcon sx={{ fontSize: 64, color: "#6a1b9a" }} />
+                        <audio controls src={audioPreview.src} style={{ width: "100%", maxWidth: "500px" }} />
+                    </Box>
+                </DialogContent>
+            </Dialog>
         </Box>
     );
 };

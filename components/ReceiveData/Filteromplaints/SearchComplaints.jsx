@@ -2489,8 +2489,8 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                           label="เอกสารประกอบการร้องเรียน"
                           name="attachment"
                           onChange={handleFileUpload}
-                          helperText="หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png และไม่เกิน 10 MB"
-                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                          helperText="หมายเหตุ : หลักฐาน เช่น สำเนาสัญญา ภาพถ่าย หรือ หมายศาล รองรับไฟล์ .pdf .doc .docx .jpg .jpeg .png .m4a และไม่เกิน 10 MB"
+                          accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.m4a"
                           maxFiles={5}
                           maxSizeMB={10}
                           multiple={true}

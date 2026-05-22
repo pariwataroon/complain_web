@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
-import { Box, Paper, Typography, Grid } from "@mui/material";
+import { Box, Paper, Typography, Grid, Dialog, DialogContent, DialogTitle, IconButton } from "@mui/material";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ImageIcon from "@mui/icons-material/Image";
+import AudioFileIcon from "@mui/icons-material/AudioFile";
+import CloseIcon from "@mui/icons-material/Close";
 import Image from "next/image";
 import Cookies from "js-cookie";
 import ButtonService from "@services/ButtonService/ButtonService";
@@ -53,8 +55,11 @@ const SearchComplaintsPreview = ({
   const [submitting, setSubmitting] = useState(false);
   const [userInfo, setUserInfo] = useState(null);
   const [outsideDepartments, setOutsideDepartments] = useState([]);
+  const [audioPreview, setAudioPreview] = useState({ open: false, src: "", name: "" });
 
   const pdfRef = useRef();
+
+  const AUDIO_EXTS = [".m4a", ".mp3", ".wav", ".ogg", ".aac"];
 
   useEffect(() => {
     const loadOutsideDepartments = async () => {
@@ -616,6 +621,11 @@ const handleSubmit = async () => {
       case ".jpeg":
       case ".png":
         return <ImageIcon sx={{ color: "#388e3c", mr: 1 }} />;
+      case ".m4a":
+      case ".mp3":
+      case ".wav":
+      case ".ogg":
+        return <AudioFileIcon sx={{ color: "#6a1b9a", mr: 1 }} />;
       default:
         return <DescriptionIcon sx={{ color: "#757575", mr: 1 }} />;
     }
@@ -1045,7 +1055,13 @@ const handleSubmit = async () => {
                           backgroundColor: "#f5f5f5",
                         },
                       }}
-                      onClick={() => window.open(file.fileUrl, "_blank")}
+                      onClick={() => {
+                        if (AUDIO_EXTS.includes(ext)) {
+                          setAudioPreview({ open: true, src: file.fileUrl, name: file.fileName });
+                        } else {
+                          window.open(file.fileUrl, "_blank");
+                        }
+                      }}
                     >
                       {getFileIcon(ext)}
                       <Typography fontSize={14} color="text.secondary">
@@ -1151,6 +1167,21 @@ const handleSubmit = async () => {
           iconRight={<CheckIcon />}
         />
       </Box>
+
+      <Dialog open={audioPreview.open} onClose={() => setAudioPreview({ open: false, src: "", name: "" })} maxWidth="sm" fullWidth>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Typography fontWeight="bold">{audioPreview.name}</Typography>
+          <IconButton onClick={() => setAudioPreview({ open: false, src: "", name: "" })}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2, py: 2 }}>
+            <AudioFileIcon sx={{ fontSize: 64, color: "#6a1b9a" }} />
+            <audio controls src={audioPreview.src} style={{ width: "100%", maxWidth: "500px" }} />
+          </Box>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

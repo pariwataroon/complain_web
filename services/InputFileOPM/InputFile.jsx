@@ -14,7 +14,7 @@ const InputFile = ({
     onChange,
     name,
     helperText,
-    accept = ".doc,.docx,.pdf,.jpg,.jpeg,.png",
+    accept = ".doc,.docx,.pdf,.jpg,.jpeg,.png,.m4a",
     maxFiles = 1,
     maxSizeMB = 10,
     error,
@@ -27,7 +27,7 @@ const InputFile = ({
     const [errorMsg, setErrorMsg] = useState("");
 
     const isValidFileType = useCallback((file) => {
-        const validExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png'];
+        const validExtensions = ['.pdf', '.doc', '.docx', '.jpg', '.jpeg', '.png', '.m4a'];
         const fileName = file.name.toLowerCase();
         return validExtensions.some(ext => fileName.endsWith(ext));
     }, []);
@@ -57,7 +57,7 @@ const InputFile = ({
 
         const invalidFiles = files.filter(file => !isValidFileType(file));
         if (invalidFiles.length > 0) {
-            setErrorMsg(`ไฟล์ ${invalidFiles.map(f => f.name).join(', ')} ไม่ใช่ประเภทที่รองรับ กรุณาเลือกไฟล์ .pdf, .doc, .docx, .jpg, .jpeg, .png เท่านั้น`);
+            setErrorMsg(`ไฟล์ ${invalidFiles.map(f => f.name).join(', ')} ไม่ใช่ประเภทที่รองรับ กรุณาเลือกไฟล์ .pdf, .doc, .docx, .jpg, .jpeg, .png, .m4a เท่านั้น`);
             e.target.value = '';
             return;
         }
