@@ -2222,10 +2222,19 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
 
         # ตรวจสอบสถานะการมอบหมาย
         is_assigned = bool(
-            complaint.assigned_officer_id or 
-            complaint.assigned_to or 
+            complaint.assigned_officer_id or
+            complaint.assigned_to or
             (hasattr(complaint, "assigned_date") and complaint.assigned_date)
         )
+
+        # ดึง _opm_meta จาก full_complaint_data สำหรับตรวจจับ reopen
+        opm_meta = None
+        if complaint.full_complaint_data:
+            try:
+                fcd = ensure_dict(complaint.full_complaint_data)
+                opm_meta = fcd.get("step4", {}).get("general", {}).get("_opm_meta")
+            except Exception:
+                opm_meta = None
 
         # เอา phone และ description ออกจากฟังก์ชันนี้
         return ComplaintListItem(
@@ -2243,9 +2252,10 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             urgency_level=complaint.urgency_level.lower() if complaint.urgency_level else "low",
             severity_level=complaint.severity_level.lower() if complaint.severity_level else "low",
             complaint_subtype=complaint_subtype_name,
-            is_assigned=is_assigned
+            is_assigned=is_assigned,
+            opm_meta=opm_meta
         )
-        
+
     except Exception as e:
         return ComplaintListItem(
             id=complaint.id,
@@ -2261,7 +2271,8 @@ def create_complaint_list_item(complaint: Complaint, db: Session = None) -> Comp
             assigned_remark=complaint.assigned_remark or "",
             urgency_level="low",
             severity_level="low",
-            is_assigned=False
+            is_assigned=False,
+            opm_meta=None
         )
 
 def create_complaint_list_item_enhanced(complaint: Complaint, db: Session = None):

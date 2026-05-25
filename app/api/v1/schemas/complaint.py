@@ -69,7 +69,8 @@ class ComplaintListItem(BaseModel):
     urgency_level: Optional[str] = "LOW"
     severity_level: Optional[str] = "LOW"
     is_assigned: Optional[bool] = False  # เพิ่มฟิลด์สำหรับตรวจสอบสถานะการมอบหมาย
-    
+    opm_meta: Optional[Dict[str, Any]] = None  # SPN metadata สำหรับตรวจจับ reopen
+
     class Config:
         from_attributes = True
 

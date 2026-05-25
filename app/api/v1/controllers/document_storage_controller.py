@@ -1600,6 +1600,12 @@ def get_document_storage_by_channel(
                 "complaintCategory": complaint_category,  # 🔥 เพิ่มประเภทการร้องเรียน
                 "creator": f"{creator.first_name} {creator.last_name}".strip() if creator else "ไม่ระบุ",
                 "note": complaint.assigned_remark or "",
+                # เลขอ้างอิง
+                "reference_number": complaint.reference_number or "",
+                "reference_number2": complaint.reference_number2 or "",
+                "reference_number3": complaint.reference_number3 or "",
+                "reference_number4": complaint.reference_number4 or "",
+                "reference_number5": complaint.additional_reference_number1 or "",
                 
                 # ข้อมูลเพิ่มเติมสำหรับ API
                 "id": str(complaint.id),
