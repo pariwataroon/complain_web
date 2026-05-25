@@ -101,7 +101,7 @@ const Opm1111Components = () => {
       if (caseCodes.length > 0) {
         // แบ่ง case codes เป็น batch ละ 50 เพื่อป้องกัน URL ยาวเกิน
         const BATCH_SIZE = 50;
-        const readSubjects = new Set();
+        const readSubjectsMap = new Map(); // case_code -> { opm_meta }
 
         for (let i = 0; i < caseCodes.length; i += BATCH_SIZE) {
           const batch = caseCodes.slice(i, i + BATCH_SIZE);
@@ -113,21 +113,36 @@ const Opm1111Components = () => {
               subject: subjectStr,
             });
 
-            const batchReadSubjects = (complaintsSubjectRes?.res_data?.items || []).map(item => item.subject);
-            batchReadSubjects.forEach(s => readSubjects.add(s));
+            const batchItems = complaintsSubjectRes?.res_data?.items || [];
+            batchItems.forEach(item => {
+              readSubjectsMap.set(item.subject, {
+                opm_meta: item.opm_meta || null,
+              });
+            });
           } catch (batchError) {
             console.warn(`Failed to check read status for batch starting at ${i}:`, batchError.message);
           }
         }
 
-        const complaintsWithReadStatus = mappedComplaints.map(item => ({
-          ...item,
-          isRead: readSubjects.has(item.case_code),
-        }));
+        const complaintsWithReadStatus = mappedComplaints.map(item => {
+          const stored = readSubjectsMap.get(item.case_code);
+          if (!stored) {
+            return { ...item, isRead: "unread" };
+          }
+
+          const spnOperatingDate = item.date_operating || "";
+          const storedOperatingDate = stored.opm_meta?.operating_date || "";
+
+          if (storedOperatingDate && spnOperatingDate && storedOperatingDate !== spnOperatingDate) {
+            return { ...item, isRead: "updated" };
+          }
+
+          return { ...item, isRead: "read" };
+        });
 
         setComplaints(complaintsWithReadStatus);
         setFilteredComplaints(complaintsWithReadStatus);
-        setReadComplaints(Array.from(readSubjects));
+        setReadComplaints(Array.from(readSubjectsMap.keys()));
       }
     } catch (error) {
       console.error("Error fetching timeline header:", error);

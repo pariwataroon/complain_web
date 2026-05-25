@@ -41,6 +41,7 @@ const TableFilterList = ({
     issueType: "",
     respondentName: "",
     channel: "",
+    caseCode: "",
     startDate: null,
     endDate: null,
   });
@@ -119,6 +120,7 @@ const TableFilterList = ({
       issueType: "",
       respondentName: "",
       channel: "",
+      caseCode: "",
       startDate: null,
       endDate: null,
     };
@@ -173,6 +175,7 @@ const TableFilterList = ({
     "เลขที่สป.สร",
     "เลขที่สตป.",
     "เลขที่สรร",
+    "รหัสเรื่อง",
   ];
 
   const mergedData = [];
@@ -198,10 +201,12 @@ const TableFilterList = ({
         item?.docNo2 || "-",
         item?.docNo3 || "-",
         item?.docNo4 || "-",
+        item?.caseCode || "-",
       ]);
       mergedData.push(...rows); // ✅ แถวข้อมูลจริง
     } else {
       mergedData.push([
+        "-",
         "-",
         "-",
         "-",
@@ -295,6 +300,14 @@ const TableFilterList = ({
                 inputLabel="กรอกชื่อผู้ถูกร้อง"
                 value={String(filters.respondentName || "")}
                 onChange={handleInputChange("respondentName")}
+                onKeyPress={handleKeyPress}
+              />
+
+              <InputText
+                label="รหัสเรื่อง"
+                inputLabel="กรอกรหัสเรื่อง"
+                value={String(filters.caseCode || "")}
+                onChange={handleInputChange("caseCode")}
                 onKeyPress={handleKeyPress}
               />
 
@@ -434,6 +447,9 @@ const TableFilterList = ({
                       <TableCell sx={{ width: 160, fontWeight: "bold" }}>
                         เลขที่สรร
                       </TableCell>
+                      <TableCell sx={{ width: 200, fontWeight: "bold" }}>
+                        รหัสเรื่อง
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -469,12 +485,13 @@ const TableFilterList = ({
                             <TableCell>{item?.docNo2 ?? "-"}</TableCell>
                             <TableCell>{item?.docNo3 ?? "-"}</TableCell>
                             <TableCell>{item?.docNo4 ?? "-"}</TableCell>
+                            <TableCell>{item?.caseCode ?? "-"}</TableCell>
                           </TableRow>
                         ))
                     ) : (
                       <TableRow>
                         <TableCell
-                          colSpan={9}
+                          colSpan={10}
                           align="center"
                           sx={{ py: 3, color: "#999", fontSize: '16px' }}
                         >

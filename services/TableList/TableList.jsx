@@ -45,6 +45,7 @@ const TableList = ({
     subject: "",
     docGov: "",
     agency: "",
+    caseCode: "",
     docKk: "",
     docSr: "",
     docStp: "",
@@ -93,6 +94,7 @@ const TableList = ({
       subject: "",
       docGov: "",
       agency: "",
+      caseCode: "",
       docKk: "",
       docSr: "",
       docStp: "",
@@ -223,6 +225,13 @@ const TableList = ({
                 inputLabel="กรอกเลขที่ส่วนรับราชการ"
                 value={filters.docGov}
                 onChange={handleChange("docGov")}
+                onKeyPress={handleKeyPress}
+              />
+              <InputText
+                label="รหัสเรื่อง"
+                inputLabel="กรอกรหัสเรื่อง"
+                value={filters.caseCode}
+                onChange={handleChange("caseCode")}
                 onKeyPress={handleKeyPress}
               />
               <SelectField
@@ -433,6 +442,13 @@ const TableList = ({
                   inputLabel="กรอกเลข สรร."
                   value={filters.docGov}
                   onChange={handleChange("docGov")}
+                  onKeyPress={handleKeyPress}
+                />
+                <InputText
+                  label="รหัสเรื่อง"
+                  inputLabel="กรอกรหัสเรื่อง"
+                  value={filters.caseCode}
+                  onChange={handleChange("caseCode")}
                   onKeyPress={handleKeyPress}
                 />
                 <SelectField

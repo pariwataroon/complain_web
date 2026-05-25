@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableFilterList from "@services/TableFilterList/TableFilterList";
-import { GetComplaintsGroupedbyChannel, GetComplaintByID } from "@pages/api/complaint/complaint";
+import { GetComplaintsGroupedbyChannel, GetComplaintByID, GetEnhancedComplaints } from "@pages/api/complaint/complaint";
 import { GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 import dayjs from "dayjs";
 
@@ -48,6 +48,7 @@ const Filteromplaints = () => {
   const [filteredGroups, setFilteredGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [documentNumberMap, setDocumentNumberMap] = useState({});
 
   // Master data for complaint types (for lookup)
   const [complaintTypesMap, setComplaintTypesMap] = useState(new Map());
@@ -128,7 +129,7 @@ const Filteromplaints = () => {
     </span>
   );
 
-  const mapItemToRow = (item) => {
+  const mapItemToRow = (item, docNumMap = {}) => {
     const isAssigned = getIsAssigned(item);
     const subjectRaw = item.subject || "-";
     // ใช้ชื่อผู้ร้องที่ได้จากการดึงข้อมูลเต็ม (ถ้ามี)
@@ -178,6 +179,12 @@ const Filteromplaints = () => {
       complaint_subtype: item.complaint_subtype,
       assigned_to: item.assigned_to,
 
+      // เลข นร และ caseCode สำหรับค้นหา
+      documentNumber: docNumMap[item.id] || item.document_number || "",
+
+      // รหัสเรื่อง - แสดงเฉพาะเลข นร
+      caseCode: docNumMap[item.id] || item.document_number || "-",
+
       is_assigned: isAssigned,
     };
   };
@@ -217,10 +224,26 @@ const Filteromplaints = () => {
       setError(null);
 
       try {
-        const response = await GetComplaintsGroupedbyChannel({
-          limit: 10000,
-          skip: 0,
-        });
+        const [response, enhancedRes] = await Promise.all([
+          GetComplaintsGroupedbyChannel({
+            limit: 10000,
+            skip: 0,
+          }),
+          GetEnhancedComplaints({ skip: 0, limit: 10000 }).catch(() => null),
+        ]);
+
+        // สร้าง map ของ complaint_id -> document_number (เลข นร)
+        const docNumMap = {};
+        if (enhancedRes?.res_data?.items) {
+          enhancedRes.res_data.items.forEach((c) => {
+            const cId = c.id || c.complaint_id;
+            const docNum = c.document_number || "";
+            if (cId && docNum) {
+              docNumMap[cId] = docNum;
+            }
+          });
+          setDocumentNumberMap(docNumMap);
+        }
 
         if (response?.res_code === "0000" && response?.res_data) {
           const data = response.res_data;
@@ -248,7 +271,7 @@ const Filteromplaints = () => {
             dataMap.set(channelName, {
               title: `ช่องทางการรับเรื่อง : ${group.complaint_channel_name}`,
               complaint_channel_id: group.complaint_channel_id,
-              data: group.items.map(mapItemToRow),
+              data: group.items.map((item) => mapItemToRow(item, docNumMap)),
             });
           });
 
@@ -282,7 +305,7 @@ const Filteromplaints = () => {
               allChannelGroups.push({
                 title: `ช่องทางการรับเรื่อง : ${group.complaint_channel_name}`,
                 complaint_channel_id: group.complaint_channel_id,
-                data: group.items.map(mapItemToRow),
+                data: group.items.map((item) => mapItemToRow(item, docNumMap)),
               });
             }
           });
@@ -354,7 +377,7 @@ const Filteromplaints = () => {
 
   const handleSearch = useCallback(
     (filters) => {
-      const { claimantName, subject, issueType, respondentName, channel, startDate, endDate } = filters;
+      const { claimantName, subject, issueType, respondentName, channel, caseCode, startDate, endDate } = filters;
 
       const hasFilters =
         !isEmpty(claimantName) ||
@@ -362,6 +385,7 @@ const Filteromplaints = () => {
         !isEmpty(issueType) ||
         !isEmpty(respondentName) ||
         !isEmpty(channel) ||
+        !isEmpty(caseCode) ||
         startDate ||
         endDate;
 
@@ -401,6 +425,21 @@ const Filteromplaints = () => {
           if (!isEmpty(issueType) && !exactMatch(item.issueType, issueType)) return false;
 
           if (!isEmpty(respondentName) && !safeIncludes(item.respondentName, respondentName)) return false;
+
+          // ค้นหาด้วยรหัสเรื่อง - ค้นหาในเลขอ้างอิงทั้งหมด (รวมเลข นร)
+          if (!isEmpty(caseCode)) {
+            const q = caseCode.toLowerCase().trim();
+            const searchFields = [
+              item.documentNumber,
+              item.docNo,
+              item.docNo2,
+              item.docNo3,
+              item.docNo4,
+              item.complaint_number,
+            ].map(v => (v || "").toLowerCase());
+            const found = searchFields.some(field => field.includes(q));
+            if (!found) return false;
+          }
 
           // Filter ตามวันที่สร้าง
           if (startDate || endDate) {

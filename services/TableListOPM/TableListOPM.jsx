@@ -28,7 +28,8 @@ import FilterListIcon from "@mui/icons-material/FilterList";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import RadioButtonUncheckedIcon from "@mui/icons-material/RadioButtonUnchecked";
-import { green, grey } from "@mui/material/colors";
+import SyncIcon from "@mui/icons-material/Sync";
+import { green, grey, orange } from "@mui/material/colors";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 
@@ -42,10 +43,11 @@ import { formatThaiShortDateTime } from "@utils/Formats";
 
 dayjs.locale("th");
 
-const statusReadOptions = [
+const getStatusReadOptions = (showReopen) => [
   { value: "", label: "ทั้งหมด" },
   { value: "read", label: "รับเรื่อง" },
   { value: "unread", label: "ยังไม่รับเรื่อง" },
+  ...(showReopen ? [{ value: "updated", label: "อัปเดตจากสปน" }] : []),
 ];
 
 // เพิ่ม options สำหรับ timeline type
@@ -91,13 +93,15 @@ const TableListOPM = ({
   navigateTo = "",
   filterFields = [],
   onRowsPerPageChange = () => { },
-  onTimelineTypeChange = () => { }, // เพิ่ม prop สำหรับ timeline type change
-  currentTimelineType = "I", // เพิ่ม prop สำหรับ current timeline type
+  onTimelineTypeChange = () => { },
+  currentTimelineType = "I",
+  showReopenIndicator = false,
 }) => {
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const isTablet = useMediaQuery(theme.breakpoints.down("lg"));
+  const statusReadOptions = getStatusReadOptions(showReopenIndicator);
   const visibleColumns = getVisibleColumns(columns);
   const extendedFilterFields = [
     ...filterFields,
@@ -183,8 +187,9 @@ const TableListOPM = ({
         if (key === "startDate" || key === "endDate") return true; // Skip date filters here
         if (!filters[key]) return true;
         if (key === "isRead") {
-          if (filters[key] === "read") return item.isRead === true;
-          if (filters[key] === "unread") return item.isRead !== true;
+          if (filters[key] === "read") return item.isRead === "read";
+          if (filters[key] === "unread") return item.isRead === "unread";
+          if (filters[key] === "updated") return item.isRead === "updated";
           return true;
         }
         const itemValue = item[key]?.toString().toLowerCase() || "";
@@ -464,7 +469,16 @@ const TableListOPM = ({
     }
 
     if (col.name === "isRead") {
-      if (item.isRead) {
+      if (item.isRead === "updated") {
+        return (
+          <Box display="flex" alignItems="center" gap={1}>
+            <SyncIcon sx={{ color: orange[600], fontSize: 22 }} />
+            <Typography color={orange[700]} fontWeight="bold">
+              อัปเดตจากสปน
+            </Typography>
+          </Box>
+        );
+      } else if (item.isRead === "read") {
         return (
           <Box display="flex" alignItems="center" gap={1}>
             <CheckCircleIcon sx={{ color: green[600], fontSize: 22 }} />

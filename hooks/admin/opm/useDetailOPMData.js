@@ -280,6 +280,16 @@ const useDetailOPMData = ({
       },
     };
 
+    // ฝัง _opm_meta สำหรับตรวจจับ reopen จากสปน
+    const spnOperatingDate = getFieldValue("operating_date");
+    if (spnOperatingDate && spnOperatingDate !== "-") {
+      step4.general._opm_meta = {
+        operating_date: spnOperatingDate,
+        main_status_text: getFieldValue("main_status_text") || "",
+        spn_synced_at: new Date().toISOString(),
+      };
+    }
+
     const payload = {
       step1,
       ...(step2 ? { step2 } : {}),

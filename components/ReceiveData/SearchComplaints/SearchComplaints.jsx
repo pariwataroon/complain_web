@@ -3,6 +3,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableList from "@services/TableList/TableList";
 import { useRouter } from "next/router";
 import { getDocumentStorageForWebsite } from "@pages/api/document/document";
+import { GetEnhancedComplaints } from "@pages/api/complaint/complaint";
 import dayjs from "dayjs";
 
 const breadcrumbItems = [
@@ -128,6 +129,23 @@ const SearchComplaints = () => {
         const res = await getDocumentStorageForWebsite({ skip: 0, limit: 10000 });
         const items = Array.isArray(res?.res_data?.items) ? res.res_data.items : [];
 
+        // ดึง document_number จาก enhanced complaints API (เลข นร)
+        let documentNumberMap = {};
+        try {
+          const enhancedRes = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
+          if (enhancedRes?.res_data?.items) {
+            enhancedRes.res_data.items.forEach((c) => {
+              const cId = c.id || c.complaint_id;
+              const docNum = c.document_number || "";
+              if (cId && docNum) {
+                documentNumberMap[cId] = docNum;
+              }
+            });
+          }
+        } catch (e) {
+          console.error("Error fetching enhanced complaints:", e);
+        }
+
         const mapped = items.map((item) => {
 
           const isAssigned = getIsAssigned(item);
@@ -204,8 +222,22 @@ const SearchComplaints = () => {
           const docGovRaw = item?.reference_number4 ?? "-";
           const caseCodeRaw = item?.reference_number5 ?? "-";
 
+          // รวบรวมเลขอ้างอิงทั้งหมดสำหรับค้นหาและแสดง "รหัสเรื่อง"
+          const itemId = item?.id ?? item?.complaint_id;
+          const documentNumber = documentNumberMap[itemId] || item?.document_number || "";
+          const allReferenceNumbers = [
+            documentNumber,
+            item?.reference_number5,
+            item?.reference_number4,
+            item?.reference_number,
+            item?.reference_number2,
+            item?.reference_number3,
+            item?.master_complaint?.complaint_number,
+          ].filter(v => v && v !== "" && v !== null && v !== "-");
+          const caseCodeSearch = allReferenceNumbers.join(" | ");
+
           return {
-            id: item?.id ?? item?.complaint_id ?? "-",
+            id: itemId ?? "-",
             name: (
               <span style={{ color: textColor }}>
                 {complainantName}
@@ -220,7 +252,8 @@ const SearchComplaints = () => {
             docStp: item?.reference_number3 ?? "-",
             docGov: docGovRaw,
             docGovRaw,
-            caseCode: caseCodeRaw,
+            caseCode: documentNumber || caseCodeRaw,
+            caseCodeSearch,
             agency: item?.incident_location ?? item?.agency ?? "-",
             status: item?.status ?? "-",
             is_assigned: isAssigned,
@@ -251,7 +284,7 @@ const SearchComplaints = () => {
   const handleNavigateTo = () => router.push("/admin/edit/search/Filteromplaints");
 
   const handleSearch = (filters) => {
-    const { claimantName, citizenId, subject, docGov, agency, docKk, docSr, docStp, startDate, endDate } = filters;
+    const { claimantName, citizenId, subject, docGov, agency, caseCode, docKk, docSr, docStp, startDate, endDate } = filters;
 
     const result = allComplaints.filter((item) => {
       if (claimantName && !safeIncludes(item.nameRaw, claimantName)) return false;
@@ -262,6 +295,20 @@ const SearchComplaints = () => {
       if (docKk && !safeIncludes(item.docKk, docKk)) return false;
       if (docSr && !safeIncludes(item.docSr, docSr)) return false;
       if (docStp && !safeIncludes(item.docStp, docStp)) return false;
+
+      // ค้นหาด้วยรหัสเรื่อง - ค้นหาใน caseCodeSearch (รวมเลขอ้างอิงทั้งหมด)
+      if (caseCode && caseCode.trim() !== "") {
+        const q = caseCode.toLowerCase().trim();
+        const searchFields = [
+          item.caseCodeSearch,
+          item.docKk,
+          item.docSr,
+          item.docStp,
+          item.docGovRaw,
+        ].map(v => (v || "").toLowerCase());
+        const found = searchFields.some(field => field.includes(q));
+        if (!found) return false;
+      }
 
       // Filter ตามวันที่สร้าง
       if (startDate || endDate) {
