@@ -63,7 +63,7 @@ const SelectFieldAPI = ({
                     const zipMap = new Map();
                     districts.forEach((item) => {
                         if (item.zip_code && !zipMap.has(item.zip_code)) {
-                            zipMap.set(item.zip_code, item);
+                            zipMap.set(item.zip_code, { value: item.zip_code, label: String(item.zip_code) });
                         }
                     });
                     response = Array.from(zipMap.values());
