@@ -3561,8 +3561,9 @@ def enrich_address_fields(data: dict, db: Session) -> dict:
             # เพิ่ม zipcode field ด้วย (ถ้ามี)
             data["zipcode"] = district.zip_code
     # Zipcode
-    if "zipcode" in data and isinstance(data["zipcode"], int):
-        data["zipcode"] = {"value": data["zipcode"], "label": str(data["zipcode"])}
+    if "zipcode" in data and isinstance(data["zipcode"], (int, str)):
+        zip_val = data["zipcode"]
+        data["zipcode"] = {"value": zip_val, "label": str(zip_val)}
     return data
 
 def get_user_roles(db: Session, user_id: UUID):

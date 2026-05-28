@@ -414,8 +414,8 @@ def update_complaint_assignment_data(
             if assignment_data["assigned_agency"] != old_value:
                 changes.append(f"หน่วยงานที่ส่ง: {old_value} → {assignment_data['assigned_agency']}")
 
-        # ✅ บันทึก complaint_filing_type
-        if "complaint_filing_type" in assignment_data:
+        # ✅ บันทึก complaint_filing_type (ข้ามถ้า boolean flags จัดการแล้ว)
+        if "complaint_filing_type" in assignment_data and not (assignment_data.get("new_complaint") or assignment_data.get("add_more_complaint_to_ref") or assignment_data.get("group_work")):
             old_value = complaint.complaint_filing_type
             new_value = assignment_data["complaint_filing_type"]
             try:
@@ -423,8 +423,6 @@ def update_complaint_assignment_data(
                     complaint.complaint_filing_type = new_value
                 elif isinstance(new_value, str) and new_value:
                     complaint.complaint_filing_type = ComplaintFilingType(new_value)
-                else:
-                    complaint.complaint_filing_type = None
             except Exception:
                 return {"success": False, "message": "ประเภทการยื่นไม่ถูกต้อง"}
             if complaint.complaint_filing_type != old_value:
