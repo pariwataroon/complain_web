@@ -26,12 +26,12 @@ router = APIRouter(
 
 @router.get("/staff-workload", response_model=FormatResponseModel)
 async def get_staff_workload_data(
-    skip: int = 0, 
-    limit: int = 100, 
+    skip: int = 0,
+    limit: int = 100,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     db: Session = Depends(get_db),
-    current_user: str = Depends(can_read("dashboard"))
+    current_user: str = Depends(can_read("account_box"))
 ):
     """
     ดึงข้อมูลภาระงานของเจ้าหน้าที่แต่ละคน แยกตามสถานะของเรื่องร้องทุกข์
