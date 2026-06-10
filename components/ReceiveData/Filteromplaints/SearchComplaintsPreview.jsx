@@ -195,13 +195,16 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
       try {
         const users = await UsersSearchByRole();
 
+        // กรองเฉพาะ role_name "staff" (กลุ่ม 4) และ "department" (กลุ่ม 6)
+        // ตรวจสอบทุก role ใน roles array (ไม่ใช่แค่ roles[0]) เพราะบาง user มีหลาย role
+        const ALLOWED_ROLE_NAMES = ["staff", "department"];
         const filteredUsers = users.filter(user => {
-          const roleDescription = user.roles?.[0]?.role_description;
-          return roleDescription !== "กลุ่มที่ 1 : ประชาชน";
+          return user.roles?.some((role) => ALLOWED_ROLE_NAMES.includes(role.role_name)) ?? false;
         });
 
         const groupedUsers = filteredUsers.reduce((groups, user) => {
-          const roleDescription = user.roles?.[0]?.role_description || "ไม่ระบุกลุ่ม";
+          const matchedRole = user.roles?.find((role) => ALLOWED_ROLE_NAMES.includes(role.role_name));
+          const roleDescription = matchedRole?.role_description || "ไม่ระบุกลุ่ม";
 
           if (!groups[roleDescription]) {
             groups[roleDescription] = [];
@@ -269,9 +272,9 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
       // รีเฟรชข้อมูล staff users ด้วย
       try {
         const users = await UsersSearchByRole();
+        const ALLOWED_ROLE_NAMES = ["staff", "department"];
         const filteredUsers = users.filter(user => {
-          const roleDescription = user.roles?.[0]?.role_description;
-          return roleDescription !== "กลุ่มที่ 1 : ประชาชน";
+          return user.roles?.some((role) => ALLOWED_ROLE_NAMES.includes(role.role_name)) ?? false;
         });
         setStaffUsers(filteredUsers);
       } catch (err) {
