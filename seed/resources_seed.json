@@ -113,6 +113,14 @@
       "is_active": true
     },
     {
+      "name": "eoffice_complaints",
+      "path": "/admin/edit/eoffice",
+      "description": "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ Mof_EOffice",
+      "group_name": "edit",
+      "order_index": 3,
+      "is_active": true
+    },
+    {
       "name": "department_reports",
       "path": "/admin/edit/report",
       "description": "รับเรื่องรายงานผลการพิจารณาจากหน่วยงาน",
