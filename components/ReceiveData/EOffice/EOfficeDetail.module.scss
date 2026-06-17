@@ -1,0 +1,101 @@
+.infoCard {
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(13, 27, 94, 0.06);
+  border: 1px solid #e8ecf4;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  background: linear-gradient(135deg, #ffffff 0%, #fafbff 100%);
+  overflow: hidden;
+
+  &:hover {
+    box-shadow: 0 8px 30px rgba(37, 99, 235, 0.1);
+    border-color: #c7d2fe;
+  }
+
+  @media (max-width: 768px) {
+    border-radius: 12px;
+  }
+}
+
+.timelineStep {
+  padding: 14px 18px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8ecf4 100%);
+  margin-bottom: 10px;
+  border-left: 4px solid #2563eb;
+}
+
+.attachmentItem {
+  transition: all 0.2s ease;
+  border-radius: 8px;
+
+  &:hover {
+    background-color: #f0f4ff;
+    transform: translateX(4px);
+  }
+}
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 24px;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  h6 {
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+}
+
+.detailField {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f2f8;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.operatingTimeline {
+  .timelineDot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+  }
+
+  .timelineConnector {
+    width: 2px;
+    background: linear-gradient(to bottom, #c7d2fe, #e8ecf4);
+  }
+}
+
+.attachmentChip {
+  transition: all 0.2s ease;
+  border-radius: 8px !important;
+
+  &:hover {
+    background-color: #eef2ff !important;
+    transform: translateY(-1px);
+  }
+}
+
+.emptyStateCard {
+  text-align: center;
+  padding: 60px 20px;
+  background: linear-gradient(135deg, #f8faff 0%, #eef2ff 100%);
+  border-radius: 16px;
+  border: 2px dashed #c7d2fe;
+}

@@ -1,0 +1,258 @@
+.container {
+  width: 100%;
+  max-width: 100%;
+
+  @media (max-width: 768px) {
+    margin: 0;
+    border-radius: 8px !important;
+  }
+}
+
+.headerBar {
+  background: linear-gradient(135deg, #0d1b5e 0%, #1a3a9a 50%, #2563eb 100%);
+  height: 56px;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  color: white;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 4px 15px rgba(13, 27, 94, 0.3);
+
+  @media (max-width: 768px) {
+    height: 48px;
+    padding: 0 16px;
+    font-size: 15px;
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+  }
+}
+
+.headerTitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (max-width: 480px) {
+    font-size: 13px;
+  }
+}
+
+.searchSection {
+  width: 100%;
+  padding: 20px;
+  background: linear-gradient(to bottom, #f8faff, #ffffff);
+  border-bottom: 1px solid #e8ecf4;
+
+  @media (max-width: 768px) {
+    padding: 14px;
+  }
+}
+
+.filtersContainer {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+}
+
+.filtersGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  flex: 1;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
+.filterField {
+  min-width: 0;
+}
+
+.actionButtons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+.buttonGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+.tableWrapper {
+  background-color: white;
+  border-radius: 0 0 16px 16px;
+  box-shadow: 0 8px 32px rgba(13, 27, 94, 0.07);
+  overflow: hidden;
+  border: 1px solid #e8ecf4;
+  border-top: none;
+
+  @media (max-width: 768px) {
+    border-radius: 0 0 12px 12px;
+  }
+}
+
+.tableContainer {
+  overflow-x: auto;
+  padding: 0 0 8px;
+
+  @media (max-width: 768px) {
+    padding: 0 8px 8px;
+  }
+}
+
+.mobileView {
+  padding: 16px;
+
+  @media (max-width: 480px) {
+    padding: 10px;
+  }
+}
+
+.mobileCard {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid #e8ecf4;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(37, 99, 235, 0.12);
+    border-color: #93b4ff;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.tableWrapper thead tr {
+  background: linear-gradient(135deg, #eef2ff 0%, #dde5ff 100%) !important;
+}
+
+.tableWrapper thead th {
+  font-weight: 700 !important;
+  color: #1e3a8a !important;
+  font-size: 13px !important;
+  letter-spacing: 0.2px;
+  border-bottom: 2px solid #c7d2fe !important;
+  padding: 14px 12px !important;
+  white-space: nowrap;
+}
+
+.tableWrapper tbody tr {
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: #f0f4ff !important;
+  }
+
+  &:nth-of-type(even) {
+    background-color: #fafbff;
+  }
+}
+
+.tableWrapper tbody td {
+  font-size: 13.5px !important;
+  color: #374151 !important;
+  padding: 12px 12px !important;
+  border-bottom: 1px solid #f0f2f8 !important;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+
+  > div {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 16px;
+    margin: 16px 0;
+
+    > div {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
+
+.statusChip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 20px;
+  color: white;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.priorityChip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 16px;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 80px 20px;
+  background: linear-gradient(to bottom, #fafbff, #ffffff);
+}
+
+@media (max-width: 768px) {
+  .tableWrapper table {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .tableContainer::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tableContainer {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
