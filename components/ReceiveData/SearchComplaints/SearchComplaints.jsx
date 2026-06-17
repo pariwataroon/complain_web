@@ -4,7 +4,9 @@ import TableList from "@services/TableList/TableList";
 import { useRouter } from "next/router";
 import { getDocumentStorageForWebsite } from "@pages/api/document/document";
 import { GetEnhancedComplaints } from "@pages/api/complaint/complaint";
+import { GetEOfficeComplaints } from "@pages/api/eoffice/eoffice";
 import dayjs from "dayjs";
+import { Box, Chip, Typography } from "@mui/material";
 
 const breadcrumbItems = [
   {
@@ -110,13 +112,20 @@ const getIsAssigned = (item) => {
 
   if (heuristicsTruthy) return true;
 
-  return false; // default
+  return false;
 };
+
+const CHANNEL_OPTIONS = [
+  { value: "", label: "ทุกช่องทาง" },
+  { value: "website", label: "เว็บไซต์ กค." },
+  { value: "eoffice", label: "Mof_EOffice" },
+];
 
 const SearchComplaints = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [channelFilter, setChannelFilter] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -124,12 +133,10 @@ const SearchComplaints = () => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // ใช้ document-storage API เหมือนกับหน้าคลังเรื่องราวร้องทุกข์ (ComplaintArchives)
-        // เพื่อให้แสดงข้อมูลผู้ร้องครบถ้วนเหมือนกัน
+        // ── 1) ดึงข้อมูล website complaints (เดิม) ──
         const res = await getDocumentStorageForWebsite({ skip: 0, limit: 10000 });
         const items = Array.isArray(res?.res_data?.items) ? res.res_data.items : [];
 
-        // ดึง document_number จาก enhanced complaints API (เลข นร)
         let documentNumberMap = {};
         try {
           const enhancedRes = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
@@ -146,11 +153,9 @@ const SearchComplaints = () => {
           console.error("Error fetching enhanced complaints:", e);
         }
 
-        const mapped = items.map((item) => {
-
+        const websiteMapped = items.map((item) => {
           const isAssigned = getIsAssigned(item);
 
-          // ตรวจสอบสถานะ is_master
           const isMasterCandidates = [
             item?.is_master,
             item?.isMaster,
@@ -167,7 +172,6 @@ const SearchComplaints = () => {
 
           const textColor = isMaster ? "#1565c0" : "#94ccf9ff";
 
-          // ดึงชื่อเรื่องจาก subject หรือ master_complaint (เหมือน AnonymousLetterRepository)
           const subjectRaw =
             item?.subject ??
             item?.issue ??
@@ -210,8 +214,6 @@ const SearchComplaints = () => {
             </div>
           );
 
-          // ดึงชื่อผู้ร้องแบบเดียวกับ AnonymousLetterRepository
-          // เพื่อให้ค้นหาเจอข้อมูลครบถ้วนเหมือนหน้าคลังบัตรสนเท่ห์
           const complainantName =
             item?.complainant?.government?.fullName ??
             item?.complainant?.name ??
@@ -222,7 +224,6 @@ const SearchComplaints = () => {
           const docGovRaw = item?.reference_number4 ?? "-";
           const caseCodeRaw = item?.reference_number5 ?? "-";
 
-          // รวบรวมเลขอ้างอิงทั้งหมดสำหรับค้นหาและแสดง "รหัสเรื่อง"
           const itemId = item?.id ?? item?.complaint_id;
           const documentNumber = documentNumberMap[itemId] || item?.document_number || "";
           const allReferenceNumbers = [
@@ -259,12 +260,93 @@ const SearchComplaints = () => {
             is_assigned: isAssigned,
             is_master: isMaster,
             created_at: item?.created_at ?? null,
+            channel: "website",
           };
         });
 
+        // ── 2) ดึงข้อมูล EOffice complaints ──
+        let eofficeMapped = [];
+        try {
+          const eofficeData = await GetEOfficeComplaints({ take: 10000, status: "A" });
+          if (Array.isArray(eofficeData) && eofficeData.length > 0) {
+            eofficeMapped = eofficeData.map((item) => {
+              const subjectRaw = item?.subject ?? "-";
+              const subjectWithDot = (
+                <div
+                  style={{
+                    position: "relative",
+                    minWidth: 0,
+                    paddingLeft: SUBJECT_LEFT_OFFSET,
+                    marginLeft: -SUBJECT_LEFT_OFFSET,
+                  }}
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: 10,
+                      height: 10,
+                      borderRadius: "50%",
+                      backgroundColor: "#2563eb",
+                    }}
+                    title="EOffice"
+                    aria-label="eoffice"
+                  />
+                  <span
+                    style={{
+                      display: "inline-block",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      color: "#1e3a8a",
+                    }}
+                  >
+                    {subjectRaw}
+                  </span>
+                </div>
+              );
+
+              const complainantName = item?.complainant_name ?? "-";
+
+              return {
+                id: item?.case_id ?? "-",
+                name: (
+                  <span style={{ color: "#1e3a8a" }}>
+                    {complainantName}
+                  </span>
+                ),
+                nameRaw: complainantName,
+                citizenId: "-",
+                subject: subjectWithDot,
+                subjectRaw,
+                docKk: "-",
+                docSr: "-",
+                docStp: "-",
+                docGov: "-",
+                docGovRaw: "-",
+                caseCode: item?.case_id ?? "-",
+                caseCodeSearch: item?.case_id ?? "-",
+                agency: item?.channel_name ?? "Mof_EOffice",
+                status: item?.status_name ?? item?.status ?? "-",
+                is_assigned: false,
+                is_master: false,
+                created_at: item?.date_received ?? null,
+                channel: "eoffice",
+              };
+            });
+          }
+        } catch (e) {
+          console.error("Error fetching EOffice complaints:", e);
+        }
+
+        // ── 3) Merge ข้อมูลทั้งหมด ──
+        const allData = [...websiteMapped, ...eofficeMapped];
+
         if (isMounted) {
-          setAllComplaints(mapped);
-          setFilteredComplaints(mapped);
+          setAllComplaints(allData);
+          setFilteredComplaints(allData);
         }
       } catch (err) {
         console.error("โหลดข้อมูลร้องเรียนล้มเหลว:", err);
@@ -281,12 +363,30 @@ const SearchComplaints = () => {
     return () => { isMounted = false; };
   }, []);
 
+  // ── Channel filter ──
+  const handleChannelChange = (channel) => {
+    setChannelFilter(channel);
+    // Re-apply search with new channel filter
+    handleSearchWithChannel(channel);
+  };
+
+  const handleSearchWithChannel = (channel) => {
+    if (!channel) {
+      setFilteredComplaints(allComplaints);
+    } else {
+      setFilteredComplaints(allComplaints.filter((item) => item.channel === channel));
+    }
+  };
+
   const handleNavigateTo = () => router.push("/admin/edit/search/Filteromplaints");
 
   const handleSearch = (filters) => {
     const { claimantName, citizenId, subject, docGov, agency, caseCode, docKk, docSr, docStp, startDate, endDate } = filters;
 
     const result = allComplaints.filter((item) => {
+      // Channel filter
+      if (channelFilter && item.channel !== channelFilter) return false;
+
       if (claimantName && !safeIncludes(item.nameRaw, claimantName)) return false;
       if (citizenId && !safeIncludes(item.citizenId, citizenId)) return false;
       if (subject && !safeIncludes(item.subjectRaw, subject)) return false;
@@ -296,7 +396,6 @@ const SearchComplaints = () => {
       if (docSr && !safeIncludes(item.docSr, docSr)) return false;
       if (docStp && !safeIncludes(item.docStp, docStp)) return false;
 
-      // ค้นหาด้วยรหัสเรื่อง - ค้นหาใน caseCodeSearch (รวมเลขอ้างอิงทั้งหมด)
       if (caseCode && caseCode.trim() !== "") {
         const q = caseCode.toLowerCase().trim();
         const searchFields = [
@@ -310,20 +409,17 @@ const SearchComplaints = () => {
         if (!found) return false;
       }
 
-      // Filter ตามวันที่สร้าง
       if (startDate || endDate) {
         if (!item.created_at) return false;
 
         const itemDate = dayjs(item.created_at);
         if (!itemDate.isValid()) return false;
 
-        // ถ้ามี startDate ให้เช็คว่าวันที่สร้างต้อง >= startDate (เริ่มต้นวัน)
         if (startDate) {
           const start = dayjs(startDate).startOf('day');
           if (itemDate.isBefore(start)) return false;
         }
 
-        // ถ้ามี endDate ให้เช็คว่าวันที่สร้างต้อง <= endDate (สิ้นสุดวัน)
         if (endDate) {
           const end = dayjs(endDate).endOf('day');
           if (itemDate.isAfter(end)) return false;
@@ -336,9 +432,46 @@ const SearchComplaints = () => {
     setFilteredComplaints(result);
   };
 
+  // ── นับจำนวนแต่ละ channel ──
+  const websiteCount = allComplaints.filter((c) => c.channel === "website").length;
+  const eofficeCount = allComplaints.filter((c) => c.channel === "eoffice").length;
+
   return (
     <>
       <BreadcrumbsService items={breadcrumbItems} />
+
+      {/* ── Channel Filter Chips ── */}
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2, px: 1 }}>
+        <Typography variant="body2" sx={{ color: "#6b7280", fontWeight: 600, mr: 1 }}>
+          ช่องทาง:
+        </Typography>
+        {CHANNEL_OPTIONS.map((opt) => (
+          <Chip
+            key={opt.value}
+            label={`${opt.label}${opt.value === "" ? ` (${allComplaints.length})` : opt.value === "website" ? ` (${websiteCount})` : ` (${eofficeCount})`}`}
+            onClick={() => handleChannelChange(opt.value)}
+            sx={{
+              fontWeight: 600,
+              fontSize: "13px",
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+              ...(channelFilter === opt.value
+                ? {
+                    background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
+                    color: "white",
+                    boxShadow: "0 3px 10px rgba(37,99,235,0.3)",
+                  }
+                : {
+                    backgroundColor: "#f3f4f6",
+                    color: "#374151",
+                    border: "1px solid #e5e7eb",
+                    "&:hover": { backgroundColor: "#e5e7eb" },
+                  }),
+            }}
+          />
+        ))}
+      </Box>
+
       {isLoading ? (
         <div style={{ textAlign: "center", margin: 40 }}>กำลังโหลดข้อมูล...</div>
       ) : (

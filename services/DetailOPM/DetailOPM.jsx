@@ -755,9 +755,9 @@ const DetailOPM = ({ params, caseDetails, attachmentsDetails, operatingsDetails,
                                     วันที่เกิดเหตุ (จาก - ถึง)
                                 </Typography>
                                 <Typography variant="body1" className={styles.value}>
-                                    {formatDate(getFieldValue("date_occurrenced_from"))}
+                                    {formatDate(getFieldValue("date_occurrenced_from") || getFieldValue("date_start") || getFieldValue("occur_from"), getFieldValue("date_opened"))}
                                     {" - "}
-                                    {formatDate(getFieldValue("date_occurrenced_to"))}
+                                    {formatDate(getFieldValue("date_occurrenced_to") || getFieldValue("date_end") || getFieldValue("occur_to"), getFieldValue("date_opened"))}
                                 </Typography>
                             </Box>
                         </Grid>

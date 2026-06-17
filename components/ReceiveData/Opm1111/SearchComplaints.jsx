@@ -76,14 +76,25 @@ const SearchComplaints = () => {
     fetchAttachments();
   }, [operatingsDetails]);
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "-";
+  const formatDate = (dateString, fallback) => {
+    if (!dateString || dateString === "-") {
+      // ถ้ามี fallback ให้ใช้ fallback แทน
+      if (fallback) return formatDate(fallback);
+      return "ไม่ระบุ";
+    }
     try {
       let dateObj;
 
-      // .NET date format: "/Date(1234567890000)/"
+      // .NET date format: "/Date(1234567890000)/" or "/Date(-62135596800000)/"
       if (typeof dateString === 'string' && dateString.includes('/Date(')) {
-        const timestamp = parseInt(dateString.replace(/\D/g, ''), 10);
+        const match = dateString.match(/-?\d+/);
+        if (!match) return "ไม่ระบุ";
+        const timestamp = parseInt(match[0], 10);
+        // .NET DateTime.MinValue (-62135596800000) = วันที่ว่าง
+        if (timestamp <= 0) {
+          if (fallback) return formatDate(fallback);
+          return "ไม่ระบุ";
+        }
         dateObj = new Date(timestamp);
       }
       // ISO format with T: "2025-01-03T00:00:00"
@@ -105,10 +116,10 @@ const SearchComplaints = () => {
         dateObj = new Date(dateString);
       }
       else {
-        return "-";
+        return "ไม่ระบุ";
       }
 
-      if (isNaN(dateObj.getTime())) return "-";
+      if (isNaN(dateObj.getTime())) return "ไม่ระบุ";
       const buddhistYear = dateObj.getFullYear() + 543;
       const day = dateObj.getDate();
       const monthNames = [
@@ -118,8 +129,8 @@ const SearchComplaints = () => {
       ];
       const month = monthNames[dateObj.getMonth()];
       return `${day} ${month} ${buddhistYear}`;
-    } catch {
-      return "-";
+    } catch (e) {
+      return "ไม่ระบุ";
     }
   };
 
