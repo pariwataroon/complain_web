@@ -13,7 +13,7 @@ export const exportElementToPDF2 = async (target, filename = "document.pdf", opt
     pageBreakBeforeSelectors = ["#complaint-info-section"],
     // คงกันการผ่ากลางบล็อกเดิม
     forcePageBreakSelectors = ["#complaint-detail", '[data-pdf-section="complaint-detail"]'],
-    scale = 3,
+    scale = 2,
     // ✅ ขนาด font สำหรับหัวข้อหลัก (โลโก้ + ชื่อเอกสาร)
     headerFontSizePx = 48,
     // ✅ ขนาด font ที่เล็กลง (สำหรับช่องทางเรื่องร้องเรียน)
@@ -136,11 +136,11 @@ export const exportElementToPDF2 = async (target, filename = "document.pdf", opt
     if ("imageSmoothingQuality" in sctx) sctx.imageSmoothingQuality = "high";
     sctx.drawImage(canvas, 0, currentTopPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
 
-    const sliceData = sliceCanvas.toDataURL("image/png");
+    const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.80);
     const sliceHeightMM = Math.min(sliceHeightPx * mmPerPx, usableHeightMM);
 
     if (pageIndex > 0) pdf.addPage();
-    pdf.addImage(sliceData, "PNG", marginLeft, marginTop, usableWidthMM, sliceHeightMM);
+    pdf.addImage(sliceData, "JPEG", marginLeft, marginTop, usableWidthMM, sliceHeightMM);
 
     currentTopPx = nextBreakPx;
     pageIndex += 1;

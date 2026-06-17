@@ -163,7 +163,7 @@ export const exportReportToPDF = async ({
   try {
     // Capture - use same approach as the working exportElementToPDF
     const canvas = await html2canvas(wrapper, {
-      scale: Math.max(window.devicePixelRatio || 1, 2),
+      scale: 2,
       useCORS: true,
       allowTaint: false,
       backgroundColor: "#ffffff",
@@ -202,11 +202,11 @@ export const exportReportToPDF = async ({
         0, 0, canvas.width, sliceHeightPx
       );
 
-      const sliceData = sliceCanvas.toDataURL("image/png");
+      const sliceData = sliceCanvas.toDataURL("image/jpeg", 0.80);
       const sliceHeightMM = Math.min(sliceHeightPx * mmPerPx, usableHeightMM);
 
       if (pageIndex > 0) pdf.addPage();
-      pdf.addImage(sliceData, "PNG", marginMM, marginMM, usableWidthMM, sliceHeightMM);
+      pdf.addImage(sliceData, "JPEG", marginMM, marginMM, usableWidthMM, sliceHeightMM);
 
       currentTopPx += sliceHeightPx;
       pageIndex++;

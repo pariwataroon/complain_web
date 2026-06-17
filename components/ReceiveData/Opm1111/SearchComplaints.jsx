@@ -78,12 +78,49 @@ const SearchComplaints = () => {
 
   const formatDate = (dateString) => {
     if (!dateString) return "-";
-    const date = new Date(parseInt(dateString.replace("/Date(", "").replace(")/", ""), 10));
-    return date.toLocaleDateString("th-TH", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    try {
+      let dateObj;
+
+      // .NET date format: "/Date(1234567890000)/"
+      if (typeof dateString === 'string' && dateString.includes('/Date(')) {
+        const timestamp = parseInt(dateString.replace(/\D/g, ''), 10);
+        dateObj = new Date(timestamp);
+      }
+      // ISO format with T: "2025-01-03T00:00:00"
+      else if (typeof dateString === 'string' && dateString.includes('T')) {
+        const [datePart, timePart] = dateString.split('T');
+        const [year, month, day] = datePart.split('-').map(Number);
+        let hour = 0, minute = 0;
+        if (timePart) {
+          [hour, minute] = timePart.split(':').map(Number);
+        }
+        dateObj = new Date(year, month - 1, day, hour, minute, 0);
+      }
+      // Plain string: "2025-01-03" or "2025-01-03 00:00:00"
+      else if (typeof dateString === 'string') {
+        dateObj = new Date(dateString.replace(' ', 'T'));
+      }
+      // Number (timestamp)
+      else if (typeof dateString === 'number') {
+        dateObj = new Date(dateString);
+      }
+      else {
+        return "-";
+      }
+
+      if (isNaN(dateObj.getTime())) return "-";
+      const buddhistYear = dateObj.getFullYear() + 543;
+      const day = dateObj.getDate();
+      const monthNames = [
+        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
+        "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม",
+        "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+      ];
+      const month = monthNames[dateObj.getMonth()];
+      return `${day} ${month} ${buddhistYear}`;
+    } catch {
+      return "-";
+    }
   };
 
   const getCaseCode = () => {
