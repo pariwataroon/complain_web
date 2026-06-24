@@ -4,7 +4,6 @@ import TableList from "@services/TableList/TableList";
 import { useRouter } from "next/router";
 import { getDocumentStorageForWebsite } from "@pages/api/document/document";
 import { GetEnhancedComplaints } from "@pages/api/complaint/complaint";
-import { GetEOfficeComplaints } from "@pages/api/eoffice/eoffice";
 import dayjs from "dayjs";
 import { Box, Chip, Typography } from "@mui/material";
 
@@ -57,6 +56,17 @@ const safeIncludes = (text, query) =>
   (text ?? "").toString().toLowerCase().includes((query ?? "").toString().toLowerCase());
 
 const SUBJECT_LEFT_OFFSET = 14;
+
+const getChannelKey = (channelName) => {
+  if (!channelName) return "website";
+  const n = channelName.toLowerCase();
+  if (n.includes("opm") || n.includes("1111")) return "opm1111";
+  if (n.includes("eoffice")) return "eoffice";
+  if (n.includes("จดหมาย") || n.includes("letter")) return "letter";
+  if (n.includes("อีเมล") || n.includes("email")) return "email";
+  if (n.includes("ศูนย์บริการร่วม") || n.includes("central")) return "central_service";
+  return "website";
+};
 
 const toBool = (v) => {
   if (v === true || v === false) return v;
@@ -117,8 +127,12 @@ const getIsAssigned = (item) => {
 
 const CHANNEL_OPTIONS = [
   { value: "", label: "ทุกช่องทาง" },
-  { value: "website", label: "เว็บไซต์ กค." },
-  { value: "eoffice", label: "Mof_EOffice" },
+  { value: "website", label: "เว็บไซต์" },
+  { value: "opm1111", label: "OPM 1111" },
+  { value: "eoffice", label: "EOffice" },
+  { value: "letter", label: "จดหมาย" },
+  { value: "email", label: "อีเมล" },
+  { value: "central_service", label: "ศูนย์บริการร่วม" },
 ];
 
 const SearchComplaints = () => {
@@ -134,26 +148,28 @@ const SearchComplaints = () => {
       setIsLoading(true);
       try {
         // ── 1) ดึงข้อมูล website complaints (เดิม) ──
-        const res = await getDocumentStorageForWebsite({ skip: 0, limit: 10000 });
-        const items = Array.isArray(res?.res_data?.items) ? res.res_data.items : [];
-
-        let documentNumberMap = {};
+        let websiteMapped = [];
         try {
-          const enhancedRes = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
-          if (enhancedRes?.res_data?.items) {
-            enhancedRes.res_data.items.forEach((c) => {
-              const cId = c.id || c.complaint_id;
-              const docNum = c.document_number || "";
-              if (cId && docNum) {
-                documentNumberMap[cId] = docNum;
-              }
-            });
-          }
-        } catch (e) {
-          console.error("Error fetching enhanced complaints:", e);
-        }
+          const res = await getDocumentStorageForWebsite({ skip: 0, limit: 10000 });
+          const items = Array.isArray(res?.res_data?.items) ? res.res_data.items : [];
 
-        const websiteMapped = items.map((item) => {
+          let documentNumberMap = {};
+          try {
+            const enhancedRes = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
+            if (enhancedRes?.res_data?.items) {
+              enhancedRes.res_data.items.forEach((c) => {
+                const cId = c.id || c.complaint_id;
+                const docNum = c.document_number || "";
+                if (cId && docNum) {
+                  documentNumberMap[cId] = docNum;
+                }
+              });
+            }
+          } catch (e) {
+            console.error("Error fetching enhanced complaints:", e);
+          }
+
+          websiteMapped = items.map((item) => {
           const isAssigned = getIsAssigned(item);
 
           const isMasterCandidates = [
@@ -260,89 +276,19 @@ const SearchComplaints = () => {
             is_assigned: isAssigned,
             is_master: isMaster,
             created_at: item?.created_at ?? null,
-            channel: "website",
+            channel: getChannelKey(item?.channel?.name),
           };
         });
-
-        // ── 2) ดึงข้อมูล EOffice complaints ──
-        let eofficeMapped = [];
-        try {
-          const eofficeData = await GetEOfficeComplaints({ take: 10000, status: "A" });
-          if (Array.isArray(eofficeData) && eofficeData.length > 0) {
-            eofficeMapped = eofficeData.map((item) => {
-              const subjectRaw = item?.subject ?? "-";
-              const subjectWithDot = (
-                <div
-                  style={{
-                    position: "relative",
-                    minWidth: 0,
-                    paddingLeft: SUBJECT_LEFT_OFFSET,
-                    marginLeft: -SUBJECT_LEFT_OFFSET,
-                  }}
-                >
-                  <span
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: 10,
-                      height: 10,
-                      borderRadius: "50%",
-                      backgroundColor: "#2563eb",
-                    }}
-                    title="EOffice"
-                    aria-label="eoffice"
-                  />
-                  <span
-                    style={{
-                      display: "inline-block",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                      color: "#1e3a8a",
-                    }}
-                  >
-                    {subjectRaw}
-                  </span>
-                </div>
-              );
-
-              const complainantName = item?.complainant_name ?? "-";
-
-              return {
-                id: item?.case_id ?? "-",
-                name: (
-                  <span style={{ color: "#1e3a8a" }}>
-                    {complainantName}
-                  </span>
-                ),
-                nameRaw: complainantName,
-                citizenId: "-",
-                subject: subjectWithDot,
-                subjectRaw,
-                docKk: "-",
-                docSr: "-",
-                docStp: "-",
-                docGov: "-",
-                docGovRaw: "-",
-                caseCode: item?.case_id ?? "-",
-                caseCodeSearch: item?.case_id ?? "-",
-                agency: item?.channel_name ?? "Mof_EOffice",
-                status: item?.status_name ?? item?.status ?? "-",
-                is_assigned: false,
-                is_master: false,
-                created_at: item?.date_received ?? null,
-                channel: "eoffice",
-              };
-            });
-          }
         } catch (e) {
-          console.error("Error fetching EOffice complaints:", e);
+          console.error("Error fetching complaints:", e);
         }
 
+        // ── 2) EOffice data เข้าหน้าสืบค้นผ่าน auto-create ──
+        //    ถูกสร้างใน EOfficeDetail → อยู่ใน document-storage แล้ว
+        //    channel ถูกตั้งค่าจาก item.channel.name ข้างบน
+
         // ── 3) Merge ข้อมูลทั้งหมด ──
-        const allData = [...websiteMapped, ...eofficeMapped];
+        const allData = websiteMapped;
 
         if (isMounted) {
           setAllComplaints(allData);
@@ -433,8 +379,7 @@ const SearchComplaints = () => {
   };
 
   // ── นับจำนวนแต่ละ channel ──
-  const websiteCount = allComplaints.filter((c) => c.channel === "website").length;
-  const eofficeCount = allComplaints.filter((c) => c.channel === "eoffice").length;
+  const getChannelCount = (key) => allComplaints.filter((c) => c.channel === key).length;
 
   return (
     <>
@@ -448,7 +393,7 @@ const SearchComplaints = () => {
         {CHANNEL_OPTIONS.map((opt) => (
           <Chip
             key={opt.value}
-            label={`${opt.label}${opt.value === "" ? ` (${allComplaints.length})` : opt.value === "website" ? ` (${websiteCount})` : ` (${eofficeCount})`}`}
+            label={`${opt.label} (${opt.value === "" ? allComplaints.length : getChannelCount(opt.value)})`}
             onClick={() => handleChannelChange(opt.value)}
             sx={{
               fontWeight: 600,

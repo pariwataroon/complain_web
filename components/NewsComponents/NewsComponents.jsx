@@ -107,13 +107,6 @@ const NewsComponent = () => {
       {/* ส่วนหัวของข่าวสาร */}
       <div className={styles.headerImage}>
         <img
-          style={{
-          width: '100%',
-          height: '100%',
-          display: 'block',
-          objectFit: 'cover',
-          maxWidth: '100%', 
-        }}
           src={newsData?.cover_image_url || fallbackImage}
           alt="ข่าวสารหัวข้อ"
           className={styles.coverImage}
@@ -200,25 +193,28 @@ const NewsComponent = () => {
 
       {/* Dialog สำหรับแสดงภาพขนาดใหญ่ */}
       <Dialog
-  open={openImageDialog}
-  onClose={handleCloseDialog}
-  sx={{
-    "& .MuiDialog-paper": {
-      boxShadow: "none",
-      borderRadius: "8px",
-      padding: 0,
-    },
-  }}
->
-  <DialogContent sx={{ p: 0, overflow: "hidden" }}>
-    <img
-      src={selectedImage}
-      alt="Selected Image"
-      style={{ width: "500px", height: "auto", display: "block" }}
-      onError={(e) => (e.target.src = fallbackImage)}
-    />
-  </DialogContent>
-</Dialog>
+        open={openImageDialog}
+        onClose={handleCloseDialog}
+        maxWidth="lg"
+        sx={{
+          "& .MuiDialog-paper": {
+            boxShadow: "none",
+            borderRadius: "8px",
+            padding: 0,
+            maxWidth: "90vw",
+            maxHeight: "90vh",
+          },
+        }}
+      >
+        <DialogContent sx={{ p: 0, overflow: "hidden", display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <img
+            src={selectedImage}
+            alt="Selected Image"
+            style={{ maxWidth: "100%", maxHeight: "85vh", width: "auto", height: "auto", display: "block", objectFit: "contain" }}
+            onError={(e) => (e.target.src = fallbackImage)}
+          />
+        </DialogContent>
+      </Dialog>
 
     </div>
   );

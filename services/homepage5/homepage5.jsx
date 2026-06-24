@@ -44,7 +44,7 @@ const Homepage5 = () => {
   }
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
+    <div style={{ padding: "20px", maxWidth: "1600px", margin: "0 auto", overflow: "hidden" }}>
       <h2 style={{ marginBottom: "20px", fontSize: "24px", fontWeight: "bold" }}>
         ข่าวสารและประชาสัมพันธ์
       </h2>
@@ -56,8 +56,9 @@ const Homepage5 = () => {
           marginBottom: "20px",
           overflow: "hidden",
           width: "100%",
-            height: "400px",
+          height: "1000px",
           borderRadius: "8px",
+          cursor: "pointer",
         }}
         onClick={() => handleImageClick(newsList[0]?.id)}
       >
@@ -66,10 +67,9 @@ const Homepage5 = () => {
           alt={newsList[0]?.title}
           style={{
             width: '100%',
-            height: '100%', 
+            height: '100%',
             display: 'block',
-            objectFit: 'cover',
-            maxWidth: '100%', 
+            objectFit: 'fill',
           }}
           onError={(e) => (e.target.src = fallbackImage)}
         />
@@ -117,7 +117,8 @@ const Homepage5 = () => {
           key={index}
           style={{
             flex: "0 0 auto",
-            width: "calc(30% - 60px)",
+            width: "calc(33.333% - 14px)",
+            minWidth: "200px",
             height: "200px",
             position: "relative",
             overflow: "hidden",
@@ -133,7 +134,7 @@ const Homepage5 = () => {
               height: "100%",
               display: "block",
               objectFit: "cover",
-              transition: "all 0.3s ease", // เพิ่มการเคลื่อนไหวให้เรียบเนียน
+              transition: "transform 0.3s ease",
             }}
             onError={(e) => (e.target.src = fallbackImage)}
           />

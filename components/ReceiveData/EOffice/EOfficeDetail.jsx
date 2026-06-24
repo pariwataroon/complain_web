@@ -10,13 +10,9 @@ import {
   Box,
   Typography,
   Card,
-  CardContent,
   Grid,
-  Divider,
   Chip,
-  Avatar,
   IconButton,
-  Paper,
   Timeline,
   TimelineItem,
   TimelineSeparator,
@@ -39,8 +35,6 @@ import {
   PictureAsPdf as PdfIcon,
   ImageOutlined as ImageIcon,
   Download as DownloadIcon,
-  ArrowBack as ArrowBackIcon,
-  Send as SendIcon,
 } from "@mui/icons-material";
 import ButtonSent from "@services/ButtonSent/ButtonSent";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
@@ -50,6 +44,7 @@ import {
   GetEOfficeOperatings,
   GetEOfficeAttachments,
 } from "@pages/api/eoffice/eoffice";
+import { formatThaiDate } from "@utils/Formats";
 import useDetailEOfficeData from "@hooks/admin/eoffice/useDetailEOfficeData";
 import styles from "./EOfficeDetail.module.scss";
 
@@ -76,54 +71,62 @@ const EOfficeDetail = () => {
 
   // ── โหลดข้อมูลรายละเอียดเรื่องร้องทุกข์ ──
   useEffect(() => {
+    if (!caseId) return;
+
+    let cancelled = false;
+
     const fetchDetail = async () => {
-      if (!caseId) return;
       try {
+        setLoading(true);
         showLoading("กำลังโหลดข้อมูลรายละเอียด...");
 
-        // TODO: เรียก API จริง
-        const detail = await GetEOfficeCaseDetail(caseId);
-        const ops = await GetEOfficeOperatings(caseId);
-        const atts = await GetEOfficeAttachments(caseId);
+        const detailRes = await GetEOfficeCaseDetail(caseId);
+        if (cancelled) return;
+        const detail = detailRes.data || detailRes;
 
-        setCaseDetail(detail);
-        setOperatings(ops || []);
-        setAttachments(atts || []);
+        const mapped = {
+          ...detail,
+          case_code: detail.content_no || `${detail.content_year}/${detail.id}`,
+          case_id: detail.id,
+          subject: detail.subject || detail.title || detail.content_title || detail.description || "-",
+          status: detail.finish_flag === 1 ? "completed" : "in_progress",
+          status_name: detail.finish_flag === 1 ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
+          date_received: detail.content_date || detail.book_date || detail.created_date,
+          date_updated: detail.updated_date,
+          priority: detail.priority === 1 ? "ปกติ" : detail.priority === 4 ? "ด่วน" : "ปกติ",
+          complainant: { org: detail.from_org, name: detail.owner_name },
+          respondent: { name: detail.to_org },
+        };
+
+        const opsRes = await GetEOfficeOperatings(caseId);
+        if (cancelled) return;
+        const attsRes = await GetEOfficeAttachments(caseId);
+        if (cancelled) return;
+
+        const ops = Array.isArray(opsRes?.data) ? opsRes.data : (Array.isArray(opsRes) ? opsRes : []);
+        const atts = Array.isArray(attsRes?.data) ? attsRes.data : (Array.isArray(attsRes) ? attsRes : []);
+
+        setCaseDetail(mapped);
+        setOperatings(ops);
+        setAttachments(atts);
         closeAlert();
       } catch (error) {
+        if (cancelled) return;
         console.error("Error fetching EOffice case detail:", error);
         closeAlert();
         alertError("เกิดข้อผิดพลาด", "ไม่สามารถโหลดข้อมูลรายละเอียดได้");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchDetail();
+
+    return () => { cancelled = true; };
   }, [caseId]);
 
   const handleBack = () => router.push("/admin/edit/eoffice");
   const handleSendResult = () => router.push(`/admin/edit/eoffice/send?case_id=${caseId}`);
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "new": return "#16a34a";
-      case "in_progress": return "#f59e0b";
-      case "completed": return "#6b7280";
-      case "rejected": return "#ef4444";
-      default: return "#6b7280";
-    }
-  };
-
-  const getStatusBg = (status) => {
-    switch (status) {
-      case "new": return "#dcfce7";
-      case "in_progress": return "#fef3c7";
-      case "completed": return "#f3f4f6";
-      case "rejected": return "#fee2e2";
-      default: return "#f3f4f6";
-    }
-  };
 
   if (loading) return null;
 
@@ -155,42 +158,47 @@ const EOfficeDetail = () => {
   const respondent = caseDetail.respondent || {};
   const organizations = caseDetail.organizations || [];
 
-  // ── Helper: render field grid ──
-  const renderFields = (fields, cols = { xs: 12, sm: 6, md: 4 }) => (
-    <Grid container spacing={2}>
+  // ── Helper: render field rows (label : value) ──
+  const renderRows = (fields) => (
+    <Box>
       {fields.map((field, idx) => (
-        <Grid item {...cols} key={idx}>
-          <Box className={styles.detailField}>
-            <Typography variant="caption" sx={{ color: "#9ca3af", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              {field.label}
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 500, color: "#1f2937", mt: 0.3 }}>
-              {field.value || "-"}
-            </Typography>
-          </Box>
-        </Grid>
+        <Box className={styles.fieldRow} key={idx}>
+          <Typography className={styles.fieldLabel}>{field.label}</Typography>
+          <Typography className={styles.fieldValue}>{field.value || "-"}</Typography>
+        </Box>
       ))}
-    </Grid>
+    </Box>
   );
 
-  // ── Helper: section card ──
-  const SectionCard = ({ icon, iconBg, title, badge, children }) => (
-    <Card className={styles.infoCard}>
-      <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-        <Box className={styles.sectionHeader}>
-          <Avatar sx={{ bgcolor: iconBg, width: 44, height: 44, boxShadow: `0 4px 12px ${iconBg}40` }}>
-            {icon}
-          </Avatar>
-          <Typography variant="h6" sx={{ fontWeight: 700, color: "#1120a3", fontSize: { xs: "15px", md: "17px" } }}>
-            {title}
-          </Typography>
-          {badge && <Box sx={{ ml: "auto" }}>{badge}</Box>}
+  // ── Helper: render field rows in 2-col grid ──
+  const renderGrid = (fields) => (
+    <Box className={styles.fieldGrid}>
+      {fields.map((field, idx) => (
+        <Box className={styles.fieldRow} key={idx}>
+          <Typography className={styles.fieldLabel}>{field.label}</Typography>
+          <Typography className={styles.fieldValue}>{field.value || "-"}</Typography>
         </Box>
-        <Divider sx={{ mb: 2, borderColor: "#e8ecf4" }} />
+      ))}
+    </Box>
+  );
+
+  // ── Helper: Section Card (clean, no gradient) ──
+  const SectionCard = ({ icon, title, badge, children }) => (
+    <Card className={styles.infoCard}>
+      <Box className={styles.sectionHeader}>
+        <Box sx={{ color: "#2563eb", display: "flex" }}>{icon}</Box>
+        <Typography variant="h6">{title}</Typography>
+        {badge && <Box className={styles.sectionBadge}>{badge}</Box>}
+      </Box>
+      <Box className={styles.sectionContent}>
         {children}
-      </CardContent>
+      </Box>
     </Card>
   );
+
+  // ── Status chip ──
+  const statusColor = caseDetail.status === "completed" ? "#16a34a" : "#d97706";
+  const statusBg = caseDetail.status === "completed" ? "#f0fdf4" : "#fffbeb";
 
   return (
     <div>
@@ -203,100 +211,79 @@ const EOfficeDetail = () => {
       />
 
       {/* ── Action Buttons ── */}
-      <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1.5, mb: 2.5, mt: 1 }}>
+      <Box className={styles.actionBar}>
         <ButtonSent label="ย้อนกลับ" onClick={handleBack} />
         <ButtonSent label="ส่งผลพิจารณา" onClick={handleSendResult} />
       </Box>
 
-      <Grid container spacing={2.5}>
+      <Grid container spacing={2}>
         {/* ══════════════════════════════════════════ */}
-        {/* 1. ข้อมูลหลัก (Main Information)          */}
+        {/* 1. ข้อมูลหลัก                             */}
         {/* ══════════════════════════════════════════ */}
         <Grid item xs={12}>
           <SectionCard
             icon={<AssignmentIcon />}
-            iconBg="#2563eb"
             title="ข้อมูลหลัก"
             badge={
               <Chip
                 label={caseDetail.status_name || caseDetail.status}
-                sx={{
-                  backgroundColor: getStatusBg(caseDetail.status),
-                  color: getStatusColor(caseDetail.status),
-                  fontWeight: 700,
-                  fontSize: "12px",
-                  px: 1,
-                }}
+                size="small"
+                sx={{ backgroundColor: statusBg, color: statusColor, fontWeight: 600, fontSize: "12px" }}
               />
             }
           >
-            {renderFields([
-              { label: "เลขที่รับเรื่อง", value: caseDetail.case_code || caseDetail.case_id },
-              { label: "ชื่อเรื่อง", value: caseDetail.subject },
-              { label: "ประเภทเรื่อง", value: caseDetail.type_name },
-              { label: "ช่องทาง", value: caseDetail.channel_name },
-              { label: "ความเร่งด่วน", value: caseDetail.priority },
-              { label: "ระดับความรุนแรง", value: caseDetail.severity },
-              { label: "ความลับ", value: caseDetail.confidentiality },
-              { label: "วันที่รับเรื่อง", value: caseDetail.date_received },
-              { label: "วันที่อัปเดทล่าสุด", value: caseDetail.date_updated },
-              ...(caseDetail.reference_no ? [{ label: "เลขอ้างอิง", value: caseDetail.reference_no }] : []),
+            {renderGrid([
+              { label: "เลขที่รับเรื่อง", value: caseDetail.case_code || caseDetail.id },
+              { label: "ปี พ.ศ.", value: caseDetail.content_year || "-" },
+              { label: "เรื่อง", value: caseDetail.subject },
+              { label: "เลขที่หนังสือ", value: caseDetail.book_no || "-" },
+              { label: "ลำดับความสำคัญ", value: caseDetail.priority === 4 ? "ด่วน" : caseDetail.priority === 1 ? "ปกติ" : `${caseDetail.priority}` },
+              { label: "ชั้นความลับ", value: caseDetail.classification === 1 ? "ลับ" : caseDetail.classification === 2 ? "ลับมาก" : "ปกติ" },
+              { label: "วันที่รับเรื่อง", value: formatThaiDate(caseDetail.date_received) },
+              { label: "วันที่หนังสือ", value: formatThaiDate(caseDetail.book_date) },
+              { label: "", value: "" }, // spacer
+              { label: "วันที่อัปเดทล่าสุด", value: formatThaiDate(caseDetail.date_updated) },
             ])}
 
             {caseDetail.description && (
-              <>
-                <Divider sx={{ my: 2.5, borderColor: "#e8ecf4" }} />
-                <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 700, color: "#1120a3", fontSize: "14px" }}>
-                  📝 รายละเอียดเรื่องร้องทุกข์
+              <Box sx={{ mt: 2 }}>
+                <Typography sx={{ fontWeight: 600, color: "#374151", fontSize: "13px", mb: 1 }}>
+                  รายละเอียดเรื่องร้องทุกข์
                 </Typography>
-                <Paper sx={{ p: 2.5, background: "linear-gradient(135deg, #f0f4ff 0%, #e8ecf4 100%)", borderRadius: 3, border: "1px solid #dbeafe" }}>
-                  <Typography variant="body2" sx={{ whiteSpace: "pre-wrap", lineHeight: 2, color: "#374151" }}>
-                    {caseDetail.description}
-                  </Typography>
-                </Paper>
-              </>
-            )}
-          </SectionCard>
-        </Grid>
-
-        {/* ══════════════════════════════════════════ */}
-        {/* 2. ผู้ร้องทุกข์ (Complainant)               */}
-        {/* ══════════════════════════════════════════ */}
-        <Grid item xs={12} md={6}>
-          <SectionCard icon={<PersonIcon />} iconBg="#16a34a" title="ผู้ร้องทุกข์">
-            {renderFields([
-              { label: "คำนำหน้า", value: complainant.title },
-              { label: "ชื่อ-นามสกุล", value: `${complainant.first_name || ""} ${complainant.last_name || ""}`.trim() },
-              { label: "เลขบัตรประชาชน", value: complainant.citizen_id },
-              { label: "เพศ", value: complainant.gender },
-              { label: "เบอร์โทร", value: complainant.phone },
-              { label: "อีเมล", value: complainant.email },
-            ], { xs: 12, sm: 6 })}
-            {complainant.address && (
-              <Box sx={{ mt: 1 }}>
-                <Typography variant="caption" sx={{ color: "#9ca3af", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  ที่อยู่
-                </Typography>
-                <Typography variant="body2" sx={{ mt: 0.3, color: "#374151" }}>
-                  {complainant.address}
-                </Typography>
+                <Box className={styles.descriptionBox}>
+                  {caseDetail.description}
+                </Box>
               </Box>
             )}
           </SectionCard>
         </Grid>
 
         {/* ══════════════════════════════════════════ */}
-        {/* 3. ผู้ถูกร้องทุกข์ (Respondent)             */}
+        {/* 2. จาก (ผู้ส่ง)                            */}
         {/* ══════════════════════════════════════════ */}
         <Grid item xs={12} md={6}>
-          <SectionCard icon={<BusinessIcon />} iconBg="#ef4444" title="ผู้ถูกร้องทุกข์">
-            {renderFields([
-              { label: "ประเภท", value: respondent.type },
-              { label: "ชื่อ", value: respondent.name },
-              { label: "หน่วยงาน", value: respondent.department },
-              { label: "ตำแหน่ง", value: respondent.position },
-              { label: "เบอร์โทร", value: respondent.phone },
-            ], { xs: 12, sm: 6 })}
+          <SectionCard icon={<PersonIcon />} title="จาก (ผู้ส่ง)">
+            {(() => {
+              const fromOrg = complainant.org || caseDetail.from_org;
+              const ownerName = complainant.name || caseDetail.owner_name;
+              const fields = [];
+              if (fromOrg) fields.push({ label: "รายชือผู้ส่ง", value: fromOrg });
+              if (ownerName && ownerName !== fromOrg) fields.push({ label: "ชื่อเจ้าของเรื่อง", value: ownerName });
+              return fields.length > 0
+                ? renderRows(fields)
+                : <Typography variant="body2" sx={{ color: "#9ca3af" }}>-</Typography>;
+            })()}
+          </SectionCard>
+        </Grid>
+
+        {/* ══════════════════════════════════════════ */}
+        {/* 3. ถึง (ผู้รับ)                            */}
+        {/* ══════════════════════════════════════════ */}
+        <Grid item xs={12} md={6}>
+          <SectionCard icon={<BusinessIcon />} title="ถึง (ผู้รับ)">
+            {renderRows([
+              { label: "หน่วยงานที่รับ", value: respondent.name || caseDetail.to_org },
+            ])}
           </SectionCard>
         </Grid>
 
@@ -305,21 +292,26 @@ const EOfficeDetail = () => {
         {/* ══════════════════════════════════════════ */}
         {organizations.length > 0 && (
           <Grid item xs={12}>
-            <SectionCard icon={<BusinessIcon />} iconBg="#f59e0b" title={`หน่วยงานที่เกี่ยวข้อง (${organizations.length})`}>
-              <Grid container spacing={2}>
+            <SectionCard icon={<BusinessIcon />} title={`หน่วยงานที่เกี่ยวข้อง (${organizations.length})`}>
+              <Grid container spacing={1.5}>
                 {organizations.map((org, idx) => (
                   <Grid item xs={12} sm={6} md={4} key={org.org_id || idx}>
-                    <Paper sx={{ p: 2, border: "1px solid #e8ecf4", borderRadius: 3, background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)", transition: "all 0.2s", "&:hover": { borderColor: "#f59e0b", boxShadow: "0 4px 12px rgba(245,158,11,0.15)" } }}>
-                      <Typography variant="body2" sx={{ fontWeight: 700, color: "#92400e" }}>
+                    <Box sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      background: "#f9fafb",
+                      border: "1px solid #e5e7eb",
+                    }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600, color: "#111827" }}>
                         {org.org_name}
                       </Typography>
-                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1.5 }}>
-                        <Chip label={org.status} size="small" sx={{ fontSize: "11px", fontWeight: 600, backgroundColor: "#dcfce7", color: "#16a34a" }} />
+                      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mt: 1 }}>
+                        <Chip label={org.status} size="small" sx={{ fontSize: "11px", fontWeight: 600, backgroundColor: "#f0fdf4", color: "#16a34a" }} />
                         <Typography variant="caption" sx={{ color: "#9ca3af" }}>
                           {org.assigned_date}
                         </Typography>
                       </Box>
-                    </Paper>
+                    </Box>
                   </Grid>
                 ))}
               </Grid>
@@ -332,28 +324,28 @@ const EOfficeDetail = () => {
         {/* ══════════════════════════════════════════ */}
         {attachments.length > 0 && (
           <Grid item xs={12}>
-            <SectionCard icon={<AttachFileIcon />} iconBg="#8b5cf6" title={`ไฟล์แนบ (${attachments.length})`}>
+            <SectionCard icon={<AttachFileIcon />} title={`ไฟล์แนบ (${attachments.length})`}>
               <List dense>
                 {attachments.map((att, idx) => (
                   <ListItem
                     key={att.id || idx}
                     className={styles.attachmentItem}
-                    sx={{ border: "1px solid #e8ecf4", borderRadius: 2, mb: 1, background: "#fafbff" }}
+                    sx={{ border: "1px solid #e5e7eb", borderRadius: 1.5, mb: 1, background: "#ffffff" }}
                     secondaryAction={
                       <IconButton edge="end" size="small" sx={{ color: "#2563eb" }}>
                         <DownloadIcon fontSize="small" />
                       </IconButton>
                     }
                   >
-                    <ListItemIcon sx={{ minWidth: 40 }}>
+                    <ListItemIcon sx={{ minWidth: 36 }}>
                       {att.file_type?.includes("pdf") ? (
-                        <PdfIcon sx={{ color: "#ef4444" }} />
+                        <PdfIcon sx={{ color: "#ef4444", fontSize: 20 }} />
                       ) : (
-                        <ImageIcon sx={{ color: "#2563eb" }} />
+                        <ImageIcon sx={{ color: "#2563eb", fontSize: 20 }} />
                       )}
                     </ListItemIcon>
                     <ListItemText
-                      primary={<Typography variant="body2" sx={{ fontWeight: 600 }}>{att.file_name}</Typography>}
+                      primary={<Typography variant="body2" sx={{ fontWeight: 500, fontSize: "13px" }}>{att.file_name}</Typography>}
                       secondary={`${att.uploaded_date || ""} | ${((att.file_size || 0) / 1024).toFixed(1)} KB`}
                     />
                   </ListItem>
@@ -367,9 +359,9 @@ const EOfficeDetail = () => {
         {/* 6. ประวัติการดำเนินการ                      */}
         {/* ══════════════════════════════════════════ */}
         <Grid item xs={12}>
-          <SectionCard icon={<HistoryIcon />} iconBg="#7c3aed" title={`ประวัติการดำเนินการ (${operatings.length})`}>
+          <SectionCard icon={<HistoryIcon />} title={`ประวัติการดำเนินการ (${operatings.length})`}>
             {operatings.length === 0 ? (
-              <Box sx={{ textAlign: "center", py: 6 }}>
+              <Box sx={{ textAlign: "center", py: 4 }}>
                 <Typography variant="body2" sx={{ color: "#9ca3af" }}>
                   ยังไม่มีประวัติการดำเนินการ
                 </Typography>
@@ -379,26 +371,29 @@ const EOfficeDetail = () => {
                 {operatings.map((op, idx) => (
                   <TimelineItem key={op.id || idx}>
                     <TimelineSeparator>
-                      <TimelineDot sx={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)", width: 16, height: 16, boxShadow: "0 3px 10px rgba(37,99,235,0.3)" }} />
-                      {idx < operatings.length - 1 && <TimelineConnector sx={{ background: "linear-gradient(to bottom, #c7d2fe, #e8ecf4)", width: 2 }} />}
+                      <TimelineDot sx={{ bgcolor: "#2563eb", width: 12, height: 12 }} />
+                      {idx < operatings.length - 1 && <TimelineConnector sx={{ bgcolor: "#e5e7eb", width: 2 }} />}
                     </TimelineSeparator>
                     <TimelineContent sx={{ py: 0, px: 2, mb: 3 }}>
-                      <Paper sx={{ p: 2.5, background: "linear-gradient(135deg, #f0f4ff 0%, #e8ecf4 100%)", borderRadius: 3, border: "1px solid #dbeafe" }}>
-                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1.5, flexWrap: "wrap", gap: 1 }}>
-                          <Chip
-                            label={op.status || `ขั้นตอนที่ ${op.step_no}`}
-                            size="small"
-                            sx={{ fontWeight: 700, background: "linear-gradient(135deg, #2563eb, #1d4ed8)", color: "white", fontSize: "11px" }}
-                          />
-                          <Typography variant="caption" sx={{ color: "#9ca3af", fontWeight: 500 }}>
+                      <Box sx={{
+                        p: 2,
+                        borderRadius: 2,
+                        background: "#f9fafb",
+                        border: "1px solid #e5e7eb",
+                      }}>
+                        <Box sx={{ display: "flex", justifyContent: "space-between", mb: 1, flexWrap: "wrap", gap: 1 }}>
+                          <Typography variant="caption" sx={{ fontWeight: 600, color: "#2563eb", fontSize: "12px" }}>
+                            {op.status || `ขั้นตอนที่ ${op.step_no}`}
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: "#9ca3af" }}>
                             {op.operating_date}
                           </Typography>
                         </Box>
-                        <Typography variant="body2" sx={{ mb: 1.5, whiteSpace: "pre-wrap", lineHeight: 1.8, color: "#374151" }}>
+                        <Typography variant="body2" sx={{ mb: 1, whiteSpace: "pre-wrap", lineHeight: 1.7, color: "#374151", fontSize: "13px" }}>
                           {op.detail}
                         </Typography>
                         <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <Typography variant="caption" sx={{ color: "#6b7280", fontWeight: 500 }}>
+                          <Typography variant="caption" sx={{ color: "#6b7280" }}>
                             โดย: {op.operating_by}
                           </Typography>
                           {op.org_name && (
@@ -408,22 +403,21 @@ const EOfficeDetail = () => {
                           )}
                         </Box>
                         {op.attachments?.length > 0 && (
-                          <Box sx={{ mt: 1.5, display: "flex", gap: 1, flexWrap: "wrap" }}>
+                          <Box sx={{ mt: 1, display: "flex", gap: 0.5, flexWrap: "wrap" }}>
                             {op.attachments.map((a, aIdx) => (
                               <Chip
                                 key={aIdx}
-                                icon={a.file_type?.includes("pdf") ? <PdfIcon /> : <ImageIcon />}
+                                icon={a.file_type?.includes("pdf") ? <PdfIcon sx={{ fontSize: 16 }} /> : <ImageIcon sx={{ fontSize: 16 }} />}
                                 label={a.file_name}
                                 size="small"
                                 variant="outlined"
-                                className={styles.attachmentChip}
                                 onClick={() => {}}
-                                sx={{ cursor: "pointer" }}
+                                sx={{ cursor: "pointer", fontSize: "11px" }}
                               />
                             ))}
                           </Box>
                         )}
-                      </Paper>
+                      </Box>
                     </TimelineContent>
                   </TimelineItem>
                 ))}

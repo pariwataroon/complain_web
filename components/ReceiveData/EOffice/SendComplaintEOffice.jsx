@@ -4,7 +4,7 @@
  * ทำงานเหมือน Opm1111/SendComplaintOPm.jsx แต่ส่งข้อมูลผ่าน REST API (JSON)
  * ฟอร์มนี้ใช้สำหรับส่งผลการดำเนินการจากระบบ MOF กลับไปยัง EOffice
  */
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -18,20 +18,17 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
-  Chip,
 } from "@mui/material";
-import { Send as SendIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import { Send as SendIcon } from "@mui/icons-material";
 import ButtonSent from "@services/ButtonSent/ButtonSent";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import GetEnhancedComplaintsService from "@services/GetEnhancedComplaintsService/GetEnhancedComplaintsService";
+import SelectFieldPAAOPM from "@services/SelectFieldPAAOPM/SelectFieldPAAOPM";
 import { alertSuccess } from "@utils/Alerts";
 import {
   AddEOfficeOperating,
-  GetEOfficeCaseStatus,
-  GetEOfficeChannels,
-  GetEOfficeProvinces,
-  GetEOfficeDistricts,
-  GetEOfficeSubDistricts,
+  loginEOffice,
 } from "@pages/api/eoffice/eoffice";
 
 const DEFAULT_STATUSES = [
@@ -88,55 +85,13 @@ const SendComplaintEOffice = () => {
 
   const [statusOptions, setStatusOptions] = useState(DEFAULT_STATUSES);
   const [channelOptions, setChannelOptions] = useState(DEFAULT_CHANNELS);
-  const [provinceOptions, setProvinceOptions] = useState([]);
-  const [districtOptions, setDistrictOptions] = useState([]);
-  const [subDistrictOptions, setSubDistrictOptions] = useState([]);
+  const [selectedComplaintData, setSelectedComplaintData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
 
   useEffect(() => {
-    const loadOptions = async () => {
-      try {
-        // TODO: เมื่อ API พร้อม
-        // const statuses = await GetEOfficeCaseStatus();
-        // if (statuses?.length) setStatusOptions(statuses.map(s => ({ value: s.id, label: s.name })));
-        // const channels = await GetEOfficeChannels();
-        // if (channels?.length) setChannelOptions(channels.map(c => ({ value: c.id, label: c.name })));
-        // const provinces = await GetEOfficeProvinces();
-        // if (provinces?.length) setProvinceOptions(provinces.map(p => ({ value: p.id, label: p.name })));
-      } catch (error) {
-        console.error("Error loading EOffice options:", error);
-      }
-    };
-    loadOptions();
-  }, []);
-
-  useEffect(() => {
     if (prefillCaseId) setFormData((prev) => ({ ...prev, case_id: prefillCaseId }));
   }, [prefillCaseId]);
-
-  const handleProvinceChange = async (e) => {
-    const provinceId = e.target.value;
-    setFormData((prev) => ({ ...prev, province: provinceId, district: "", sub_district: "" }));
-    setDistrictOptions([]);
-    setSubDistrictOptions([]);
-    if (provinceId) {
-      // TODO: เมื่อ API พร้อม
-      // const districts = await GetEOfficeDistricts(provinceId);
-      // setDistrictOptions(districts.map(d => ({ value: d.id, label: d.name })));
-    }
-  };
-
-  const handleDistrictChange = async (e) => {
-    const districtId = e.target.value;
-    setFormData((prev) => ({ ...prev, district: districtId, sub_district: "" }));
-    setSubDistrictOptions([]);
-    if (districtId) {
-      // TODO: เมื่อ API พร้อม
-      // const subDistricts = await GetEOfficeSubDistricts(districtId);
-      // setSubDistrictOptions(subDistricts.map(s => ({ value: s.id, label: s.name })));
-    }
-  };
 
   const isFormValid = useMemo(() => {
     return (
@@ -152,6 +107,10 @@ const SendComplaintEOffice = () => {
     if (!isFormValid) return;
     setLoading(true);
     try {
+      // 1) Login ก่อน เหมือน OPM flow
+      await loginEOffice();
+
+      // 2) ส่งผลพิจารณา → SetOrgSummaryResult
       const response = await AddEOfficeOperating({
         case_id: formData.case_id,
         status: formData.status,
@@ -165,9 +124,13 @@ const SendComplaintEOffice = () => {
         date_created: formData.date_created || null,
         date_updated: formData.date_updated || null,
       });
-      if (response.res_code === "0000") {
+
+      // API จริงคืน { success: true/false } (ไม่ใช่ res_code)
+      if (response.success) {
         alertSuccess("ส่งผลสำเร็จ", "บันทึกข้อมูลการส่งผลพิจารณาเรียบร้อยแล้ว");
         router.push("/admin/edit/eoffice");
+      } else {
+        throw new Error(response.message || "API ส่งผลไม่สำเร็จ");
       }
     } catch (error) {
       console.error("Error submitting to EOffice:", error);
@@ -184,11 +147,74 @@ const SendComplaintEOffice = () => {
       province: "", district: "", sub_district: "",
       date_created: null, date_updated: null,
     });
+    setSelectedComplaintData(null);
   };
 
   const handleFieldChange = (field) => (e) => {
     setFormData((prev) => ({ ...prev, [field]: e.target.value }));
   };
+
+  const handleComplaintSelection = useCallback((complaint) => {
+    setSelectedComplaintData(complaint);
+
+    if (complaint) {
+      setFormData((prev) => {
+        const next = { ...prev };
+
+        // เลขที่รับเรื่อง
+        if (complaint.complaint_number && complaint.complaint_number !== '-') {
+          next.case_id = complaint.complaint_number;
+        }
+
+        // ชื่อ-นามสกุลผู้รายงาน
+        if (complaint.complainant_first_name || complaint.complainant_last_name) {
+          const prefix = complaint.complainant_prefix || '';
+          const firstName = complaint.complainant_first_name || '';
+          const lastName = complaint.complainant_last_name || '';
+          next.reporter_first_name = prefix ? `${prefix} ${firstName}`.trim() : firstName;
+          next.reporter_last_name = lastName;
+        } else if (complaint.complainant_name && complaint.complainant_name !== '-') {
+          const fullName = complaint.complainant_name.trim();
+          const nameParts = fullName.split(' ');
+          if (nameParts.length >= 2) {
+            next.reporter_first_name = nameParts.slice(0, -1).join(' ');
+            next.reporter_last_name = nameParts[nameParts.length - 1];
+          } else {
+            next.reporter_first_name = fullName;
+            next.reporter_last_name = '';
+          }
+        }
+
+        // เบอร์โทร
+        if (complaint.complainant_phone && complaint.complainant_phone !== '-') {
+          next.reporter_phone = complaint.complainant_phone;
+        }
+
+        // รายละเอียดเรื่องร้องเรียน
+        if (complaint.complainant_description && complaint.complainant_description !== '-') {
+          next.detail = complaint.complainant_description;
+        }
+
+        // วันที่สร้าง
+        if (complaint.created_at) {
+          next.date_created = complaint.created_at;
+        }
+
+        // ข้อมูลที่อยู่ — set พร้อมกันทีเดียวเพื่อไม่ให้ province onChange รีเซ็ต district/sub_district
+        if (complaint.province_name && complaint.province_name !== '-') {
+          next.province = complaint.province_id || '';
+        }
+        if (complaint.district_name && complaint.district_name !== '-') {
+          next.district = complaint.district_id || '';
+        }
+        if (complaint.subdistrict_name && complaint.subdistrict_name !== '-') {
+          next.sub_district = complaint.subdistrict_id || complaint.sub_district_id || '';
+        }
+
+        return next;
+      });
+    }
+  }, []);
 
   return (
     <div>
@@ -230,6 +256,26 @@ const SendComplaintEOffice = () => {
 
           {/* ── Section 1: ข้อมูลเรื่อง ── */}
           <Typography sx={sectionTitleSx}>📋 ข้อมูลเรื่อง</Typography>
+
+          {/* ปุ่มค้นหาเรื่องร้องเรียน — อยู่บนสุด เด่นชัด */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+            <GetEnhancedComplaintsService onComplaintSelect={handleComplaintSelection} />
+            <Typography variant="body2" sx={{ color: "#6b7280", fontSize: "13px" }}>
+              กดเพื่อค้นหาเรื่องราวร้องทุกข์จากฐานข้อมูล
+            </Typography>
+          </Box>
+
+          {selectedComplaintData && (
+            <Box sx={{ mb: 2, p: 1.5, bgcolor: '#e3f2fd', borderRadius: 1, border: '1px solid #2196f3' }}>
+              <Typography variant="body2" color="primary" fontWeight="bold" sx={{ fontSize: '13px' }}>
+                ✅ เลือก: {selectedComplaintData.complaint_number}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
+                {selectedComplaintData.subject} | {selectedComplaintData.complainant_name}
+              </Typography>
+            </Box>
+          )}
+
           <Grid container spacing={2.5}>
             <Grid item xs={12} sm={6} md={4}>
               <Typography variant="caption" sx={{ color: "#6b7280", mb: 0.5, display: "block", fontWeight: 600 }}>
@@ -306,25 +352,42 @@ const SendComplaintEOffice = () => {
           <Typography sx={sectionTitleSx}>📍 ที่อยู่</Typography>
           <Grid container spacing={2.5}>
             <Grid item xs={12} sm={4}>
-              <Typography variant="caption" sx={{ color: "#6b7280", mb: 0.5, display: "block", fontWeight: 600 }}>จังหวัด</Typography>
-              <TextField fullWidth select size="small" value={formData.province} onChange={handleProvinceChange} sx={textFieldSx}>
-                <MenuItem value=""><em>เลือกจังหวัด</em></MenuItem>
-                {provinceOptions.map((opt) => (<MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>))}
-              </TextField>
+              <SelectFieldPAAOPM
+                label="จังหวัด"
+                name="province"
+                placeholder="เลือกจังหวัด"
+                value={formData.province}
+                onChange={(val) => setFormData((prev) => ({ ...prev, province: val, district: "", sub_district: "" }))}
+                size="small"
+                required={false}
+              />
             </Grid>
             <Grid item xs={12} sm={4}>
-              <Typography variant="caption" sx={{ color: "#6b7280", mb: 0.5, display: "block", fontWeight: 600 }}>อำเภอ/เขต</Typography>
-              <TextField fullWidth select size="small" value={formData.district} onChange={handleDistrictChange} disabled={!formData.province || districtOptions.length === 0} sx={textFieldSx}>
-                <MenuItem value=""><em>เลือกอำเภอ</em></MenuItem>
-                {districtOptions.map((opt) => (<MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>))}
-              </TextField>
+              <SelectFieldPAAOPM
+                label="อำเภอ/เขต"
+                name="district"
+                placeholder="เลือกอำเภอ"
+                value={formData.district}
+                onChange={(val) => setFormData((prev) => ({ ...prev, district: val, sub_district: "" }))}
+                disabled={!formData.province}
+                selectedProvince={formData.province}
+                size="small"
+                required={false}
+              />
             </Grid>
             <Grid item xs={12} sm={4}>
-              <Typography variant="caption" sx={{ color: "#6b7280", mb: 0.5, display: "block", fontWeight: 600 }}>ตำบล/แขวง</Typography>
-              <TextField fullWidth select size="small" value={formData.sub_district} onChange={handleFieldChange("sub_district")} disabled={!formData.district || subDistrictOptions.length === 0} sx={textFieldSx}>
-                <MenuItem value=""><em>เลือกตำบล</em></MenuItem>
-                {subDistrictOptions.map((opt) => (<MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>))}
-              </TextField>
+              <SelectFieldPAAOPM
+                label="ตำบล/แขวง"
+                name="subdistrict"
+                placeholder="เลือกตำบล"
+                value={formData.sub_district}
+                onChange={(val) => setFormData((prev) => ({ ...prev, sub_district: val }))}
+                disabled={!formData.district}
+                selectedProvince={formData.province}
+                selectedDistrict={formData.district}
+                size="small"
+                required={false}
+              />
             </Grid>
           </Grid>
 

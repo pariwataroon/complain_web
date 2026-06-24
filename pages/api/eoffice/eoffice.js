@@ -3,112 +3,128 @@
  *  API Service — เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ Mof_EOffice
  * ============================================================
  *
- *  ไฟล์นี้คือช่องสำหรับเชื่อม API จริงจาก eofficer
- *  เมื่อ API จาก eofficer พร้อมใช้งาน ให้ใส่ URL และ logic ในแต่ละฟังก์ชัน
+ *  เชื่อมต่อ API จาก eofficer (Rongtook ↔ Saraban)
+ *  Base URL: https://172.29.34.216/api/v1/rongtook/SOAP
+ *  Auth: token_id แนบเป็น query parameter (แบบ OPM)
+ *  Response: JSON (ไม่ใช่ SOAP XML)
  *
  *  ─────────────────────────────────────────
- *  📌 วิธีใส่ API จริง:
+ *  📌 3 endpoints จาก Postman:
  *  ─────────────────────────────────────────
- *
- *  1) import axiosInstance จาก @pages/api/axiosInstance (สำหรับ API ภายใน)
- *     หรือสร้าง axios instance ใหม่ถ้า eofficer เป็น server ต่าง domain:
- *
- *       import axios from "axios";
- *       const eofficeInstance = axios.create({
- *         baseURL: "https://eoffice-api-url.go.th/api/v1",  // ← เปลี่ยนเป็น URL จริง
- *         headers: { "Content-Type": "application/json" },
- *       });
- *
- *  2) ในแต่ละฟังก์ชัน ให้แทนที่ TODO ด้วยการเรียก API จริง:
- *
- *       const response = await eofficeInstance.get("/complaints");
- *       return response?.data;
- *
- *  3) response จาก eofficer จะเป็น JSON โครงสร้างประมาณนี้:
- *       {
- *         "res_code": "0000",
- *         "res_message": "GET_DATA_SUCCESSFULLY",
- *         "res_data": { ... }
- *       }
- *
- *  ─────────────────────────────────────────
- *  📌 โครงสร้างข้อมูลที่ eofficer จะส่งมา (JSON):
- *  ─────────────────────────────────────────
- *
- *  **รายการร้องทุกข์ (GET /complaints)** → res_data เป็น array:
- *    [{
- *       case_id: string,          // เลขที่เรื่อง เช่น "EO-2569-00001"
- *       subject: string,          // ชื่อเรื่อง
- *       complainant_name: string,  // ชื่อผู้ร้อง
- *       complainant_phone: string,
- *       type_name: string,         // ประเภทเรื่อง
- *       status: string,            // "new" | "in_progress" | "completed"
- *       status_name: string,       // ชื่อสถานะภาษาไทย
- *       channel_name: string,
- *       date_received: string,     // "2569/01/15 09:30:00"
- *       date_updated: string,
- *       priority: string,          // "ปกติ" | "ด่วน" | "เร่งด่วน"
- *    }]
- *
- *  **รายละเอียดร้องทุกข์ (GET /complaints/{case_id})** → res_data เป็น object:
- *    {
- *       case_id, case_code, subject, description,
- *       status, status_name, type_name, channel_name,
- *       priority, severity, confidentiality,
- *       date_received, date_updated, reference_no,
- *       complainant: { title, first_name, last_name, citizen_id, gender, phone, email, address, province, district, sub_district, zipcode },
- *       respondent: { type, name, department, position, phone },
- *       organizations: [{ org_id, org_name, status, assigned_date }],
- *       attachments: [{ id, file_name, file_type, file_size, uploaded_date }],
- *       operatings: [{ id, step_no, status, detail, operating_by, operating_date, org_name, attachments }]
- *    }
+ *  1. POST /v1/rongtook/SOAP/General             → login → คืน token_id
+ *  2. GET  /v1/rongtook/SOAP/Officer             → ดึงรายการเอกสาร (list + detail)
+ *  3. POST /v1/rongtook/SOAP/SetOrgSummaryResult → อัปเดตสถานะเอกสาร
  *
  * ============================================================
  */
 
 import axios from "axios";
+import Cookies from "js-cookie";
 
 // ──────────────────────────────────────────────
-// 🔧 ตั้งค่า axios instance สำหรับ eofficer
-//    เปลี่ยน baseURL เป็น URL จริงของ eofficer API เมื่อพร้อม
+// 🔧 Axios instance สำหรับ eofficer API
+//    ใช้ proxy /api/eoffice-proxy/... (server-side) เพื่อ:
+//    - local dev + VPN: proxy ส่งต่อไป EOffice API ได้เลย
+//    - prod server (ในกระทรวง): proxy ส่งต่อไปได้ ผู้ใช้ไม่ต้อง VPN
+//    Browser → /api/eoffice-proxy/... → Next.js server → EOffice API
 // ──────────────────────────────────────────────
 const eofficeInstance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_EOFFICE_API_BASE_URL || "https://eoffice-api.example.com/api/v1",
+  baseURL: "/api/eoffice-proxy",
   headers: {
     "Content-Type": "application/json",
   },
+  timeout: 30000,
 });
 
-// ── Auth interceptor: เพิ่ม token ถ้า API ต้องการ ──
-eofficeInstance.interceptors.request.use((config) => {
-  // TODO: ถ้า eofficer API ต้องการ token ให้เอามาจาก cookie/env
-  // const token = Cookies.get("eoffice_token");
-  // if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+// ──────────────────────────────────────────────
+// 🔧 Config — แก้ตรงนี้ถ้า credentials ต่างจาก Postman
+// ──────────────────────────────────────────────
+const EOFFICE_USER = process.env.NEXT_PUBLIC_EOFFICE_USER || "INTEGRATION_USER";
+const EOFFICE_PASSWORD = process.env.NEXT_PUBLIC_EOFFICE_PASSWORD || "";
+
+// ──────────────────────────────────────────────
+// 🔧 Cookie names สำหรับเก็บ token
+// ──────────────────────────────────────────────
+const TOKEN_COOKIE = "eoffice_token";
 
 // ============================================================
-//  ฟังก์ชัน API — รายการร้องทุกข์ (List)
+//  1. LOGIN — POST /v1/rongtook/SOAP/General
 // ============================================================
 
 /**
- * ดึงรายการร้องทุกข์ทั้งหมดจาก EOffice
+ * Login และรับ token_id จาก eofficer API
+ * คล้าย OPM Encode() → GetToken()
+ *
+ * Response: { success: true, data: { token_id, officer_id, officer_name, org_id, ... } }
+ */
+const loginEOffice = async () => {
+  try {
+    const response = await eofficeInstance.post("/v1/rongtook/SOAP/General", {
+      user: EOFFICE_USER,
+      password: EOFFICE_PASSWORD,
+      authen_from: "S",
+      ip_address: "",
+    });
+
+    const json = response?.data || {};
+
+    if (json.success && json.data?.token_id) {
+      // เก็บ token_id ใน cookie (ใช้ 30 นาที่)
+      Cookies.set(TOKEN_COOKIE, json.data.token_id, { expires: 30, path: "/" });
+      return json.data;
+    }
+
+    throw new Error(json.message || "Login ล้มเหลว");
+  } catch (error) {
+    console.error("[EOffice API] loginEOffice error:", error);
+    throw error;
+  }
+};
+
+/**
+ * ดึง token_id จาก cookie หรือ login ใหม่
+ */
+const getEOfficeToken = async () => {
+  let token = Cookies.get(TOKEN_COOKIE);
+
+  if (!token) {
+    const tokenData = await loginEOffice();
+    token = tokenData.token_id;
+  }
+
+  return token;
+};
+
+// ============================================================
+//  2. OFFICER — GET /v1/rongtook/SOAP/Officer
+// ============================================================
+
+/**
+ * ดึงรายการเอกสารหนังสือเข้า (เหมือน GetTimelineHeader ของ OPM)
  *
  * @param {Object} params
- * @param {number} params.take     - จำนวนที่ต้องการ (default: 10000)
- * @param {string} params.status   - สถานะ: "A"(ทั้งหมด), "I"(ใหม่), "P"(กำลังดำเนินการ), "C"(ยุติเรื่อง)
- * @returns {Array} รายการร้องทุกข์
+ * @param {number} params.take    - จำนวนที่ต้องการ (default: 50)
+ * @param {number} params.skip    - ข้าม (default: 0)
+ * @param {number} params.folder_id - แฟ้มที่อนุญาต (default: 271,272)
+ * @param {number} params.year    - ปี พ.ศ. (default: ปัจจุบัน)
+ * @returns {Object} { success, data: [...], totalSize }
  */
-export const GetEOfficeComplaints = async ({ take = 10000, status = "A" } = {}) => {
+export const GetEOfficeComplaints = async ({ take = 50, skip = 0, folder_id = 271, year = 0 } = {}) => {
   try {
-    // TODO: 📌 แทนที่ด้วย API จริง — เปลี่ยน endpoint ตามที่ eofficer กำหนด
-    // const response = await eofficeInstance.get("/complaints", {
-    //   params: { take, status },
-    // });
-    // return response?.data?.res_data || [];
+    const token = await getEOfficeToken();
 
-    console.warn("[EOffice API] GetEOfficeComplaints — API ยังไม่เชื่อม คืนค่าว่าง");
-    return [];
+    const response = await eofficeInstance.get("/v1/rongtook/SOAP/Officer", {
+      params: {
+        token_id: token,
+        take,
+        skip,
+        folder_id,
+        year,
+      },
+    });
+
+    const json = response?.data || {};
+    return json;
   } catch (error) {
     console.error("[EOffice API] GetEOfficeComplaints error:", error);
     throw error;
@@ -116,138 +132,153 @@ export const GetEOfficeComplaints = async ({ take = 10000, status = "A" } = {}) 
 };
 
 /**
- * ค้นหาร้องทุกข์
+ * ดึงเอกสารรายตัวด้วย id
+ * คล้าย GetCase() ของ OPM
  *
- * @param {Object} params
- * @param {string} params.search - คำค้นหา
- * @param {string} params.status - สถานะ
- * @param {string} params.date_from - วันที่เริ่มต้น "2569/01/01"
- * @param {string} params.date_to - วันที่สิ้นสุด "2569/12/31"
+ * @param {string} docId - id ของเอกสาร
+ * @returns {Object} { success, data: { id, uuid, ... } }
  */
-export const SearchEOfficeComplaints = async ({ search = "", status = "A", date_from = "", date_to = "" } = {}) => {
+export const GetEOfficeCaseDetail = async (docId) => {
   try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get("/complaints/search", {
-    //   params: { search, status, date_from, date_to },
-    // });
-    // return response?.data?.res_data || [];
+    const token = await getEOfficeToken();
 
-    console.warn("[EOffice API] SearchEOfficeComplaints — API ยังไม่เชื่อม คืนค่าว่าง");
-    return [];
+    const response = await eofficeInstance.get("/v1/rongtook/SOAP/Officer", {
+      params: {
+        token_id: token,
+        id: docId,
+      },
+    });
+
+    const json = response?.data || {};
+    return json;
   } catch (error) {
-    console.error("[EOffice API] SearchEOfficeComplaints error:", error);
-    throw error;
-  }
-};
-
-// ============================================================
-//  ฟังก์ชัน API — รายละเอียดร้องทุกข์ (Detail)
-// ============================================================
-
-/**
- * ดึงข้อมูลรายละเอียดร้องทุกข์ตาม case_id
- *
- * @param {string} caseId - เลขที่เรื่อง เช่น "EO-2569-00001"
- * @returns {Object} ข้อมูลรายละเอียดร้องทุกข์
- */
-export const GetEOfficeCaseDetail = async (caseId) => {
-  try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get(`/complaints/${caseId}`);
-    // return response?.data?.res_data || null;
-
-    console.warn(`[EOffice API] GetEOfficeCaseDetail(${caseId}) — API ยังไม่เชื่อม คืนค่า null`);
-    return null;
-  } catch (error) {
-    console.error(`[EOffice API] GetEOfficeCaseDetail(${caseId}) error:`, error);
+    console.error(`[EOffice API] GetEOfficeCaseDetail(${docId}) error:`, error);
     throw error;
   }
 };
 
 /**
- * ดึงประวัติการดำเนินการ (Operating Steps) ของร้องทุกข์
- *
- * @param {string} caseId
- * @returns {Array} รายการ operating steps
+ * ดึงประวัติการดำเนินการ — เรียกแยก endpoint ถ้า API มีแยก
+ * ตอนนี้ใช้ endpoint เดียวกับ Officer แต่กรองเฉพาะ id
  */
-export const GetEOfficeOperatings = async (caseId) => {
+export const GetEOfficeOperatings = async (docId) => {
   try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get(`/complaints/${caseId}/operatings`);
-    // return response?.data?.res_data || [];
+    const token = await getEOfficeToken();
 
-    console.warn(`[EOffice API] GetEOfficeOperatings(${caseId}) — API ยังไม่เชื่อม คืนค่าว่าง`);
-    return [];
+    // TODO: ถ้า eofficer มี endpoint แยกสำหรับ operatings ให้เปลี่ยนที่นี่
+    // ตอนนี้เรียกเอกสารรายตัวแล้วแยก operating จาก response
+    const response = await eofficeInstance.get("/v1/rongtook/SOAP/Officer", {
+      params: {
+        token_id: token,
+        id: docId,
+      },
+    });
+
+    const json = response?.data || {};
+    // TODO: แยก operatings จาก response ตามโครงสร้างจริงของ eofficer
+    return json.data?.operatings || json.data?.steps || [];
   } catch (error) {
-    console.error(`[EOffice API] GetEOfficeOperatings(${caseId}) error:`, error);
+    console.error(`[EOffice API] GetEOfficeOperatings(${docId}) error:`, error);
     throw error;
   }
 };
 
 /**
- * ดึงไฟล์แนบของร้องทุกข์
- *
- * @param {string} caseId
- * @returns {Array} รายการไฟล์แนบ
+ * ดึงไฟล์แนบ
+ * TODO: ถ้า eofficer มี endpoint แยกสำหรับ attachments
  */
-export const GetEOfficeAttachments = async (caseId) => {
+export const GetEOfficeAttachments = async (docId) => {
   try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get(`/complaints/${caseId}/attachments`);
-    // return response?.data?.res_data || [];
-
-    console.warn(`[EOffice API] GetEOfficeAttachments(${caseId}) — API ยังไม่เชื่อม คืนค่าว่าง`);
-    return [];
+    // TODO: เปลี่ยนเป็น API จริงเมื่อ eofficer มี endpoint สำหรับ attachments
+    const token = await getEOfficeToken();
+    const response = await eofficeInstance.get("/v1/rongtook/SOAP/Officer", {
+      params: { token_id: token, id: docId },
+    });
+    const json = response?.data || {};
+    return json.data?.attachments || [];
   } catch (error) {
-    console.error(`[EOffice API] GetEOfficeAttachments(${caseId}) error:`, error);
+    console.error(`[EOffice API] GetEOfficeAttachments(${docId}) error:`, error);
     throw error;
   }
 };
 
 // ============================================================
-//  ฟังก์ชัน API — ส่งผลพิจารณา (Send)
+//  3. SET STATUS — POST /v1/rongtook/SOAP/SetOrgSummaryResult
 // ============================================================
 
 /**
- * ส่งผลการพิจารณากลับไปยัง EOffice
+ * อัปเดตสถานะเอกสาร
+ * คล้าย SetOrgSummaryResult / AddOperating ของ OPM
  *
- * @param {Object} submitData - ข้อมูลที่จะส่ง
- * @param {string} submitData.case_id - เลขที่เรื่อง
- * @param {string} submitData.status - สถานะ
- * @param {string} submitData.detail - รายละเอียดผลการพิจารณา
- * @param {string} submitData.result - ผลลัพธ์
- * @param {string} submitData.reporter_name - ชื่อผู้รายงาน
- * @param {string} submitData.reporter_phone - เบอร์ผู้รายงาน
- * @returns {Object} response จาก API
+ * @param {Object} submitData
+ * @param {string} submitData.id        - id ของเอกสาร
+ * @param {string} submitData.status_id - 0=กำลังดำเนินการ, 1=ยุติเรื่อง, 2=รับทราบไว้ชั้นต้น, 3=ไม่อยู่ในอำนาจ
+ * @param {string} submitData.result    - รายละเอียดผลการพิจารณา
+ * @returns {Object} { success: true }
+ */
+export const UpdateEOfficeStatus = async ({ id, status_id = "0", result = "" }) => {
+  try {
+    const token = await getEOfficeToken();
+
+    const response = await eofficeInstance.post("/v1/rongtook/SOAP/SetOrgSummaryResult", {
+      token_id: token,
+      id,
+      status_id,
+      result,
+    });
+
+    return response?.data || {};
+  } catch (error) {
+    console.error("[EOffice API] UpdateEOfficeStatus error:", error);
+    throw error;
+  }
+};
+
+/**
+ * ส่งผลพิจารณา (wrapper สำหรับ Send form)
+ * เรียก UpdateEOfficeStatus แต่อรับ parameter แบบ form
  */
 export const AddEOfficeOperating = async (submitData) => {
   try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.post("/complaints/operating", submitData);
-    // return response?.data;
-
-    console.warn("[EOffice API] AddEOfficeOperating — API ยังไม่เชื่อม");
-    return { res_code: "0000", res_message: "SUCCESS (mock)", res_data: null };
+    return await UpdateEOfficeStatus({
+      id: submitData.case_id,
+      status_id: submitData.status === "ยุติเรื่อง" ? "1" : "0",
+      result: submitData.detail,
+    });
   } catch (error) {
     console.error("[EOffice API] AddEOfficeOperating error:", error);
     throw error;
   }
 };
 
+// ============================================================
+//  AUTH HELPERS
+// ============================================================
+
 /**
- * สร้างเรื่องร้องทุกข์ใหม่ใน EOffice (ส่งออกจากระบบ MOF → EOffice)
- *
- * @param {Object} submitData - ข้อมูลร้องทุกข์
- * @returns {Object} response จาก API
+ * Mark เรื่องว่าอ่านแล้ว (ถ้า API รองรับ)
+ * TODO: ถ้า eofficer มี endpoint สำหรับ mark as read
+ */
+export const MarkEOfficeCaseAsRead = async (docId) => {
+  try {
+    // TODO: เปลี่ยนเป็น API จริงเมื่อพร้อม
+    console.log(`[EOffice API] MarkEOfficeCaseAsRead(${docId}) — not implemented yet`);
+    return { success: true };
+  } catch (error) {
+    console.error(`[EOffice API] MarkEOfficeCaseAsRead(${docId}) error:`, error);
+    throw error;
+  }
+};
+
+/**
+ * สร้างเรื่องใหม่ใน EOffice (ถ้า API รองรับ)
+ * TODO: ถ้า eofficer มี endpoint สำหรับ AddCase
  */
 export const AddEOfficeCase = async (submitData) => {
   try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.post("/complaints", submitData);
-    // return response?.data;
-
-    console.warn("[EOffice API] AddEOfficeCase — API ยังไม่เชื่อม");
-    return { res_code: "0000", res_message: "SUCCESS (mock)", res_data: null };
+    // TODO: เปลี่ยนเป็น API จริงเมื่อพร้อม
+    console.log("[EOffice API] AddEOfficeCase — not implemented yet");
+    return { success: true };
   } catch (error) {
     console.error("[EOffice API] AddEOfficeCase error:", error);
     throw error;
@@ -255,19 +286,13 @@ export const AddEOfficeCase = async (submitData) => {
 };
 
 // ============================================================
-//  ฟังก์ชัน API — Master Data (Dropdowns)
+//  MASTER DATA (จำเป็นไว้ใช้ dropdowns)
+//  TODO: เมี endpoint แยกจาก eofficer หรือใช้ API หลักของ MOF
 // ============================================================
 
-/**
- * ดึงข้อมูลจังหวัด
- */
 export const GetEOfficeProvinces = async () => {
   try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get("/master/provinces");
-    // return response?.data?.res_data || [];
-
-    console.warn("[EOffice API] GetEOfficeProvinces — API ยังไม่เชื่อม คืนค่าว่าง");
+    // TODO: เปลี่ยนเป็น API จริงของ eofficer ถ้ามี หรือใช้ geography API ของ MOF
     return [];
   } catch (error) {
     console.error("[EOffice API] GetEOfficeProvinces error:", error);
@@ -275,107 +300,30 @@ export const GetEOfficeProvinces = async () => {
   }
 };
 
-/**
- * ดึงข้อมูลอำเภอตามจังหวัด
- * @param {string} provinceId
- */
-export const GetEOfficeDistricts = async (provinceId) => {
-  try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get(`/master/districts/${provinceId}`);
-    // return response?.data?.res_data || [];
-
-    console.warn(`[EOffice API] GetEOfficeDistricts(${provinceId}) — API ยังไม่เชื่อม คืนค่าว่าง`);
-    return [];
-  } catch (error) {
-    console.error(`[EOffice API] GetEOfficeDistricts(${provinceId}) error:`, error);
-    throw error;
-  }
+export const GetEOfficeDistricts = async () => {
+  try { return []; } catch (error) { throw error; }
 };
 
-/**
- * ดึงข้อมูลตำบลตามอำเภอ
- * @param {string} districtId
- */
-export const GetEOfficeSubDistricts = async (districtId) => {
-  try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get(`/master/sub-districts/${districtId}`);
-    // return response?.data?.res_data || [];
-
-    console.warn(`[EOffice API] GetEOfficeSubDistricts(${districtId}) — API ยังไม่เชื่อม คืนค่าว่าง`);
-    return [];
-  } catch (error) {
-    console.error(`[EOffice API] GetEOfficeSubDistricts(${districtId}) error:`, error);
-    throw error;
-  }
+export const GetEOfficeSubDistricts = async () => {
+  try { return []; } catch (error) { throw error; }
 };
 
-/**
- * ดึงตัวเลือกช่องทาง (Channel options)
- */
 export const GetEOfficeChannels = async () => {
-  try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get("/master/channels");
-    // return response?.data?.res_data || [];
-
-    console.warn("[EOffice API] GetEOfficeChannels — API ยังไม่เชื่อม คืนค่าว่าง");
-    return [];
-  } catch (error) {
-    console.error("[EOffice API] GetEOfficeChannels error:", error);
-    throw error;
-  }
+  try { return []; } catch (error) { throw error; }
 };
 
-/**
- * ดึงตัวเลือกสถานะ (Status options)
- */
 export const GetEOfficeCaseStatus = async () => {
-  try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get("/master/statuses");
-    // return response?.data?.res_data || [];
-
-    console.warn("[EOffice API] GetEOfficeCaseStatus — API ยังไม่เชื่อม คืนค่าว่าง");
-    return [];
-  } catch (error) {
-    console.error("[EOffice API] GetEOfficeCaseStatus error:", error);
-    throw error;
-  }
+  try { return []; } catch (error) { throw error; }
 };
 
-/**
- * ดึงตัวเลือกประเภทเรื่อง (Case Type options)
- */
 export const GetEOfficeCaseTypes = async () => {
-  try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.get("/master/case-types");
-    // return response?.data?.res_data || [];
-
-    console.warn("[EOffice API] GetEOfficeCaseTypes — API ยังไม่เชื่อม คืนค่าว่าง");
-    return [];
-  } catch (error) {
-    console.error("[EOffice API] GetEOfficeCaseTypes error:", error);
-    throw error;
-  }
+  try { return []; } catch (error) { throw error; }
 };
 
-/**
- * Mark เรื่องว่าอ่านแล้ว
- * @param {string} caseId
- */
-export const MarkEOfficeCaseAsRead = async (caseId) => {
-  try {
-    // TODO: 📌 แทนที่ด้วย API จริง
-    // const response = await eofficeInstance.put(`/complaints/${caseId}/read`);
-    // return response?.data;
-
-    console.warn(`[EOffice API] MarkEOfficeCaseAsRead(${caseId}) — API ยังไม่เชื่อม`);
-    return { res_code: "0000", res_message: "SUCCESS (mock)" };
-  } catch (error) {
-    console.error(`[EOffice API] MarkEOfficeCaseAsRead(${caseId}) error:`, error);
-    throw error;
-  }
+// ============================================================
+//  EXPORT ALL
+// ============================================================
+export {
+  loginEOffice,
+  getEOfficeToken,
 };

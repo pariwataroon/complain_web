@@ -22,28 +22,37 @@ import {
   Divider,
   Chip,
   Stack,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import SearchOffIcon from "@mui/icons-material/SearchOff";
 import SendIcon from "@mui/icons-material/Send";
 import ButtonSent from "@services/ButtonSent/ButtonSent";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import { formatThaiOfficialDate } from "@utils/Formats";
 import styles from "./TableListEOffice.module.scss";
 
 // ── คอลัมน์ของตาราง ──
 const columns = [
-  { name: "case_code", label: "เลขที่รับเรื่อง", width: 140, priority: 2 },
-  { name: "complainant_name", label: "ชื่อผู้ร้อง", width: 120, priority: 2 },
-  { name: "type_name", label: "ประเภทเรื่อง", width: 160, priority: 3 },
-  { name: "subject", label: "ชื่อเรื่อง", width: 200, priority: 4 },
+  { name: "book_no", label: "เลขที่หนังสือ", width: 120, priority: 2 },
+  { name: "book_date", label: "วันที่หนังสือ", width: 140, priority: 2 },
+  { name: "complainant_name", label: "ชื่อผู้ร้อง", width: 160, priority: 2 },
+  { name: "type_name", label: "ประเภทเรื่อง", width: 130, priority: 3 },
+  { name: "subject", label: "ชื่อเรื่อง", width: undefined, priority: 4 },
   { name: "priority", label: "ความเร่งด่วน", width: 100, priority: 4 },
-  { name: "date_received", label: "วันที่รับเรื่อง", width: 140, priority: 3 },
-  { name: "status_name", label: "สถานะ", width: 140, priority: 2 },
+  { name: "date_received", label: "วันที่รับเรื่อง", width: 130, priority: 3 },
+  { name: "status_name", label: "สถานะ", width: 120, priority: 2 },
 ];
 
 const TableListEOffice = ({
   data = [],
   title = "",
+  statusType = "P",
+  statusTypeOptions = [],
+  onStatusTypeChange = () => {},
   onRowClick = () => {},
   onRefresh = () => {},
   onSendClick = () => {},
@@ -69,6 +78,27 @@ const TableListEOffice = ({
     return columns;
   }, [isMobile, isTablet]);
 
+  // ── helper: แปลงวันที่จาก API (พ.ศ. string) → JS Date ──
+  // รับ: "2569/01/15 09:30:00" หรือ "2569-01-15" หรือ Date object
+  const parseApiDate = (dateStr) => {
+    if (!dateStr || dateStr === "-") return null;
+    if (dateStr instanceof Date) return isNaN(dateStr) ? null : dateStr;
+
+    const s = String(dateStr);
+    // พ.ศ. format: 2569/01/15 หรือ 2569-01-15
+    const match = s.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+    if (!match) {
+      // fallback: ลอง parse ตรงๆ
+      const d = new Date(s);
+      return isNaN(d) ? null : d;
+    }
+    const year = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const day = parseInt(match[3], 10);
+    const adjusted = year > 2400 ? year - 543 : year; // พ.ศ. → ค.ศ.
+    return new Date(adjusted, month, day);
+  };
+
   // ── filter ข้อมูล client-side ──
   const filteredData = useMemo(() => {
     let result = [...data];
@@ -78,6 +108,7 @@ const TableListEOffice = ({
       result = result.filter(
         (item) =>
           (item.case_code || "").toLowerCase().includes(lower) ||
+          (item.book_no || "").toLowerCase().includes(lower) ||
           (item.complainant_name || "").toLowerCase().includes(lower) ||
           (item.subject || "").toLowerCase().includes(lower) ||
           (item.type_name || "").toLowerCase().includes(lower)
@@ -85,17 +116,25 @@ const TableListEOffice = ({
     }
 
     if (dateFrom) {
-      result = result.filter((item) => {
-        if (!item.date_received) return false;
-        return item.date_received >= dateFrom.format("YYYY/MM/DD");
-      });
+      const fromDate = new Date(dateFrom);
+      const fromTime = isNaN(fromDate) ? null : fromDate.getTime();
+      if (fromTime !== null) {
+        result = result.filter((item) => {
+          const d = parseApiDate(item.date_received);
+          return d && !isNaN(d) && d.getTime() >= fromTime;
+        });
+      }
     }
 
     if (dateTo) {
-      result = result.filter((item) => {
-        if (!item.date_received) return false;
-        return item.date_received <= dateTo.format("YYYY/MM/DD") + " 23:59:59";
-      });
+      const toDate = new Date(dateTo);
+      const toTime = isNaN(toDate) ? null : toDate.getTime();
+      if (toTime !== null) {
+        result = result.filter((item) => {
+          const d = parseApiDate(item.date_received);
+          return d && !isNaN(d) && d.getTime() <= toTime;
+        });
+      }
     }
 
     return result;
@@ -153,6 +192,26 @@ const TableListEOffice = ({
       <Box className={styles.searchSection}>
         <div className={styles.filtersContainer}>
           <div className={styles.filtersGrid}>
+            {/* สถานะ filter */}
+            {statusTypeOptions.length > 0 && (
+              <div className={styles.filterField}>
+                <Typography variant="caption" sx={{ color: "#666", mb: 0.5, display: "block" }}>
+                  สถานะ
+                </Typography>
+                <FormControl size="small" fullWidth>
+                  <Select
+                    value={statusType}
+                    onChange={(e) => { onStatusTypeChange(e.target.value); setPage(0); }}
+                    sx={{ height: 40, fontSize: "14px", fontFamily: "Sarabun, sans-serif" }}
+                  >
+                    {statusTypeOptions.map((opt) => (
+                      <MenuItem key={opt.value} value={opt.value}>{opt.label}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </div>
+            )}
+
             {/* ค้นหา */}
             <div className={styles.filterField}>
               <Typography variant="caption" sx={{ color: "#666", mb: 0.5, display: "block" }}>
@@ -256,12 +315,18 @@ const TableListEOffice = ({
             {/* Desktop/Tablet Table */}
             {!isMobile && (
               <div className={styles.tableContainer}>
-                <Table>
+                <Table sx={{ tableLayout: "fixed", width: "100%" }}>
                   <TableHead>
                     <TableRow>
                       <TableCell sx={{ width: 50, textAlign: "center" }}>ลำดับ</TableCell>
                       {visibleColumns.map((col) => (
-                        <TableCell key={col.name} sx={{ minWidth: col.width }}>
+                        <TableCell
+                          key={col.name}
+                          sx={{
+                            ...(col.width ? { width: col.width } : {}),
+                            ...(col.name === "subject" ? { width: "auto" } : {}),
+                          }}
+                        >
                           {col.label}
                         </TableCell>
                       ))}
@@ -286,7 +351,14 @@ const TableListEOffice = ({
                             {page * rowsPerPage + index + 1}
                           </TableCell>
                           {visibleColumns.map((col) => (
-                            <TableCell key={col.name}>
+                            <TableCell
+                              key={col.name}
+                              sx={{
+                                ...(col.name === "subject" || col.name === "complainant_name"
+                                  ? { whiteSpace: "normal", wordBreak: "break-word" }
+                                  : {}),
+                              }}
+                            >
                               {col.name === "status_name" ? (
                                 <Chip
                                   label={item[col.name] || "-"}
@@ -308,12 +380,41 @@ const TableListEOffice = ({
                                 >
                                   {item[col.name] || "-"}
                                 </span>
+                              ) : col.name === "book_date" || col.name === "date_received" ? (
+                                <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
+                                  {formatThaiOfficialDate(item[col.name]) || "-"}
+                                </Typography>
+                              ) : col.name === "subject" ? (
+                                <Box
+                                  component="div"
+                                  sx={{
+                                    whiteSpace: "normal",
+                                    fontSize: "14px",
+                                    fontFamily: "Sarabun, sans-serif",
+                                    lineHeight: 1.4,
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {item[col.name] || "-"}
+                                </Box>
+                              ) : col.name === "complainant_name" ? (
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    whiteSpace: "normal",
+                                    wordBreak: "break-word",
+                                    lineHeight: 1.4,
+                                  }}
+                                >
+                                  {item[col.name] || "-"}
+                                </Typography>
                               ) : (
                                 <Typography
                                   variant="body2"
                                   sx={{
-                                    textOverflow: "ellipsis",
                                     overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
                                     maxWidth: col.width,
                                   }}
                                 >
@@ -377,7 +478,7 @@ const TableListEOffice = ({
                         </Typography>
                         <Divider sx={{ my: 1 }} />
                         <Typography variant="caption" sx={{ color: "#999" }}>
-                          วันที่รับเรื่อง: {item.date_received || "-"}
+                          วันที่รับเรื่อง: {formatThaiOfficialDate(item.date_received) || "-"}
                         </Typography>
                       </CardContent>
                     </Card>

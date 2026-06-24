@@ -247,6 +247,23 @@ const GetComplaintsWithSearch = async ({
   }
 };
 
+// ค้นหา complaints โดย reference_number5 (=EOffice case_id / OPM case_code) เพื่อ dedup
+const GetComplaintByReferenceNumber5 = async ({
+  reference_number5,
+  skip = 0,
+  limit = 10,
+}) => {
+  try {
+    const response = await axiosInstance.get("/complaints", {
+      params: { skip, limit, reference_number5 },
+    });
+    return response?.data;
+  } catch (error) {
+    console.error("Error fetching complaint by reference_number5:", error);
+    throw error;
+  }
+};
+
 const GetComplaintsSubjectOPM = async ({ skip = 0, limit = 10, subject }) => {
   try {
     const response = await axiosInstance.get(
@@ -460,6 +477,7 @@ export {
   UpdateAssignmentCompleteByAdmin,
   GetEnhancedComplaints,
   GetComplaintsWithSearch,
+  GetComplaintByReferenceNumber5,
   GetComplaintsSubjectOPM,
   GetComplaintsByPageType,
   GetComplaintsByPageTypeCard,
