@@ -247,14 +247,15 @@ async def read_complaints(
     reference_number2: Optional[str] = None,  # เพิ่ม reference_number2 filter
     reference_number3: Optional[str] = None,  # เพิ่ม reference_number3 filter
     reference_number4: Optional[str] = None,  # เพิ่ม reference_number4 filter
+    reference_number5: Optional[str] = None,  # เพิ่ม reference_number5 filter (= additional_reference_number1)
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("setting_access"))
 ):
     """Get a list of complaints with advanced filtering and search"""
     result = get_complaints(
-        db, 
-        skip=skip, 
-        limit=limit, 
+        db,
+        skip=skip,
+        limit=limit,
         status=status,
         complaint_type=complaint_type,
         complaint_subtype=complaint_subtype,   # ส่งไป controller
@@ -268,7 +269,8 @@ async def read_complaints(
         reference_number=reference_number,   # ส่ง reference_number filter ไป controller
         reference_number2=reference_number2, # ส่ง reference_number2 filter ไป controller
         reference_number3=reference_number3, # ส่ง reference_number3 filter ไป controller
-        reference_number4=reference_number4  # ส่ง reference_number4 filter ไป controller
+        reference_number4=reference_number4,  # ส่ง reference_number4 filter ไป controller
+        reference_number5=reference_number5   # ส่ง reference_number5 filter ไป controller
     )
     return format_response("0000", result)
 

@@ -1741,6 +1741,7 @@ def get_complaints_enhanced(
                 "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
                 "reference_number4": complaint.reference_number4,
                 "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
+                "reference_number5": complaint.additional_reference_number1 or "",  # EOffice case_id / OPM case_code
                 # เพิ่ม document_number และ document_date
                 "document_number": complaint.document_number,
                 "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
@@ -1823,6 +1824,7 @@ def get_complaints(
     reference_number2: Optional[str] = None,  # เพิ่ม reference_number2 filter
     reference_number3: Optional[str] = None,  # เพิ่ม reference_number3 filter
     reference_number4: Optional[str] = None,  # เพิ่ม reference_number4 filter
+    reference_number5: Optional[str] = None,  # เพิ่ม reference_number5 filter (= additional_reference_number1, สำหรับ EOffice dedup)
 ):
     query = db.query(Complaint)
     
@@ -1906,6 +1908,10 @@ def get_complaints(
             )
         else:
             query = query.filter(Complaint.reference_number4.ilike(f"%{reference_number4}%"))
+
+    # Filter by reference_number5 (= additional_reference_number1, สำหรับ EOffice dedup)
+    if reference_number5:
+        query = query.filter(Complaint.additional_reference_number1 == reference_number5)
 
     # ปรับ search ให้มีลำดับความสำคัญที่ถูกต้อง
     if search:
