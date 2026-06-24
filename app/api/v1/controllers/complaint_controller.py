@@ -2145,7 +2145,11 @@ def get_complaints(
 
             # ✅ เพิ่ม is_master key เพื่อบอกสถานะ parent/child (คำนวณง่ายๆ)
             list_item_dict["is_master"] = complaint.parent_complaint_id is None
-            
+
+            # ✅ เพิ่ม reference_number5 สำหรับ EOffice/OPM dedup (checkDuplicate ใช้ฟิลด์นี้)
+            list_item_dict["reference_number5"] = complaint.additional_reference_number1 or ""
+            list_item_dict["additional_reference_number1"] = complaint.additional_reference_number1
+
             result.append(list_item_dict)
         except Exception as e:
             if DEBUG_MODE:
