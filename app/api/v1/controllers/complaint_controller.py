@@ -2133,7 +2133,7 @@ def get_complaints(
                     complaint_type_name = ctype.name
                     complaint_type_id = str(ctype.id)
             
-            list_item_dict = list_item.__dict__
+            list_item_dict = list_item.model_dump() if hasattr(list_item, 'model_dump') else list_item.__dict__
             list_item_dict["complaint_subtype"] = complaint_subtype_name
             list_item_dict["complaint_subtype_id"] = complaint_subtype_id
             list_item_dict["complaint_type_id"] = complaint_type_id
