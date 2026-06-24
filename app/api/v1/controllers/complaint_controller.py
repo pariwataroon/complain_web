@@ -613,7 +613,9 @@ def prepare_complaint_model_data(
         "urgency_level": UrgencyLevel.LOW,
         "severity_level": SeverityLevel.LOW,
         "complaint_filing_type": ComplaintFilingType.NEW,
-        "progress_percentage": 0
+        "progress_percentage": 0,
+        # ✅ อ่าน reference_number5 จาก step4.general (สำหรับ EOffice/OPM dedup)
+        "additional_reference_number1": complaint_data.get("step4", {}).get("general", {}).get("reference_number5", ""),
     }
 
 def extract_location_data(complaint_data: Dict, db: Session = None) -> Dict:
@@ -3445,7 +3447,9 @@ def prepare_complaint_model_data(
         "urgency_level": UrgencyLevel.LOW,
         "severity_level": SeverityLevel.LOW,
         "complaint_filing_type": ComplaintFilingType.NEW,
-        "progress_percentage": 0
+        "progress_percentage": 0,
+        # ✅ อ่าน reference_number5 จาก step4.general (สำหรับ EOffice/OPM dedup)
+        "additional_reference_number1": complaint_data.get("step4", {}).get("general", {}).get("reference_number5", ""),
     }
 
 def add_related_complaint(db: Session, complaint_id: UUID, related_complaint_id: UUID) -> bool:
