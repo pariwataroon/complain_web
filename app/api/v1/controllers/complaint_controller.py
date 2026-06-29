@@ -233,12 +233,26 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         
         # สร้าง Complaint object
         new_complaint = Complaint(**model_data)
-        
+
         # บันทึกลงฐานข้อมูล
         db.add(new_complaint)
         db.commit()
         db.refresh(new_complaint)
-        
+
+        # ✅ [EOffice/OPM แยก] — อัปเดต document_number ถ้า payload มีส่งมา
+        # เฉพาะเคสที่มี document_number จะเข้า here → flow อื่นไม่กระทบ
+        doc_num = (
+            complaint_data.get("document_number", "")
+            or complaint_data.get("step3", {}).get("general", {}).get("document_number", "")
+        )
+        if doc_num and doc_num.strip():
+            try:
+                new_complaint.document_number = doc_num.strip()
+                db.commit()
+                logger.info(f"[Auto-fill] document_number set for {new_complaint.id}: {doc_num}")
+            except Exception as dn_err:
+                logger.warning(f"[Auto-fill] Failed to set document_number: {str(dn_err)}")
+
         # สร้างประวัติสถานะ
         create_status_history(
             db, new_complaint.id, ComplaintStatus.SUBMITTED, 
@@ -4228,6 +4242,9 @@ def create_grouped_complaint_item(db: Session, complaint: Complaint, all_subtype
             "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
             "reference_number4": complaint.reference_number4,
             "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
+            # ✅ เลขหนังสือ นร
+            "document_number": complaint.document_number or "",
+            "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
         }
         
     except Exception as e:
