@@ -306,13 +306,13 @@ const TopLeftService = () => {
       {/* Control Panel */}
       <Box
         sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 2,
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 1.5,
+          mb: 1,
         }}
       >
-        <Box sx={{ minWidth: 140 }}>
+        <Box sx={{ gridColumn: "1 / -1" }}>
           <SelectField
             label="จังหวัด"
             options={provinceOptions}
@@ -322,7 +322,7 @@ const TopLeftService = () => {
           />
         </Box>
 
-        <Box sx={{ minWidth: 120 }}>
+        <Box>
           <SelectField
             label="ปีเริ่มต้น"
             options={yearOptions}
@@ -332,7 +332,7 @@ const TopLeftService = () => {
           />
         </Box>
 
-        <Box sx={{ minWidth: 120 }}>
+        <Box>
           <SelectField
             label="ปีสิ้นสุด"
             options={yearOptions.filter(

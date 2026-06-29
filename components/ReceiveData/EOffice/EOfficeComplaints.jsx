@@ -1,5 +1,5 @@
 /**
- * EOfficeComplaints — รายการร้องทุกข์จากเว็บไซต์ Mof_EOffice
+ * EOfficeComplaints — รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์
  *
  * ทำงานเหมือน Opm1111.jsx — login แล้ว fetch list จาก eofficer API (JSON)
  * Flow: login → getTimelineHeader → แสดงในตาราง
@@ -76,7 +76,7 @@ const EOfficeComplaints = () => {
         date_received: item.content_date || item.book_date || item.created_date || "-",
         date_updated: item.updated_date || "-",
 
-        channel_name: "EOffice",
+        channel_name: "รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์",
         priority: item.priority === 1 ? "ปกติ" : item.priority === 4 ? "ด่วน" : "ปกติ",
       }));
 
@@ -123,13 +123,13 @@ const EOfficeComplaints = () => {
       <BreadcrumbsService
         items={[
           { label: "จัดการข้อมูลในระบบ", url: "/admin/dashboard" },
-          { label: "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ Mof_EOffice" },
+          { label: "รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์" },
         ]}
       />
 
       <TableListEOffice
         data={complaints}
-        title="รายการร้องทุกข์จาก Mof_EOffice"
+        title="รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์"
         statusType={statusType}
         statusTypeOptions={statusTypeOptions}
         onStatusTypeChange={setStatusType}

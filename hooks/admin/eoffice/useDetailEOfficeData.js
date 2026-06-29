@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { GetAllComplaintChannels } from "@pages/api/allselect/allselect";
-import { CreateComplaint, UpdateComplaint, GetComplaintByReferenceNumber5 } from "@pages/api/complaint/complaint";
+import { CreateComplaint, GetComplaintByReferenceNumber5, UpdateAssignmentCompleteByAdmin } from "@pages/api/complaint/complaint";
 
 const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
   const [eofficeChannelId, setEofficeChannelId] = useState(null);
@@ -36,7 +36,8 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
         (item) =>
           item.name?.includes("EOffice") ||
           item.name?.includes("eoffice") ||
-          item.name?.includes("Mof_EOffice")
+          item.name?.includes("Mof_EOffice") ||
+          item.name?.includes("สารบรรณอิเล็กทรอนิกส์")
       );
       if (eofficeChannel) {
         console.log("[EOffice] ✅ พบ EOffice channel:", eofficeChannel.id);
@@ -127,7 +128,7 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       };
     }
 
-    // step3: รายละเอียดเรื่อง — subject ใช้ชื่อเรื่องจริง, case_id เก็บใน reference_number5
+    // step3: รายละเอียดเรื่อง
     const step3 = {
       general: {
         complaintType: caseDetail.type_name || "",
@@ -146,11 +147,11 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       },
     };
 
-    // step4: metadata + reference tracking
+    // step4: เก็บเลขนร (book_no) ใน reference_number5 เหมือน OPM1111 เก็บ case_code
     const step4 = {
       general: {
         accepted: true,
-        reference_number5: String(caseDetail.case_id || ""), // เก็บ case_id ของ EOffice สำหรับ dedup
+        reference_number5: caseDetail.book_no || "", // เลขหนังสือ นร — ใช้ dedup เหมือน OPM1111
         _eoffice_meta: {
           case_id: caseDetail.case_id,
           status: caseDetail.status,
@@ -169,6 +170,8 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
 
     console.log("[EOffice] 📦 Payload preview:", {
       subject: payload.step3.general.subject,
+      reference_number5: payload.step4.general.reference_number5,
+      book_no: caseDetail.book_no,
       complainantName: complainantName,
       respondentName,
       incidentDate,
@@ -179,44 +182,43 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
   };
 
   // ── ตรวจสอบว่าเรื่องนี้มีในระบบแล้วหรือยัง ──
-  // 1) เช็ค localStorage ก่อน (เร็ว, ไม่ต้องรอ backend)
-  // 2) ถ้าไม่เจอ → เช็ค backend (reference_number5 filter)
+  // ค้นหาด้วย book_no (เลขนร) ใน reference_number5 — เหมือน OPM1111 ใช้ case_code
   // คืนค่า { found, item } — found=true พบซ้ำ, found=false ไม่พบ, found=null ตรวจล้มเหลว
   const checkDuplicate = async () => {
-    if (!caseDetail?.case_id) return { found: false, item: null };
-    const caseIdStr = String(caseDetail.case_id);
+    const bookNo = caseDetail?.book_no || "";
+    if (!bookNo || bookNo.trim() === "-") return { found: false, item: null };
 
     // ── 1) localStorage check (ป้องกันซ้ำแม้ backend ยังไม่ restart) ──
     try {
       const createdIds = JSON.parse(localStorage.getItem("eoffice_created_ids") || "[]");
-      if (createdIds.includes(caseIdStr)) {
-        console.log(`[EOffice] ✅ พบเรื่องซ้ำใน localStorage case_id=${caseIdStr}`);
+      if (createdIds.includes(bookNo)) {
+        console.log(`[EOffice] ✅ พบเรื่องซ้ำใน localStorage book_no=${bookNo}`);
         return { found: true, item: { id: "localStorage" } };
       }
     } catch (lsErr) {
       // localStorage error — ข้าม ไปเช็ค backend
     }
 
-    // ── 2) backend check (reference_number5 filter) ──
+    // ── 2) backend check (reference_number5 filter — book_no) ──
     try {
       const existingRes = await GetComplaintByReferenceNumber5({
-        reference_number5: caseIdStr,
+        reference_number5: bookNo,
         limit: 10,
       });
 
       const existingItems = existingRes?.res_data?.items || [];
       const existingItem = existingItems.find(
-        (item) => String(item.reference_number5) === caseIdStr
+        (item) => String(item.reference_number5) === bookNo
       );
 
       if (existingItem) {
-        console.log(`[EOffice] ✅ พบเรื่องซ้ำจาก backend case_id=${caseIdStr} → complaint id=${existingItem.id}`);
+        console.log(`[EOffice] ✅ พบเรื่องซ้ำจาก backend book_no=${bookNo} → complaint id=${existingItem.id}`);
         // เก็บลง localStorage ด้วย ครั้งหน้าจะได้ไม่ต้องเช็ค backend
-        saveCreatedId(caseIdStr);
+        saveCreatedId(bookNo);
         return { found: true, item: existingItem };
       }
 
-      console.log(`[EOffice] 🔍 ไม่พบเรื่องซ้ำ case_id=${caseIdStr}`);
+      console.log(`[EOffice] 🔍 ไม่พบเรื่องซ้ำ book_no=${bookNo}`);
       return { found: false, item: null };
     } catch (checkError) {
       console.error("[EOffice] ❌ เช็คเรื่องซ้ำล้มเหลว:", checkError.message);
@@ -224,12 +226,12 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
     }
   };
 
-  // ── บันทึก case_id ลง localStorage (ป้องกันสร้างซ้ำ) ──
-  const saveCreatedId = (caseIdStr) => {
+  // ── บันทึก book_no ลง localStorage (ป้องกันสร้างซ้ำ) ──
+  const saveCreatedId = (bookNo) => {
     try {
       const createdIds = JSON.parse(localStorage.getItem("eoffice_created_ids") || "[]");
-      if (!createdIds.includes(caseIdStr)) {
-        createdIds.push(caseIdStr);
+      if (!createdIds.includes(bookNo)) {
+        createdIds.push(bookNo);
         localStorage.setItem("eoffice_created_ids", JSON.stringify(createdIds));
       }
     } catch (e) {
@@ -282,8 +284,22 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       const result = await createComplaintAPI(apiData);
       console.log(`[EOffice] ✅ สร้าง complaint เรื่อง ${caseDetail.case_id} สำเร็จ!`, result);
 
-      // บันทึก case_id ลง localStorage ป้องกันสร้างซ้ำ (hot-reload / เข้าหน้าเดิม)
-      saveCreatedId(String(caseDetail.case_id));
+      // บันทึก book_no ลง localStorage ป้องกันสร้างซ้ำ (hot-reload / เข้าหน้าเดิม)
+      saveCreatedId(caseDetail.book_no || "");
+
+      // เซ็ต document_number (เลขนร) ทันทีด้วย ID จาก response — ไม่ต้องรอ worker ค้นหา
+      const newComplaintId = result?.res_data?.id || result?.res_data?.complaint_id;
+      const bookNo = caseDetail.book_no || "";
+      if (newComplaintId && bookNo && bookNo.trim() !== "-") {
+        try {
+          await UpdateAssignmentCompleteByAdmin(newComplaintId, {
+            document_number: bookNo.trim(),
+          });
+          console.log(`[EOffice] ✅ เซ็ต document_number="${bookNo}" → ${newComplaintId} สำเร็จ!`);
+        } catch (patchErr) {
+          console.warn(`[EOffice] ⚠️ เซ็ต document_number ล้มเหลว:`, patchErr?.response?.status, patchErr?.message);
+        }
+      }
 
       return result;
     } catch (error) {

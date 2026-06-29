@@ -479,7 +479,7 @@ const TableFilterList = ({
                             </TableCell>
                             <TableCell>{item?.name ?? "-"}</TableCell>
                             <TableCell>{item?.issueType ?? "-"}</TableCell>
-                            <TableCell>{item?.subject ?? "-"}</TableCell>
+                            <TableCell sx={{ whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word", lineHeight: 1.5, maxWidth: 350 }}>{item?.subject ?? "-"}</TableCell>
                             <TableCell>{item?.respondentName ?? "-"}</TableCell>
                             <TableCell>{item?.docNo ?? "-"}</TableCell>
                             <TableCell>{item?.docNo2 ?? "-"}</TableCell>

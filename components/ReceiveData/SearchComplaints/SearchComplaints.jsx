@@ -61,7 +61,7 @@ const getChannelKey = (channelName) => {
   if (!channelName) return "website";
   const n = channelName.toLowerCase();
   if (n.includes("opm") || n.includes("1111")) return "opm1111";
-  if (n.includes("eoffice")) return "eoffice";
+  if (n.includes("eoffice") || n.includes("สารบรรณอิเล็กทรอนิกส์")) return "eoffice";
   if (n.includes("จดหมาย") || n.includes("letter")) return "letter";
   if (n.includes("อีเมล") || n.includes("email")) return "email";
   if (n.includes("ศูนย์บริการร่วม") || n.includes("central")) return "central_service";
@@ -129,7 +129,7 @@ const CHANNEL_OPTIONS = [
   { value: "", label: "ทุกช่องทาง" },
   { value: "website", label: "เว็บไซต์" },
   { value: "opm1111", label: "OPM 1111" },
-  { value: "eoffice", label: "EOffice" },
+  { value: "eoffice", label: "สารบรรณอิเล็กทรอนิกส์" },
   { value: "letter", label: "จดหมาย" },
   { value: "email", label: "อีเมล" },
   { value: "central_service", label: "ศูนย์บริการร่วม" },
@@ -206,8 +206,7 @@ const SearchComplaints = () => {
                 style={{
                   position: "absolute",
                   left: 0,
-                  top: "50%",
-                  transform: "translateY(-50%)",
+                  top: 4,
                   width: 10,
                   height: 10,
                   borderRadius: "50%",
@@ -218,10 +217,11 @@ const SearchComplaints = () => {
               />
               <span
                 style={{
-                  display: "inline-block",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  display: "block",
+                  whiteSpace: "normal",
+                  wordBreak: "break-word",
+                  overflowWrap: "break-word",
+                  lineHeight: 1.5,
                   color: textColor,
                 }}
               >

@@ -1,0 +1,171 @@
+/* ════════════════════════════════════════════
+   WorkflowFlow — ผังการไหลเอกสาร (list_case_org_owner)
+   ════════════════════════════════════════════ */
+
+// ── Container ──
+.flowContainer {
+  margin-bottom: 20px;
+}
+
+// ── Flow Header ──
+.flowHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+// ── Flow Body ──
+.flowBody {
+  position: relative;
+  padding-left: 0;
+}
+
+// ── Step Row (timeline dot + card) ──
+.stepRow {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  position: relative;
+}
+
+// ── Timeline Column (dot + vertical line) ──
+.timelineCol {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 0 0 36px;
+  min-height: 20px;
+}
+
+// ── Step Dot (วงกลมหมายเลขขั้น) ──
+.stepDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  z-index: 1;
+}
+
+// ── Step Line (เส้นเชื่อมแนวตั้งระหว่าง dot) ──
+.stepLine {
+  width: 2px;
+  flex: 1;
+  min-height: 20px;
+  margin-top: 4px;
+  border-radius: 1px;
+}
+
+// ── Step Card ──
+.stepCard {
+  flex: 1;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #2563eb;
+  margin-bottom: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.15s ease;
+
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+}
+
+// ── Step Card Header (ชื่อหน่วยงาน + chip) ──
+.stepCardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+// ── Step Detail (ผลการดำเนินการ) ──
+.stepDetail {
+  line-height: 1.6;
+  margin-bottom: 8px;
+  padding: 8px 12px;
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+// ── Step Footer (ผู้ดำเนินการ + วันที่) ──
+.stepFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+// ── Arrow Row (ลูกศรระหว่างขั้น) ──
+.arrowRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 24px;
+}
+
+.arrowSpacer {
+  flex: 0 0 36px;
+  display: flex;
+  justify-content: center;
+}
+
+.arrowIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: -12px;
+  margin-top: -4px;
+}
+
+// ── Responsive ──
+@media (max-width: 768px) {
+  .stepCard {
+    padding: 12px;
+    border-radius: 8px;
+  }
+
+  .stepCardHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .stepFooter {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .stepDetail {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
+  .timelineCol {
+    flex: 0 0 30px;
+  }
+
+  .stepDot {
+    width: 24px;
+    height: 24px;
+  }
+
+  .stepDot span {
+    font-size: 10px;
+  }
+
+  .arrowSpacer {
+    flex: 0 0 30px;
+  }
+}

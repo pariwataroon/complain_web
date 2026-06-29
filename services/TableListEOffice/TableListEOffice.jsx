@@ -1,5 +1,5 @@
 /**
- * TableListEOffice — ตารางรายการร้องทุกข์จาก Mof_EOffice
+ * TableListEOffice — ตารางรับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์
  *
  * ใช้ pattern เดียวกับ TableListOPM แต่ปรับ columns ให้ตรงกับข้อมูลจาก eofficer
  */

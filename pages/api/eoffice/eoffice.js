@@ -1,6 +1,6 @@
 /**
  * ============================================================
- *  API Service — เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ Mof_EOffice
+ *  API Service — รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์
  * ============================================================
  *
  *  เชื่อมต่อ API จาก eofficer (Rongtook ↔ Saraban)
@@ -179,6 +179,32 @@ export const GetEOfficeOperatings = async (docId) => {
     return json.data?.operatings || json.data?.steps || [];
   } catch (error) {
     console.error(`[EOffice API] GetEOfficeOperatings(${docId}) error:`, error);
+    throw error;
+  }
+};
+
+/**
+ * ดึงรายละเอียดเต็มของเอกสาร (เทียบ GetCase ของ OPM)
+ * คืน case detail + list_case_org_owner (ผังการไหล) + list_case_attachment (ไฟล์แนบ)
+ *
+ * @param {string} docId - id หรือ uuid ของเอกสาร
+ * @returns {Object} { success, data: { case_id, list_case_org_owner, list_case_attachment, ... } }
+ */
+export const GetEOfficeCaseOwners = async (docId) => {
+  try {
+    const token = await getEOfficeToken();
+
+    const response = await eofficeInstance.get("/v1/rongtook/SOAP/GetCase", {
+      params: {
+        token_id: token,
+        case_id: docId,
+      },
+    });
+
+    const json = response?.data || {};
+    return json;
+  } catch (error) {
+    console.error(`[EOffice API] GetEOfficeCaseOwners(${docId}) error:`, error);
     throw error;
   }
 };

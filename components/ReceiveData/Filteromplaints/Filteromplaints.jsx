@@ -27,18 +27,35 @@ const breadcrumbItems = [
 const ALL_CHANNELS = [
   { key: "website", name: "เว็บไซต์ (https://complain.mof.go.th)" },
   { key: "opm1111", name: "ร้องเรียนผ่านระบบ OPM 1111 (สำนักงานปลัดสำนักนายกรัฐมนตรี)" },
-  { key: "eoffice", name: "ร้องเรียนผ่านระบบ EOffice (สำนักงานปลัดกระทรวงการคลัง)" },
+  { key: "eoffice", name: "รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์" },
   { key: "central_service", name: "ศูนย์บริการร่วมกระทรวงการคลัง" },
   { key: "letter", name: "ร้องเรียนผ่านจดหมาย" },
   { key: "email", name: "ร้องเรียนผ่านอีเมล" },
 ];
+
+/**
+ * Normalize ชื่อ channel จาก backend → key ที่ตรงกับ ALL_CHANNELS.key
+ * ใช้ substring matching เหมือน getChannelKey() ใน SearchComplaints
+ * เผื่อ backend ส่งชื่อ channel มาไม่ตรงเป๊ะ (เช่น "Mof_EOffice", "EOffice", ฯลฯ)
+ */
+const normalizeChannelKey = (channelName) => {
+  if (!channelName) return "website";
+  const n = channelName.toLowerCase();
+  if (n.includes("opm") || n.includes("1111")) return "opm1111";
+  if (n.includes("eoffice") || n.includes("สารบรรณอิเล็กทรอนิกส์")) return "eoffice";
+  if (n.includes("จดหมาย") || n.includes("letter")) return "letter";
+  if (n.includes("อีเมล") || n.includes("email")) return "email";
+  if (n.includes("ศูนย์บริการร่วม") || n.includes("central")) return "central_service";
+  if (n.includes("website") || n.includes("เว็บไซต์")) return "website";
+  return n; // fallback: ใช้ชื่อเดิม (lowercase)
+};
 
 // Channel options สำหรับ dropdown filter (รวม "ทุกช่องทาง")
 const CHANNEL_OPTIONS = [
   { value: "", label: "ทุกช่องทาง" },
   { value: "website", label: "เว็บไซต์ (https://complain.mof.go.th)" },
   { value: "opm1111", label: "ร้องเรียนผ่านระบบ OPM 1111" },
-  { value: "eoffice", label: "ร้องเรียนผ่านระบบ EOffice" },
+  { value: "eoffice", label: "รับเรื่องร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์" },
   { value: "central_service", label: "ศูนย์บริการร่วมกระทรวงการคลัง" },
   { value: "letter", label: "ร้องเรียนผ่านจดหมาย" },
   { value: "email", label: "ร้องเรียนผ่านอีเมล" },
@@ -244,8 +261,9 @@ const Filteromplaints = () => {
               docNumMap[cId] = docNum;
             }
           });
-          setDocumentNumberMap(docNumMap);
         }
+
+        setDocumentNumberMap(docNumMap);
 
         if (response?.res_code === "0000" && response?.res_data) {
           const data = response.res_data;
@@ -266,12 +284,13 @@ const Filteromplaints = () => {
             };
           });
 
-          // สร้าง Map ของข้อมูลที่มี
+          // สร้าง Map ของข้อมูลที่มี (ใช้ normalizeChannelKey เป็น key แทนชื่อดิบ)
           const dataMap = new Map();
           enrichedGroups.forEach((group) => {
-            const channelName = group.complaint_channel_name.toLowerCase();
-            dataMap.set(channelName, {
-              title: `ช่องทางการรับเรื่อง : ${group.complaint_channel_name}`,
+            const channelName = group.complaint_channel_name;
+            const normalizedKey = normalizeChannelKey(channelName);
+            dataMap.set(normalizedKey, {
+              title: `ช่องทางการรับเรื่อง : ${channelName}`,
               complaint_channel_id: group.complaint_channel_id,
               data: group.items.map((item) => mapItemToRow(item, docNumMap)),
             });
@@ -279,12 +298,15 @@ const Filteromplaints = () => {
 
           // สร้างกลุ่มทั้งหมด รวมทั้งที่ไม่มีข้อมูล
           const allChannelGroups = ALL_CHANNELS.map((channel) => {
-            const existingData =
-              dataMap.get(channel.name.toLowerCase()) ||
-              dataMap.get(channel.key.toLowerCase());
+            // หาข้อมูลจาก dataMap โดยใช้ channel.key (ที่ normalize แล้วตรงกัน)
+            const existingData = dataMap.get(channel.key);
 
             if (existingData) {
-              return existingData;
+              // ใช้ชื่อภาษาไทยจาก ALL_CHANNELS เป็น title
+              return {
+                ...existingData,
+                title: `ช่องทางการรับเรื่อง : ${channel.name}`,
+              };
             } else {
               return {
                 title: `ช่องทางการรับเรื่อง : ${channel.name}`,
@@ -294,16 +316,10 @@ const Filteromplaints = () => {
             }
           });
 
-          // เพิ่มกลุ่มจาก API ที่ไม่อยู่ใน ALL_CHANNELS
+          // เพิ่มกลุ่มจาก API ที่ไม่อยู่ใน ALL_CHANNELS (เผื่อมี channel ใหม่)
+          const matchedKeys = new Set(allChannelGroups.map((g) => g.complaint_channel_id));
           enrichedGroups.forEach((group) => {
-            const channelName = group.complaint_channel_name.toLowerCase();
-            const exists = ALL_CHANNELS.some(
-              (ch) =>
-                ch.name.toLowerCase() === channelName ||
-                ch.key.toLowerCase() === channelName
-            );
-
-            if (!exists) {
+            if (!matchedKeys.has(group.complaint_channel_id)) {
               allChannelGroups.push({
                 title: `ช่องทางการรับเรื่อง : ${group.complaint_channel_name}`,
                 complaint_channel_id: group.complaint_channel_id,
@@ -555,15 +571,13 @@ const Filteromplaints = () => {
 
         .complaint-table .subject-dot {
           position: relative;
-          display: inline-block;
-          min-width: 0;
+          display: block;
           padding-left: ${SUBJECT_DOT_INDENT}px; /* เว้นที่ให้จุด */
         }
         .complaint-table .subject-dot .dot {
           position: absolute;
-          left: 0;                 /* ชิดซ้ายสุดของพื้นที่ cell */
-          top: 50%;
-          transform: translateY(-50%);
+          left: 0;
+          top: 4px;
           width: 10px;
           height: 10px;
           border-radius: 50%;
@@ -572,11 +586,11 @@ const Filteromplaints = () => {
         .complaint-table .subject-dot .dot.on { background: #2ecc71; }
 
         .complaint-table .subject-dot .text {
-          display: inline-block;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          vertical-align: middle;
+          display: block;
+          white-space: normal !important;
+          word-break: break-word;
+          overflow-wrap: break-word;
+          line-height: 1.5;
         }
       `}</style>
     </>

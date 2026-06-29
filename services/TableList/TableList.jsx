@@ -626,7 +626,7 @@ const TableList = ({
                   {/* <TableCell>
                     {formatCitizenId_null(item?.citizenId ?? "-")}
                   </TableCell> */}
-                  <TableCell className={styles.ellipsisCell}>
+                  <TableCell sx={{ whiteSpace: "normal", wordBreak: "break-word", overflowWrap: "break-word", lineHeight: 1.5, maxWidth: 350 }}>
                     {item?.subject ?? "-"}
                   </TableCell>
                   <TableCell>{item?.docKk ?? "-"}</TableCell>

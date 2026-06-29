@@ -1,5 +1,5 @@
 /**
- * SendComplaintEOffice — ฟอร์มส่งผลการพิจารณาไปยัง EOffice
+ * SendComplaintEOffice — ฟอร์มส่งผลการพิจารณาไปยังระบบสารบรรณอิเล็กทรอนิกส์
  *
  * ทำงานเหมือน Opm1111/SendComplaintOPm.jsx แต่ส่งข้อมูลผ่าน REST API (JSON)
  * ฟอร์มนี้ใช้สำหรับส่งผลการดำเนินการจากระบบ MOF กลับไปยัง EOffice
@@ -38,7 +38,7 @@ const DEFAULT_STATUSES = [
   { value: "ยุติเรื่อง", label: "ยุติเรื่อง" },
 ];
 
-const DEFAULT_CHANNELS = [{ value: "6", label: "เว็บไซต์ Mof_EOffice" }];
+const DEFAULT_CHANNELS = [{ value: "6", label: "ระบบสารบรรณอิเล็กทรอนิกส์" }];
 
 const textFieldSx = {
   "& .MuiOutlinedInput-root": {
@@ -221,7 +221,7 @@ const SendComplaintEOffice = () => {
       <BreadcrumbsService
         items={[
           { label: "จัดการข้อมูลในระบบ", url: "/admin/dashboard" },
-          { label: "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ Mof_EOffice", url: "/admin/edit/eoffice" },
+          { label: "รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์", url: "/admin/edit/eoffice" },
           { label: "ส่งผลการพิจารณา" },
         ]}
       />
@@ -246,7 +246,7 @@ const SendComplaintEOffice = () => {
             </Box>
             <Box>
               <Typography variant="h6" sx={{ fontWeight: 700, color: "#1120a3", fontSize: "18px" }}>
-                ส่งผลการพิจารณาไปยัง Mof_EOffice
+                ส่งผลการพิจารณาไปยังระบบสารบรรณอิเล็กทรอนิกส์
               </Typography>
               <Typography variant="caption" sx={{ color: "#9ca3af" }}>
                 กรอกข้อมูลผลการพิจารณาเพื่อส่งกลับไปยังระบบ EOffice
