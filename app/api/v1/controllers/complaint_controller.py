@@ -3971,6 +3971,11 @@ def get_complaints_grouped_by_channel(
     from models.comp_complaint_types import ComplaintChannel, ComplaintSubType
     
     try:
+        # Pre-load channels และ subtypes เพื่อป้องกัน N+1 query
+        from models.comp_complaint_types import ComplaintChannel, ComplaintSubType
+        all_channels = {str(ch.id): ch.name for ch in db.query(ComplaintChannel).all()}
+        all_subtypes = {str(st.id): st.name for st in db.query(ComplaintSubType).all()}
+
         # สร้าง query พื้นฐาน
         query = db.query(Complaint)
         
@@ -4112,10 +4117,10 @@ def get_complaints_grouped_by_channel(
         for complaint in complaints:
             # กำหนด channel info
             channel_id = str(complaint.complaint_channel_id) if complaint.complaint_channel_id else "unknown"
-            channel_name = get_channel_name(db, complaint.complaint_channel_id)
-            
+            channel_name = get_channel_name(db, complaint.complaint_channel_id, all_channels)
+
             # สร้าง complaint item
-            item = create_grouped_complaint_item(db, complaint)
+            item = create_grouped_complaint_item(db, complaint, all_subtypes)
             item["complaint_channel_id"] = channel_id
             item["complaint_channel_name"] = channel_name
             
@@ -4151,11 +4156,15 @@ def get_complaints_grouped_by_channel(
             "filters": get_filter_options(db)
         }
 
-def get_channel_name(db: Session, channel_id: Optional[UUID]) -> str:
-    """ดึงชื่อช่องทางการร้องเรียน"""
+def get_channel_name(db: Session, channel_id: Optional[UUID], all_channels: Optional[Dict[str, str]] = None) -> str:
+    """ดึงชื่อช่องทางการร้องเรียน (รองรับ pre-loaded dict เพื่อป้องกัน N+1)"""
     if not channel_id:
         return "ไม่ระบุช่องทาง"
-    
+
+    # ถ้ามี pre-loaded dict ให้ใช้ dict lookup แทน query DB
+    if all_channels is not None:
+        return all_channels.get(str(channel_id)) or "ไม่ระบุช่องทาง"
+
     try:
         from models.comp_complaint_types import ComplaintChannel
         channel = db.query(ComplaintChannel).filter(ComplaintChannel.id == channel_id).first()
@@ -4163,16 +4172,19 @@ def get_channel_name(db: Session, channel_id: Optional[UUID]) -> str:
     except Exception:
         return "ไม่ระบุช่องทาง"
 
-def create_grouped_complaint_item(db: Session, complaint: Complaint) -> Dict:
-    """สร้างข้อมูล complaint item สำหรับการจัดกลุ่ม"""
+def create_grouped_complaint_item(db: Session, complaint: Complaint, all_subtypes: Optional[Dict[str, str]] = None) -> Dict:
+    """สร้างข้อมูล complaint item สำหรับการจัดกลุ่ม (รองรับ pre-loaded dict เพื่อป้องกัน N+1)"""
     try:
         # ดึงข้อมูล complaint_subtype
         complaint_subtype = ""
         if complaint.complaint_subtype_id:
-            from models.comp_complaint_types import ComplaintSubType
-            subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
-            if subtype:
-                complaint_subtype = subtype.name
+            if all_subtypes is not None:
+                complaint_subtype = all_subtypes.get(str(complaint.complaint_subtype_id)) or ""
+            else:
+                from models.comp_complaint_types import ComplaintSubType
+                subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+                if subtype:
+                    complaint_subtype = subtype.name
         
         # ตรวจสอบสถานะการมอบหมาย
         is_assigned = bool(
