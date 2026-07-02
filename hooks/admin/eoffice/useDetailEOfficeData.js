@@ -375,6 +375,28 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       console.log(`[EOffice] 📤 กำลังสร้าง complaint... (channel: ${eofficeChannelId})`);
       const result = await createComplaintAPI(apiData);
       console.log(`[EOffice] ✅ สร้าง complaint เรื่อง ${caseDetail.case_id} สำเร็จ!`, result);
+
+      // ── Backend ไม่เก็บ reference fields จาก step3.general → ต้อง update ทีหลังด้วย flat payload ──
+      const newComplaintId = result?.res_data?.id || result?.res_data?.complaint_id;
+      if (newComplaintId) {
+        const hasRefData = caseDetail.opsDocNo || caseDetail.book_no || caseDetail.ministerDocNo;
+        if (hasRefData) {
+          try {
+            await UpdateComplaint(newComplaintId, {
+              reference_number: caseDetail.opsDocNo || null,
+              reference_date: parseEOfficeDate(caseDetail.opsReceivedDate) || null,
+              reference_number2: caseDetail.ministerDocNo || null,
+              reference_date2: parseEOfficeDate(caseDetail.ministerDocDate) || null,
+              document_number: caseDetail.book_no || null,
+              document_date: parseEOfficeDate(caseDetail.book_date) || null,
+            });
+            console.log(`[EOffice] ✅ Update reference fields สำเร็จสำหรับ ${newComplaintId}`);
+          } catch (refErr) {
+            console.warn("[EOffice] ⚠️ Update reference fields ล้มเหลว:", refErr?.response?.data || refErr?.message);
+          }
+        }
+      }
+
       return result;
     } catch (error) {
       console.error("[EOffice] ❌ Error auto-creating complaint:", error?.response?.data || error?.message || error);
