@@ -32,27 +32,22 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       const items = data.res_data?.items || [];
       console.log("[EOffice] 📡 ได้ channels:", items.length, "รายการ");
 
+      // หา channel ชื่อ "ระบบสารบรรณอิเล็กทรอนิกส์" หรือชื่อที่เกี่ยวข้องกับ EOffice
       const eofficeChannel = items.find(
         (item) =>
+          item.name?.includes("สารบรรณ") ||
+          item.name?.includes("สารบัญ") ||
           item.name?.includes("EOffice") ||
           item.name?.includes("eoffice") ||
           item.name?.includes("Mof_EOffice")
       );
       if (eofficeChannel) {
-        console.log("[EOffice] ✅ พบ EOffice channel:", eofficeChannel.id);
+        console.log("[EOffice] ✅ พบ สารบรรณ/EOffice channel:", eofficeChannel.name, "id:", eofficeChannel.id);
         setEofficeChannelId(eofficeChannel.id);
         return eofficeChannel.id;
       } else {
-        // ถ้าไม่เจอ channel EOffice ให้ใช้ channel เริ่มต้น (website)
-        const websiteChannel = items.find(
-          (item) => item.name?.includes("เว็บไซต์")
-        );
-        if (websiteChannel) {
-          console.log("[EOffice] ⚠️ ไม่เจอ EOffice channel ใช้ website:", websiteChannel.id);
-          setEofficeChannelId(websiteChannel.id);
-          return websiteChannel.id;
-        }
-        throw new Error("EOffice Channel not found — no channels available");
+        console.error("[EOffice] ❌ ไม่พบช่องทาง สารบรรณ/EOffice ในระบบ  channels ที่มี:", items.map(i => i.name));
+        throw new Error("EOffice Channel not found — ไม่พบช่องทาง สารบรรณอิเล็กทรอนิกส์");
       }
     } catch (error) {
       console.error("[EOffice] ❌ Error fetching Channel ID:", error);
