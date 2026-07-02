@@ -49,6 +49,10 @@ const columns = [
 
 const TableListEOffice = ({
   data = [],
+  totalCount = 0,
+  loadedCount = 0,
+  isLoadingMore = false,
+  onFetchMore = () => {},
   title = "",
   statusType = "P",
   statusTypeOptions = [],
@@ -146,7 +150,13 @@ const TableListEOffice = ({
     return filteredData.slice(start, start + rowsPerPage);
   }, [filteredData, page, rowsPerPage]);
 
-  const handleChangePage = (_, newPage) => setPage(newPage);
+  const handleChangePage = (_, newPage) => {
+    setPage(newPage);
+    const neededEnd = (newPage + 1) * rowsPerPage;
+    if (neededEnd > loadedCount && loadedCount < totalCount) {
+      onFetchMore();
+    }
+  };
   const handleChangeRowsPerPage = (e) => {
     setRowsPerPage(parseInt(e.target.value, 10));
     setPage(0);
@@ -180,7 +190,7 @@ const TableListEOffice = ({
           <span className={styles.headerTitle}>{title}</span>
           <Stack direction="row" spacing={1}>
             <Chip
-              label={`ทั้งหมด ${filteredData.length} รายการ`}
+              label={`ทั้งหมด ${totalCount} รายการ`}
               size="small"
               sx={{ color: "white", backgroundColor: "rgba(255,255,255,0.2)" }}
             />
@@ -491,7 +501,7 @@ const TableListEOffice = ({
             {filteredData.length > 0 && (
               <TablePagination
                 component="div"
-                count={filteredData.length}
+                count={totalCount || filteredData.length}
                 page={page}
                 onPageChange={handleChangePage}
                 rowsPerPage={rowsPerPage}

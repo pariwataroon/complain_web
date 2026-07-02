@@ -1,10 +1,9 @@
 /**
  * EOfficeComplaints — รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์
  *
- * ทำงานเหมือน Opm1111.jsx — login แล้ว fetch list จาก eofficer API (JSON)
- * Flow: login → getTimelineHeader → แสดงในตาราง
+ * Server-side pagination: ดึงทีละ 50 รายการ, กดหน้าถัดไปค่อยดึงเพิ่ม
  */
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListEOffice from "@services/TableListEOffice/TableListEOffice";
@@ -22,12 +21,35 @@ const statusTypeOptions = [
   { value: "C", label: "ยุติเรื่อง" },
 ];
 
+// ── Map EOffice item → table row ──
+const mapItem = (item) => ({
+  case_id: item.id,
+  case_code: item.content_no || `${item.content_year}/${item.id}` || `${item.id}`,
+  book_no: item.book_no || item.content_no || "-",
+  book_date: item.book_date || "-",
+  complainant_name: item.owner_name || item.from_org || "-",
+  subject: item.subject || item.title || item.content_title || item.description || "-",
+  type_name: item.folder_id === 271 ? "หนังสือเข้า" : item.folder_id === 272 ? "หนังสือออก" : "-",
+  status: item.finish_flag === 1 ? "C" : "P",
+  status_name: item.finish_flag === 1 ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
+  status_color: item.finish_flag === 1 ? "#4caf50" : "#ff9800",
+  date_received: item.content_date || item.book_date || item.created_date || "-",
+  date_updated: item.updated_date || "-",
+  channel_name: "รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์",
+  priority: item.priority === 1 ? "ปกติ" : item.priority === 4 ? "ด่วน" : "ปกติ",
+});
+
+const BATCH_SIZE = 50;
+
 const EOfficeComplaints = () => {
-  const [allComplaints, setAllComplaints] = useState([]); // ข้อมูลทั้งหมดจาก API
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [statusType, setStatusType] = useState("P"); // default: กำลังดำเนินการ
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [statusType, setStatusType] = useState("P");
   const router = useRouter();
+  const fetchingRef = useRef(false);
 
   // ── Client-side filter ตาม status ──
   const complaints = useMemo(() => {
@@ -35,85 +57,77 @@ const EOfficeComplaints = () => {
     return allComplaints.filter((item) => item.status === statusType);
   }, [allComplaints, statusType]);
 
-  // ── Login + โหลดรายการจาก EOffice API ──
+  // ── Fetch ชุดแรก ──
   const fetchComplaints = useCallback(async () => {
     try {
       showLoading("กำลังเชื่อมต่อ EOffice...");
-
-      // 1) Login เหมือน OPM (Encode)
       await loginEOffice();
       const token = Cookies.get("eoffice_token");
+      if (!token) throw new Error("Login ล้มเหลว — ไม่ได้ token");
 
-      if (!token) {
-        throw new Error("Login ล้มเหลว — ไม่ได้ token");
-      }
-
-      // 2) ดึงรายการเอกสารทั้งหมด
       const response = await GetEOfficeComplaints({
-        take: 500,
+        take: BATCH_SIZE,
         skip: 0,
         folder_id: 271,
         year: 0,
       });
 
-      // 3) แปลง response → table format
       const items = response?.data || [];
-      const mapped = items.map((item) => ({
-        case_id: item.id,
-        case_code: item.content_no || `${item.content_year}/${item.id}` || `${item.id}`,
-        book_no: item.book_no || item.content_no || "-",
-        book_date: item.book_date || "-",
-
-        complainant_name: item.owner_name || item.from_org || "-",
-        subject: item.subject || item.title || item.content_title || item.description || "-",
-        type_name: item.folder_id === 271 ? "หนังสือเข้า" : item.folder_id === 272 ? "หนังสือออก" : "-",
-
-        // status: P=กำลังดำเนินการ, C=เสร็จสิ้น
-        status: item.finish_flag === 1 ? "C" : "P",
-        status_name: item.finish_flag === 1 ? "เสร็จสิ้น" : "อยู่ระหว่างดำเนินการ",
-        status_color: item.finish_flag === 1 ? "#4caf50" : "#ff9800",
-
-        date_received: item.content_date || item.book_date || item.created_date || "-",
-        date_updated: item.updated_date || "-",
-
-        channel_name: "รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์",
-        priority: item.priority === 1 ? "ปกติ" : item.priority === 4 ? "ด่วน" : "ปกติ",
-      }));
-
-      setAllComplaints(mapped);
+      setAllComplaints(items.map(mapItem));
+      setTotalCount(response?.totalSize || items.length);
       closeAlert();
       setIsDataLoaded(true);
       setIsRefreshing(false);
     } catch (error) {
       console.error("Error fetching EOffice complaints:", error);
       closeAlert();
-      alertError(
-        "เกิดข้อผิดพลาด",
-        `ไม่สามารถเชื่อมต่อ EOffice ได้: ${error.message || "Unknown error"}`
-      );
+      alertError("เกิดข้อผิดพลาด", `ไม่สามารถเชื่อมต่อ EOffice ได้: ${error.message || "Unknown error"}`);
       setIsDataLoaded(true);
       setIsRefreshing(false);
     }
   }, []);
 
-  // ── เรียกครั้งแรก ──
-  useEffect(() => {
-    fetchComplaints();
-  }, []);
+  // ── Fetch หน้าถัดไป (เรียกจาก TableListEOffice เมื่อกด page) ──
+  const fetchMore = useCallback(async () => {
+    if (fetchingRef.current || allComplaints.length >= totalCount) return;
+    try {
+      fetchingRef.current = true;
+      setIsFetchingMore(true);
 
-  // ── Refresh ──
+      const token = Cookies.get("eoffice_token");
+      if (!token) throw new Error("No token");
+
+      const response = await GetEOfficeComplaints({
+        take: BATCH_SIZE,
+        skip: allComplaints.length,
+        folder_id: 271,
+        year: 0,
+      });
+
+      const items = response?.data || [];
+      setAllComplaints((prev) => [...prev, ...items.map(mapItem)]);
+      setTotalCount(response?.totalSize || totalCount);
+      setIsFetchingMore(false);
+    } catch (error) {
+      console.error("Error fetching more:", error);
+      setIsFetchingMore(false);
+    } finally {
+      fetchingRef.current = false;
+    }
+  }, [allComplaints.length, totalCount]);
+
+  useEffect(() => { fetchComplaints(); }, []);
+
   const handleRefresh = () => {
     setIsRefreshing(true);
     Cookies.remove("eoffice_token");
     fetchComplaints();
   };
 
-  // ── คลิกแถว → ไป detail ──
   const handleRowClick = (item) => {
     router.push(`/admin/edit/eoffice/${item.case_id}/`);
   };
 
-  // ── ไปหน้าส่งผล ──
   const handleSendClick = () => {
     router.push("/admin/edit/eoffice/send");
   };
@@ -129,6 +143,10 @@ const EOfficeComplaints = () => {
 
       <TableListEOffice
         data={complaints}
+        totalCount={totalCount}
+        loadedCount={allComplaints.length}
+        isLoadingMore={isFetchingMore}
+        onFetchMore={fetchMore}
         title="รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์"
         statusType={statusType}
         statusTypeOptions={statusTypeOptions}
