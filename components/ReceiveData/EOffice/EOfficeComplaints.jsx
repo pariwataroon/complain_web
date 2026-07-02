@@ -50,7 +50,7 @@ const EOfficeComplaints = () => {
 
       // 2) ดึงรายการเอกสารทั้งหมด
       const response = await GetEOfficeComplaints({
-        take: 10000,
+        take: 500,
         skip: 0,
         folder_id: 271,
         year: 0,

@@ -25,7 +25,7 @@ const proxyInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 30000,
+  timeout: 120000,
   // ส่ง error response body กลับไปด้วย
   validateStatus: () => true,
 });
