@@ -583,10 +583,26 @@ def prepare_complaint_model_data(
     
     # สร้างเลขที่เรื่องร้องเรียน
     complaint_number = generate_complaint_number(db)
-    
+
     # ประมวลผลข้อมูลที่อยู่ พร้อมแก้ไขข้อมูลที่ไม่สมบูรณ์
     location_data = extract_location_data(complaint_data, db)
-    
+
+    # ✅ ดึง reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+    step3_general = complaint_data.get("step3", {}).get("general", {})
+
+    def parse_date_field(val):
+        """แปลงค่าวันที่จาก string/ISO เป็น datetime object"""
+        if not val or val is None or val == "":
+            return None
+        if isinstance(val, str):
+            try:
+                if "T" in val:
+                    return datetime.fromisoformat(val.replace("Z", "+00:00").replace("+00:00", ""))
+                return datetime.strptime(val, "%Y-%m-%d")
+            except (ValueError, TypeError):
+                return None
+        return val
+
     return {
         "id": uuid.uuid4(),
         "complaint_number": complaint_number,
@@ -616,6 +632,17 @@ def prepare_complaint_model_data(
         "progress_percentage": 0,
         # ✅ อ่าน reference_number5 จาก step4.general (สำหรับ EOffice/OPM dedup)
         "additional_reference_number1": complaint_data.get("step4", {}).get("general", {}).get("reference_number5", ""),
+        # ✅ อ่าน reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+        "reference_number": step3_general.get("reference_number") or None,
+        "reference_date": parse_date_field(step3_general.get("reference_date")),
+        "reference_number2": step3_general.get("reference_number2") or None,
+        "reference_date2": parse_date_field(step3_general.get("reference_date2")),
+        "reference_number3": step3_general.get("reference_number3") or None,
+        "reference_date3": parse_date_field(step3_general.get("reference_date3")),
+        "reference_number4": step3_general.get("reference_number4") or None,
+        "reference_date4": parse_date_field(step3_general.get("reference_date4")),
+        "document_number": step3_general.get("document_number") or None,
+        "document_date": parse_date_field(step3_general.get("document_date")),
     }
 
 def extract_location_data(complaint_data: Dict, db: Session = None) -> Dict:
@@ -3417,10 +3444,26 @@ def prepare_complaint_model_data(
     
     # สร้างเลขที่เรื่องร้องเรียน
     complaint_number = generate_complaint_number(db)
-    
+
     # ประมวลผลข้อมูลที่อยู่ พร้อมแก้ไขข้อมูลที่ไม่สมบูรณ์
     location_data = extract_location_data(complaint_data, db)
-    
+
+    # ✅ ดึง reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+    step3_general = complaint_data.get("step3", {}).get("general", {})
+
+    def parse_date_field(val):
+        """แปลงค่าวันที่จาก string/ISO เป็น datetime object"""
+        if not val or val is None or val == "":
+            return None
+        if isinstance(val, str):
+            try:
+                if "T" in val:
+                    return datetime.fromisoformat(val.replace("Z", "+00:00").replace("+00:00", ""))
+                return datetime.strptime(val, "%Y-%m-%d")
+            except (ValueError, TypeError):
+                return None
+        return val
+
     return {
         "id": uuid.uuid4(),
         "complaint_number": complaint_number,
@@ -3450,6 +3493,17 @@ def prepare_complaint_model_data(
         "progress_percentage": 0,
         # ✅ อ่าน reference_number5 จาก step4.general (สำหรับ EOffice/OPM dedup)
         "additional_reference_number1": complaint_data.get("step4", {}).get("general", {}).get("reference_number5", ""),
+        # ✅ อ่าน reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+        "reference_number": step3_general.get("reference_number") or None,
+        "reference_date": parse_date_field(step3_general.get("reference_date")),
+        "reference_number2": step3_general.get("reference_number2") or None,
+        "reference_date2": parse_date_field(step3_general.get("reference_date2")),
+        "reference_number3": step3_general.get("reference_number3") or None,
+        "reference_date3": parse_date_field(step3_general.get("reference_date3")),
+        "reference_number4": step3_general.get("reference_number4") or None,
+        "reference_date4": parse_date_field(step3_general.get("reference_date4")),
+        "document_number": step3_general.get("document_number") or None,
+        "document_date": parse_date_field(step3_general.get("document_date")),
     }
 
 def add_related_complaint(db: Session, complaint_id: UUID, related_complaint_id: UUID) -> bool:
