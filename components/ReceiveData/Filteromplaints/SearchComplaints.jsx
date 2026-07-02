@@ -696,8 +696,8 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       console.log('Complainant Type:', cType);
       console.log('Complainant Data:', cData);
 
-      // Step 1: Delegate
-      const delegate = data?.step1?.general?.delegate || {};
+      // Step 1: Delegate (รองรับทั้ง delegate และ signer สำหรับ corporate)
+      const delegate = data?.step1?.general?.delegate || data?.step1?.general?.signer || {};
       const { type: dType, data: dData } = getDelegateTypeAndData(delegate);
       setDelegateType(dType);
       setDelegateData(dData);

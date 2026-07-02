@@ -253,9 +253,16 @@ useEffect(() => {
       setSubComplaintTypes(subTypes);
 
       // Reset forms with normalized field names (use complaintType instead of complaintTypeId)
-      generalMethods.reset(merged?.step1?.general?.general || {});
-      delegateMethods.reset(merged?.step1?.general?.delegate || {});
-      step2Methods.reset(merged?.step2?.general?.individual || {});
+      // ✅ รองรับทุกประเภทผู้ร้อง (individual/corporate/government)
+      const s1General = merged?.step1?.general || {};
+      const s1Complainant = s1General.corporate || s1General.government || s1General.general || {};
+      const s1Delegate = s1General.signer || s1General.delegate || {};
+      generalMethods.reset(s1Complainant);
+      delegateMethods.reset(s1Delegate);
+      // ✅ รองรับทุกประเภทผู้ถูกร้อง
+      const s2General = merged?.step2?.general || {};
+      const s2Respondent = s2General[s2General.activeType] || s2General.individual || s2General.corporate || s2General.government || {};
+      step2Methods.reset(s2Respondent);
       step3Methods.reset({
         ...merged?.step3?.general,
         complaintType: complaintTypeId ? String(complaintTypeId) : "",
@@ -912,18 +919,20 @@ useEffect(() => {
       }
 
       // ตรวจสอบประเภทผู้ร้องทุกข์จากข้อมูล
-      const step1Inner = data?.step1?.general?.general || {};
-      if (step1Inner.corporate && Object.keys(step1Inner.corporate).length > 0) {
+      // ✅ เช็คที่ step1.general (รองรับทั้งโครงสร้างเก่าและใหม่จาก backend)
+      const step1General = data?.step1?.general || {};
+      const step1Inner = step1General.general || {};
+      if (step1General.corporate && Object.keys(step1General.corporate).length > 0) {
         setComplainantType("corporate");
         setDelegateType("signer");
-        defaultDelegateRef.current = data?.step1?.general?.signer || null;
-      } else if (step1Inner.government && Object.keys(step1Inner.government).length > 0) {
+        defaultDelegateRef.current = step1General.signer || null;
+      } else if (step1General.government && Object.keys(step1General.government).length > 0) {
         setComplainantType("government");
         defaultDelegateRef.current = null;
       } else {
         setComplainantType("individual");
         setDelegateType("delegate");
-        defaultDelegateRef.current = data?.step1?.general?.delegate || null;
+        defaultDelegateRef.current = step1General.delegate || null;
       }
 
       // ตรวจสอบประเภทผู้ถูกร้องเรียนจากข้อมูล
@@ -948,6 +957,10 @@ useEffect(() => {
       defaultStep3Ref.current.complaint_number = data?.complaint_number || "";
 
       console.log("defaultStep3Ref", defaultStep3Ref);
+
+      // ✅ เซ็ต defaultGeneralRef ตามประเภทผู้ร้องที่ตรวจจับได้
+      const s1G = data?.step1?.general || {};
+      defaultGeneralRef.current = s1G.corporate || s1G.government || s1G.general || {};
 
       // reset form อื่น
       generalMethods.reset(defaultGeneralRef.current);
@@ -988,10 +1001,11 @@ useEffect(() => {
   step4Methods.reset(defaultData?.step4?.general || {});
 
   // Restore original type states from loaded data
-  const step1Inner = defaultData?.step1?.general?.general || {};
-  const cType = step1Inner.government && Object.keys(step1Inner.government).length > 0
+  // ✅ เช็คที่ step1.general (รองรับทั้งโครงสร้างเก่าและใหม่)
+  const step1G = defaultData?.step1?.general || {};
+  const cType = step1G.government && Object.keys(step1G.government).length > 0
     ? "government"
-    : step1Inner.corporate && Object.keys(step1Inner.corporate).length > 0
+    : step1G.corporate && Object.keys(step1G.corporate).length > 0
     ? "corporate"
     : "individual";
   setComplainantType(cType);
@@ -1547,8 +1561,11 @@ const handleSubmit = async () => {
     }
 
     // Update complaint with attachment changes first
+    // ✅ ส่ง step1+step2 ไปด้วยเพื่อป้องกัน backend เขียนทับข้อมูลเดิม
     console.log("📎 Updating attachments:", existingAttachments);
     await UpdateComplaint(defaultData.id, {
+      step1: defaultData?.step1,
+      step2: defaultData?.step2,
       step3: {
         ...defaultData?.step3,
         general: {

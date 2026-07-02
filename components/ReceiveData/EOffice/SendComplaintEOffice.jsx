@@ -25,7 +25,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import GetEnhancedComplaintsService from "@services/GetEnhancedComplaintsService/GetEnhancedComplaintsService";
 import SelectFieldPAAOPM from "@services/SelectFieldPAAOPM/SelectFieldPAAOPM";
-import { alertSuccess } from "@utils/Alerts";
+import { alertSuccess, alertError } from "@utils/Alerts";
 import {
   AddEOfficeOperating,
   loginEOffice,
@@ -90,8 +90,18 @@ const SendComplaintEOffice = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
 
   useEffect(() => {
-    if (prefillCaseId) setFormData((prev) => ({ ...prev, case_id: prefillCaseId }));
-  }, [prefillCaseId]);
+    // รอ router query พร้อมก่อน (Next.js: router.query เป็น {} ตอน render แรก)
+    if (!router.isReady) return;
+
+    if (prefillCaseId) {
+      setFormData((prev) => ({ ...prev, case_id: prefillCaseId }));
+    } else {
+      // ไม่มี EOffice ID → กลับไปหน้า list (ต้องมากจากหน้า detail เสมอ)
+      // เพราะ complaint_number จาก MOF ไม่ใช่ EOffice id → ส่งไป SetOrgSummaryResult จะ error 400
+      alertError("ไม่พบ EOffice ID", "กรุณาเข้าจากหน้ารายละเอียดเรื่องร้องทุกข์ (กดปุ่ม 'ส่งผลพิจารณา')");
+      router.push("/admin/edit/eoffice");
+    }
+  }, [router.isReady, prefillCaseId]);
 
   const isFormValid = useMemo(() => {
     return (
@@ -161,8 +171,11 @@ const SendComplaintEOffice = () => {
       setFormData((prev) => {
         const next = { ...prev };
 
-        // เลขที่รับเรื่อง
-        if (complaint.complaint_number && complaint.complaint_number !== '-') {
+        // เลขที่รับเรื่อง:
+        // - ถ้ามี prefillCaseId จาก URL (มาจาก EOffice detail page) → ใช้ค่าเดิม ไม่เขียนทับ
+        //   เพราะ complaint_number เป็นเลข MOF ไม่ใช่ EOffice id → ส่งไป API จะ error 400
+        // - ถ้าไม่มี (เข้าหน้า send ตรงๆ) → ใช้ complaint_number เป็น fallback
+        if (!prefillCaseId && complaint.complaint_number && complaint.complaint_number !== '-') {
           next.case_id = complaint.complaint_number;
         }
 
@@ -214,7 +227,7 @@ const SendComplaintEOffice = () => {
         return next;
       });
     }
-  }, []);
+  }, [prefillCaseId]);
 
   return (
     <div>
@@ -269,6 +282,11 @@ const SendComplaintEOffice = () => {
             <Box sx={{ mb: 2, p: 1.5, bgcolor: '#e3f2fd', borderRadius: 1, border: '1px solid #2196f3' }}>
               <Typography variant="body2" color="primary" fontWeight="bold" sx={{ fontSize: '13px' }}>
                 ✅ เลือก: {selectedComplaintData.complaint_number}
+                {formData.case_id && formData.case_id !== selectedComplaintData.complaint_number && (
+                  <Typography component="span" variant="caption" sx={{ ml: 1, color: '#6b7280' }}>
+                    (EOffice ID: {formData.case_id})
+                  </Typography>
+                )}
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '12px' }}>
                 {selectedComplaintData.subject} | {selectedComplaintData.complainant_name}

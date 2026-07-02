@@ -1,5 +1,5 @@
 /**
- * EOfficeDetail — รายละเอียดรับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์
+ * EOfficeDetail — รายละเอียดร้องทุกข์จากเว็บไซต์ Mof_EOffice
  *
  * ทำงานเหมือน Opm1111/SearchComplaints.jsx แต่ดึงข้อมูลจาก eofficer REST API (JSON)
  * แสดงข้อมูลเรื่องร้องทุกข์, ผู้ร้อง, ผู้ถูกร้อง, ไฟล์แนบ, ประวัติการดำเนินการ
@@ -41,11 +41,9 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import { showLoading, closeAlert, alertError } from "@utils/Alerts";
 import {
   GetEOfficeCaseDetail,
-  GetEOfficeCaseOwners,
   GetEOfficeOperatings,
   GetEOfficeAttachments,
 } from "@pages/api/eoffice/eoffice";
-import WorkflowFlow from "./WorkflowFlow";
 import { formatThaiDate } from "@utils/Formats";
 import useDetailEOfficeData from "@hooks/admin/eoffice/useDetailEOfficeData";
 import styles from "./EOfficeDetail.module.scss";
@@ -57,7 +55,6 @@ const EOfficeDetail = () => {
   const { id: caseId } = router.query;
 
   const [caseDetail, setCaseDetail] = useState(null);
-  const [caseOwners, setCaseOwners] = useState([]);
   const [operatings, setOperatings] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -106,24 +103,10 @@ const EOfficeDetail = () => {
         const attsRes = await GetEOfficeAttachments(caseId);
         if (cancelled) return;
 
-        // ดึงผังการไหล (list_case_org_owner) จาก GetCase
-        let owners = [];
-        try {
-          const ownersRes = await GetEOfficeCaseOwners(caseId);
-          if (!cancelled && ownersRes?.data) {
-            owners = Array.isArray(ownersRes.data.list_case_org_owner)
-              ? ownersRes.data.list_case_org_owner
-              : [];
-          }
-        } catch (err) {
-          console.warn("[EOfficeDetail] GetEOfficeCaseOwners failed, flow will be hidden:", err);
-        }
-
         const ops = Array.isArray(opsRes?.data) ? opsRes.data : (Array.isArray(opsRes) ? opsRes : []);
         const atts = Array.isArray(attsRes?.data) ? attsRes.data : (Array.isArray(attsRes) ? attsRes : []);
 
         setCaseDetail(mapped);
-        setCaseOwners(owners);
         setOperatings(ops);
         setAttachments(atts);
         closeAlert();
@@ -154,7 +137,7 @@ const EOfficeDetail = () => {
         <BreadcrumbsService
           items={[
             { label: "จัดการข้อมูลในระบบ", url: "/admin/dashboard" },
-            { label: "รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์", url: "/admin/edit/eoffice" },
+            { label: "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ Mof_EOffice", url: "/admin/edit/eoffice" },
             { label: String(caseId || "...") },
           ]}
         />
@@ -222,7 +205,7 @@ const EOfficeDetail = () => {
       <BreadcrumbsService
         items={[
           { label: "จัดการข้อมูลในระบบ", url: "/admin/dashboard" },
-          { label: "รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์", url: "/admin/edit/eoffice" },
+          { label: "เรื่องราวร้องทุกข์ช่องทางเว็บไซต์ Mof_EOffice", url: "/admin/edit/eoffice" },
           { label: caseDetail.case_code || caseDetail.case_id },
         ]}
       />
@@ -284,8 +267,8 @@ const EOfficeDetail = () => {
               const fromOrg = complainant.org || caseDetail.from_org;
               const ownerName = complainant.name || caseDetail.owner_name;
               const fields = [];
-              if (fromOrg) fields.push({ label: "รายชือผู้ส่ง", value: fromOrg });
-              if (ownerName && ownerName !== fromOrg) fields.push({ label: "ชื่อเจ้าของเรื่อง", value: ownerName });
+              if (fromOrg) fields.push({ label: "หน่วยงานที่ส่ง", value: fromOrg });
+              if (ownerName && ownerName !== fromOrg) fields.push({ label: "ผู้ส่ง", value: ownerName });
               return fields.length > 0
                 ? renderRows(fields)
                 : <Typography variant="body2" sx={{ color: "#9ca3af" }}>-</Typography>;
@@ -377,9 +360,6 @@ const EOfficeDetail = () => {
         {/* ══════════════════════════════════════════ */}
         <Grid item xs={12}>
           <SectionCard icon={<HistoryIcon />} title={`ประวัติการดำเนินการ (${operatings.length})`}>
-            {/* ── ผังการไหลเอกสาร (list_case_org_owner) ── */}
-            <WorkflowFlow orgOwners={caseOwners} />
-
             {operatings.length === 0 ? (
               <Box sx={{ textAlign: "center", py: 4 }}>
                 <Typography variant="body2" sx={{ color: "#9ca3af" }}>
