@@ -25,6 +25,7 @@ class ComplaintStatus(str, enum.Enum):
 class ComplainantType(str, enum.Enum):
     INDIVIDUAL = "individual"   # บุคคลธรรมดา
     CORPORATE = "corporate"     # นิติบุคคล
+    GOVERNMENT = "government"   # หน่วยงานราชการ
 
 # Define respondent type (ประเภทผู้ถูกร้องเรียน)
 class RespondentType(str, enum.Enum):

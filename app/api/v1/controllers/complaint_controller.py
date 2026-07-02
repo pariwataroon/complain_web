@@ -233,26 +233,12 @@ def create_complaint(db: Session, complaint_data: Dict[str, Any], user_id: Optio
         
         # สร้าง Complaint object
         new_complaint = Complaint(**model_data)
-
+        
         # บันทึกลงฐานข้อมูล
         db.add(new_complaint)
         db.commit()
         db.refresh(new_complaint)
-
-        # ✅ [EOffice/OPM แยก] — อัปเดต document_number ถ้า payload มีส่งมา
-        # เฉพาะเคสที่มี document_number จะเข้า here → flow อื่นไม่กระทบ
-        doc_num = (
-            complaint_data.get("document_number", "")
-            or complaint_data.get("step3", {}).get("general", {}).get("document_number", "")
-        )
-        if doc_num and doc_num.strip():
-            try:
-                new_complaint.document_number = doc_num.strip()
-                db.commit()
-                logger.info(f"[Auto-fill] document_number set for {new_complaint.id}: {doc_num}")
-            except Exception as dn_err:
-                logger.warning(f"[Auto-fill] Failed to set document_number: {str(dn_err)}")
-
+        
         # สร้างประวัติสถานะ
         create_status_history(
             db, new_complaint.id, ComplaintStatus.SUBMITTED, 
@@ -2147,7 +2133,7 @@ def get_complaints(
                     complaint_type_name = ctype.name
                     complaint_type_id = str(ctype.id)
             
-            list_item_dict = list_item.model_dump() if hasattr(list_item, 'model_dump') else list_item.__dict__
+            list_item_dict = list_item.__dict__
             list_item_dict["complaint_subtype"] = complaint_subtype_name
             list_item_dict["complaint_subtype_id"] = complaint_subtype_id
             list_item_dict["complaint_type_id"] = complaint_type_id
@@ -2159,11 +2145,7 @@ def get_complaints(
 
             # ✅ เพิ่ม is_master key เพื่อบอกสถานะ parent/child (คำนวณง่ายๆ)
             list_item_dict["is_master"] = complaint.parent_complaint_id is None
-
-            # ✅ เพิ่ม reference_number5 สำหรับ EOffice/OPM dedup (checkDuplicate ใช้ฟิลด์นี้)
-            list_item_dict["reference_number5"] = complaint.additional_reference_number1 or ""
-            list_item_dict["additional_reference_number1"] = complaint.additional_reference_number1
-
+            
             result.append(list_item_dict)
         except Exception as e:
             if DEBUG_MODE:
@@ -3985,11 +3967,6 @@ def get_complaints_grouped_by_channel(
     from models.comp_complaint_types import ComplaintChannel, ComplaintSubType
     
     try:
-        # Pre-load channels และ subtypes เพื่อป้องกัน N+1 query
-        from models.comp_complaint_types import ComplaintChannel, ComplaintSubType
-        all_channels = {str(ch.id): ch.name for ch in db.query(ComplaintChannel).all()}
-        all_subtypes = {str(st.id): st.name for st in db.query(ComplaintSubType).all()}
-
         # สร้าง query พื้นฐาน
         query = db.query(Complaint)
         
@@ -4131,10 +4108,10 @@ def get_complaints_grouped_by_channel(
         for complaint in complaints:
             # กำหนด channel info
             channel_id = str(complaint.complaint_channel_id) if complaint.complaint_channel_id else "unknown"
-            channel_name = get_channel_name(db, complaint.complaint_channel_id, all_channels)
-
+            channel_name = get_channel_name(db, complaint.complaint_channel_id)
+            
             # สร้าง complaint item
-            item = create_grouped_complaint_item(db, complaint, all_subtypes)
+            item = create_grouped_complaint_item(db, complaint)
             item["complaint_channel_id"] = channel_id
             item["complaint_channel_name"] = channel_name
             
@@ -4170,15 +4147,11 @@ def get_complaints_grouped_by_channel(
             "filters": get_filter_options(db)
         }
 
-def get_channel_name(db: Session, channel_id: Optional[UUID], all_channels: Optional[Dict[str, str]] = None) -> str:
-    """ดึงชื่อช่องทางการร้องเรียน (รองรับ pre-loaded dict เพื่อป้องกัน N+1)"""
+def get_channel_name(db: Session, channel_id: Optional[UUID]) -> str:
+    """ดึงชื่อช่องทางการร้องเรียน"""
     if not channel_id:
         return "ไม่ระบุช่องทาง"
-
-    # ถ้ามี pre-loaded dict ให้ใช้ dict lookup แทน query DB
-    if all_channels is not None:
-        return all_channels.get(str(channel_id)) or "ไม่ระบุช่องทาง"
-
+    
     try:
         from models.comp_complaint_types import ComplaintChannel
         channel = db.query(ComplaintChannel).filter(ComplaintChannel.id == channel_id).first()
@@ -4186,19 +4159,16 @@ def get_channel_name(db: Session, channel_id: Optional[UUID], all_channels: Opti
     except Exception:
         return "ไม่ระบุช่องทาง"
 
-def create_grouped_complaint_item(db: Session, complaint: Complaint, all_subtypes: Optional[Dict[str, str]] = None) -> Dict:
-    """สร้างข้อมูล complaint item สำหรับการจัดกลุ่ม (รองรับ pre-loaded dict เพื่อป้องกัน N+1)"""
+def create_grouped_complaint_item(db: Session, complaint: Complaint) -> Dict:
+    """สร้างข้อมูล complaint item สำหรับการจัดกลุ่ม"""
     try:
         # ดึงข้อมูล complaint_subtype
         complaint_subtype = ""
         if complaint.complaint_subtype_id:
-            if all_subtypes is not None:
-                complaint_subtype = all_subtypes.get(str(complaint.complaint_subtype_id)) or ""
-            else:
-                from models.comp_complaint_types import ComplaintSubType
-                subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
-                if subtype:
-                    complaint_subtype = subtype.name
+            from models.comp_complaint_types import ComplaintSubType
+            subtype = db.query(ComplaintSubType).filter(ComplaintSubType.id == complaint.complaint_subtype_id).first()
+            if subtype:
+                complaint_subtype = subtype.name
         
         # ตรวจสอบสถานะการมอบหมาย
         is_assigned = bool(
@@ -4242,9 +4212,6 @@ def create_grouped_complaint_item(db: Session, complaint: Complaint, all_subtype
             "reference_date3": complaint.reference_date3.isoformat() if complaint.reference_date3 else None,
             "reference_number4": complaint.reference_number4,
             "reference_date4": complaint.reference_date4.isoformat() if complaint.reference_date4 else None,
-            # ✅ เลขหนังสือ นร
-            "document_number": complaint.document_number or "",
-            "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
         }
         
     except Exception as e:
