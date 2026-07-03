@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, useRef } from "react";
 import { GetAllComplaintChannels } from "@pages/api/allselect/allselect";
-import { CreateComplaint, UpdateComplaint, GetComplaintByReferenceNumber5 } from "@pages/api/complaint/complaint";
+import { CreateComplaint, UpdateAssignmentCompleteByAdmin, GetComplaintByReferenceNumber5 } from "@pages/api/complaint/complaint";
 
 const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
   const [eofficeChannelId, setEofficeChannelId] = useState(null);
@@ -20,6 +20,13 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
   // ── ตรวจสอบว่าข้อมูลพร้อม ──
   useEffect(() => {
     if (caseDetail && caseDetail.case_id) {
+      console.log("[EOffice Hook] 🔍 caseDetail keys:", Object.keys(caseDetail));
+      console.log("[EOffice Hook] 🔍 book_no:", caseDetail.book_no);
+      console.log("[EOffice Hook] 🔍 opsDocNo:", caseDetail.opsDocNo);
+      console.log("[EOffice Hook] 🔍 ministerDocNo:", caseDetail.ministerDocNo);
+      console.log("[EOffice Hook] 🔍 book_date:", caseDetail.book_date);
+      console.log("[EOffice Hook] 🔍 opsReceivedDate:", caseDetail.opsReceivedDate);
+      console.log("[EOffice Hook] 🔍 ministerDocDate:", caseDetail.ministerDocDate);
       setIsDataReady(true);
     }
   }, [caseDetail]);
@@ -31,28 +38,58 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       const data = await GetAllComplaintChannels();
       const items = data.res_data?.items || [];
       console.log("[EOffice] 📡 ได้ channels:", items.length, "รายการ");
+      console.log("[EOffice] 📡 รายการ channels ทั้งหมด:", items.map(i => ({ id: i.id, name: i.name })));
 
-      // หา channel ชื่อ "ระบบสารบรรณอิเล็กทรอนิกส์" หรือชื่อที่เกี่ยวข้องกับ EOffice
-      const eofficeChannel = items.find(
-        (item) =>
-          item.name?.includes("สารบรรณ") ||
-          item.name?.includes("สารบัญ") ||
-          item.name?.includes("EOffice") ||
-          item.name?.includes("eoffice") ||
-          item.name?.includes("Mof_EOffice")
-      );
+      // หา channel ที่เกี่ยวข้องกับ EOffice/สารบรรณ (เรียงตามความเฉพาะเจาะจง)
+      const SEARCH_KEYWORDS = [
+        "สารบรรณอิเล็กทรอนิกส์",
+        "Mof_EOffice",
+        "EOffice",
+        "eoffice",
+        "สารบรรณ",
+        "สารบัญ",
+        "rongtook",
+      ];
+
+      let eofficeChannel = null;
+      for (const keyword of SEARCH_KEYWORDS) {
+        eofficeChannel = items.find((item) =>
+          item.name?.toLowerCase().includes(keyword.toLowerCase())
+        );
+        if (eofficeChannel) {
+          console.log(`[EOffice] ✅ พบ channel ด้วย keyword "${keyword}":`, eofficeChannel.name, "id:", eofficeChannel.id);
+          break;
+        }
+      }
+
       if (eofficeChannel) {
-        console.log("[EOffice] ✅ พบ สารบรรณ/EOffice channel:", eofficeChannel.name, "id:", eofficeChannel.id);
         setEofficeChannelId(eofficeChannel.id);
         return eofficeChannel.id;
       } else {
-        console.error("[EOffice] ❌ ไม่พบช่องทาง สารบรรณ/EOffice ในระบบ  channels ที่มี:", items.map(i => i.name));
+        console.error("[EOffice] ❌ ไม่พบช่องทาง สารบรรณ/EOffice ในระบบ");
+        console.error("[EOffice] ❌ channels ที่มี:", items.map(i => `"${i.name}"`).join(", "));
         throw new Error("EOffice Channel not found — ไม่พบช่องทาง สารบรรณอิเล็กทรอนิกส์");
       }
     } catch (error) {
       console.error("[EOffice] ❌ Error fetching Channel ID:", error);
       return null;
     }
+  };
+
+  // ── Helper: แปลงวันที่ EOffice → ISO string สำหรับ API (hook scope) ──
+  const parseEOfficeDate = (dateStr) => {
+    if (!dateStr) return null;
+    try {
+      if (dateStr.includes("T")) {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) return d.toISOString();
+      }
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) return d.toISOString();
+    } catch (e) {
+      console.warn("[EOffice] ⚠️ parseEOfficeDate failed:", dateStr, e);
+    }
+    return null;
   };
 
   // ── แปลงข้อมูล EOffice เป็น format สำหรับ CreateComplaint API ──
@@ -66,13 +103,10 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
     let incidentDate = caseDetail.date_received || "";
     if (incidentDate) {
       try {
-        // ลอง parse แบบต่างๆ
         if (incidentDate.includes("T")) {
-          // ISO format: "2026-06-19T00:00:00"
           const d = new Date(incidentDate);
           if (!isNaN(d.getTime())) incidentDate = d.toISOString();
         } else {
-          // Thai format: "2569/01/15 09:30:00"
           const parts = incidentDate.match(/(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
           if (parts) {
             const year = parseInt(parts[1]) - 543;
@@ -122,36 +156,6 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       };
     }
 
-    // ── Helper: แปลงวันที่ EOffice → ISO string สำหรับ API ──
-    const parseEOfficeDate = (dateStr) => {
-      if (!dateStr) return null;
-      try {
-        if (dateStr.includes("T")) {
-          // ISO format: "2026-06-04T00:00:00"
-          const d = new Date(dateStr);
-          if (!isNaN(d.getTime())) return d.toISOString();
-        }
-        // อาจเป็น short date: "2026-06-30"
-        const d = new Date(dateStr);
-        if (!isNaN(d.getTime())) return d.toISOString();
-      } catch (e) {
-        console.warn("[EOffice] ⚠️ parseEOfficeDate failed:", dateStr, e);
-      }
-      return null;
-    };
-
-    // ── เลขที่หนังสือ + วันที่ (จาก book_no / book_date) ──
-    const documentNumber = caseDetail.book_no || "";
-    const documentDate = parseEOfficeDate(caseDetail.book_date) || parseEOfficeDate(caseDetail.date_received);
-
-    // ── เลข สป.กค. + วันที่ (จาก opsDocNo / opsReceivedDate) ──
-    const referenceNumber1 = caseDetail.opsDocNo || "";
-    const referenceDate1 = parseEOfficeDate(caseDetail.opsReceivedDate);
-
-    // ── เลข สป.สร. + วันที่ (จาก ministerDocNo / ministerDocDate) ──
-    const referenceNumber2 = caseDetail.ministerDocNo || "";
-    const referenceDate2 = parseEOfficeDate(caseDetail.ministerDocDate);
-
     // step3: รายละเอียดเรื่อง — subject ใช้ชื่อเรื่องจริง, case_id เก็บใน reference_number5
     const step3 = {
       general: {
@@ -169,36 +173,22 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
             content: file.file_content || null,
           })) || [],
         // เลขที่หนังสือ + วันที่
-        document_number: documentNumber,
-        document_date: documentDate,
+        document_number: caseDetail.book_no || "",
+        document_date: parseEOfficeDate(caseDetail.book_date) || parseEOfficeDate(caseDetail.date_received),
         // เลข สป.กค. + วันที่
-        reference_number: referenceNumber1,
-        reference_date: referenceDate1,
+        reference_number: caseDetail.opsDocNo || "",
+        reference_date: parseEOfficeDate(caseDetail.opsReceivedDate),
         // เลข สป.สร. + วันที่
-        reference_number2: referenceNumber2,
-        reference_date2: referenceDate2,
+        reference_number2: caseDetail.ministerDocNo || "",
+        reference_date2: parseEOfficeDate(caseDetail.ministerDocDate),
       },
-    };
-
-    // assignment_form: ส่ง reference fields เหมือน WebsiteComplaints (เพื่อให้ backend เก็บได้ตรง)
-    const assignment_form = {
-      document_number: documentNumber,
-      document_date: documentDate,
-      // เลข สป.กค. + วันที่
-      reference_number: referenceNumber1,
-      reference_date: referenceDate1,
-      reference_number1: referenceNumber1,
-      reference_date1: referenceDate1,
-      // เลข สป.สร. + วันที่
-      reference_number2: referenceNumber2,
-      reference_date2: referenceDate2,
     };
 
     // step4: metadata + reference tracking
     const step4 = {
       general: {
         accepted: true,
-        reference_number5: String(caseDetail.case_id || ""), // เก็บ case_id ของ EOffice สำหรับ dedup
+        reference_number5: String(caseDetail.case_id || ""),
         _eoffice_meta: {
           case_id: caseDetail.case_id,
           status: caseDetail.status,
@@ -213,7 +203,6 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       ...(step2 ? { step2 } : {}),
       step3,
       step4,
-      assignment_form,
     };
 
     console.log("[EOffice] 📦 Payload preview:", {
@@ -225,6 +214,30 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
     });
 
     return payload;
+  };
+
+  // ── เตรียม reference fields payload สำหรับ UpdateAssignmentCompleteByAdmin ──
+  const getReferenceFieldsPayload = () => {
+    if (!caseDetail) return null;
+
+    const documentNumber = caseDetail.book_no || "";
+    const documentDate = parseEOfficeDate(caseDetail.book_date) || parseEOfficeDate(caseDetail.date_received);
+    const referenceNumber1 = caseDetail.opsDocNo || "";
+    const referenceDate1 = parseEOfficeDate(caseDetail.opsReceivedDate);
+    const referenceNumber2 = caseDetail.ministerDocNo || "";
+    const referenceDate2 = parseEOfficeDate(caseDetail.ministerDocDate);
+
+    const hasData = documentNumber || referenceNumber1 || referenceNumber2;
+    if (!hasData) return null;
+
+    return {
+      document_number: documentNumber || "",
+      document_date: documentDate || null,
+      reference_number1: referenceNumber1 || "",
+      reference_date1: referenceDate1 || null,
+      reference_number2: referenceNumber2 || "",
+      reference_date2: referenceDate2 || null,
+    };
   };
 
   // ── ตรวจสอบว่าเรื่องนี้มีในระบบแล้วหรือยัง (เทียบ reference_number5 = EOffice case_id) ──
@@ -299,7 +312,7 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
           caseDetail.book_no ||
           caseDetail.ministerDocNo
         ) && (
-          !existingItem.reference_number && !existingItem.reference_number1 ||
+          !existingItem.reference_number1 ||
           !existingItem.document_number ||
           !existingItem.reference_number2
         );
@@ -311,50 +324,21 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
 
         if (needsSubjectUpdate || needsRefUpdate) {
           try {
-            const updatePayload = {};
-            const step3General = {};
-            const updateAssignmentForm = {};
-
-            // อัปเดต subject
+            // อัปเดต subject ผ่าน UpdateAssignmentCompleteByAdmin
             if (needsSubjectUpdate) {
-              step3General.subject = correctSubject;
               console.log(`[EOffice] 🔄 กำลัง update subject: "${currentSubject}" → "${correctSubject}"`);
+              await UpdateAssignmentCompleteByAdmin(existingItem.id, { subject: correctSubject });
             }
 
-            // อัปเดต reference fields (สป.กค., สป.สร., เลขที่หนังสือ)
+            // อัปเดต reference fields ผ่าน UpdateAssignmentCompleteByAdmin (เหมือนเว็บ)
             if (needsRefUpdate) {
-              const docNo = caseDetail.book_no || "";
-              const docDate = caseDetail.book_date || caseDetail.date_received || null;
-              const refNo1 = caseDetail.opsDocNo || "";
-              const refDate1 = caseDetail.opsReceivedDate || null;
-              const refNo2 = caseDetail.ministerDocNo || "";
-              const refDate2 = caseDetail.ministerDocDate || null;
-
-              // step3.general
-              step3General.document_number = docNo;
-              step3General.document_date = docDate;
-              step3General.reference_number = refNo1;
-              step3General.reference_date = refDate1;
-              step3General.reference_number2 = refNo2;
-              step3General.reference_date2 = refDate2;
-
-              // assignment_form
-              updateAssignmentForm.document_number = docNo;
-              updateAssignmentForm.document_date = docDate;
-              updateAssignmentForm.reference_number = refNo1;
-              updateAssignmentForm.reference_date = refDate1;
-              updateAssignmentForm.reference_number1 = refNo1;
-              updateAssignmentForm.reference_date1 = refDate1;
-              updateAssignmentForm.reference_number2 = refNo2;
-              updateAssignmentForm.reference_date2 = refDate2;
-
-              console.log(`[EOffice] 🔄 กำลัง update reference fields:`, { docNo, refNo1, refNo2 });
+              const refPayload = getReferenceFieldsPayload();
+              if (refPayload) {
+                console.log(`[EOffice] 🔄 กำลัง update reference fields:`, refPayload);
+                await UpdateAssignmentCompleteByAdmin(existingItem.id, refPayload);
+              }
             }
 
-            if (Object.keys(step3General).length > 0) updatePayload.step3 = { general: step3General };
-            if (Object.keys(updateAssignmentForm).length > 0) updatePayload.assignment_form = updateAssignmentForm;
-
-            await UpdateComplaint(existingItem.id, updatePayload);
             console.log(`[EOffice] ✅ อัปเดตข้อมูลสำเร็จสำหรับเรื่อง ${caseDetail.case_id}`);
           } catch (updateErr) {
             console.warn("[EOffice] ⚠️ อัปเดตข้อมูลล้มเหลว:", updateErr.message);
@@ -376,21 +360,15 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       const result = await createComplaintAPI(apiData);
       console.log(`[EOffice] ✅ สร้าง complaint เรื่อง ${caseDetail.case_id} สำเร็จ!`, result);
 
-      // ── Backend ไม่เก็บ reference fields จาก step3.general → ต้อง update ทีหลังด้วย flat payload ──
+      // ── Backend ไม่เก็บ reference fields จาก step3.general → ต้อง update ทีหลังด้วย UpdateAssignmentCompleteByAdmin ──
       const newComplaintId = result?.res_data?.id || result?.res_data?.complaint_id;
       if (newComplaintId) {
-        const hasRefData = caseDetail.opsDocNo || caseDetail.book_no || caseDetail.ministerDocNo;
-        if (hasRefData) {
+        const refPayload = getReferenceFieldsPayload();
+        if (refPayload) {
           try {
-            await UpdateComplaint(newComplaintId, {
-              reference_number: caseDetail.opsDocNo || null,
-              reference_date: parseEOfficeDate(caseDetail.opsReceivedDate) || null,
-              reference_number2: caseDetail.ministerDocNo || null,
-              reference_date2: parseEOfficeDate(caseDetail.ministerDocDate) || null,
-              document_number: caseDetail.book_no || null,
-              document_date: parseEOfficeDate(caseDetail.book_date) || null,
-            });
-            console.log(`[EOffice] ✅ Update reference fields สำเร็จสำหรับ ${newComplaintId}`);
+            console.log(`[EOffice] 📝 กำลัง update reference fields ผ่าน UpdateAssignmentCompleteByAdmin...`, refPayload);
+            const updateRes = await UpdateAssignmentCompleteByAdmin(newComplaintId, refPayload);
+            console.log(`[EOffice] ✅ Update reference fields สำเร็จสำหรับ ${newComplaintId}`, updateRes);
           } catch (refErr) {
             console.warn("[EOffice] ⚠️ Update reference fields ล้มเหลว:", refErr?.response?.data || refErr?.message);
           }

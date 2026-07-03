@@ -84,6 +84,10 @@ const EOfficeDetail = () => {
         if (cancelled) return;
         const detail = detailRes.data || detailRes;
 
+        // 🔍 Log EOffice API response เพื่อดู field names จริง
+        console.log("[EOffice Detail] 🔍 Raw API response keys:", Object.keys(detail));
+        console.log("[EOffice Detail] 🔍 Full response:", JSON.stringify(detail, null, 2));
+
         const mapped = {
           ...detail,
           case_code: detail.content_no || `${detail.content_year}/${detail.id}`,
