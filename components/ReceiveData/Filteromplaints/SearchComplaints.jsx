@@ -1210,18 +1210,60 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       );
     }
 
-    // 3.5) บันทึก filing type, boolean flags, additional references ผ่าน assignment API
+    // 3.5) บันทึก step3-4 ทั้งหมดผ่าน assignment API
     const step3PreData = step3Methods.getValues();
+    const step4PreData = step4Methods?.getValues?.() || {};
     const filingTypeForAPI = complaintFilingType === "committee" ? "anonymous" : complaintFilingType;
+
+    // helper: format วันที่
+    const formatDateForAPI = (val) => {
+      if (!val) return null;
+      try {
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return null;
+        const pad = (n) => String(n).padStart(2, "0");
+        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+      } catch { return null; }
+    };
+
     const assignmentPayload = {
+      // complaint type & channel
+      complaint_type_id: step3PreData.complaintTypeId || step3PreData.complaintType || "",
+      complaint_subtype_id: step3PreData.complaintSubType || "",
+      complaint_channel_id: step3PreData.complaintChannel || "",
+      // subject
+      subject: step3PreData.subject || "",
+      // confidentiality & urgency
+      confidentiality_level: step3PreData.securityLevel || "normal",
+      urgency_level: step3PreData.urgencyLevel || "low",
+      // agency
+      assigned_agency: step3PreData.senderAgency || "",
+      agency_sender: step3PreData.senderAgency || "",
+      // reference fields (สป.กค., สป.สร., เลขที่หนังสือ)
+      reference_number1: step3PreData.referenceNumber1 || "",
+      reference_date1: formatDateForAPI(step3PreData.referenceDate1),
+      reference_number2: step3PreData.referenceNumber2 || "",
+      reference_date2: formatDateForAPI(step3PreData.referenceDate2),
+      reference_number3: step3PreData.referenceNumber3 || "",
+      reference_date3: formatDateForAPI(step3PreData.referenceDate3),
+      reference_number4: step3PreData.referenceNumber4 || "",
+      reference_date4: formatDateForAPI(step3PreData.referenceDate4),
+      document_number: step3PreData.documentNumber || "",
+      document_date: formatDateForAPI(step3PreData.documentDate),
+      // step4 dates
+      registration_date: formatDateForAPI(step4PreData.officerReceivedDate),
+      director_submission_date: formatDateForAPI(step4PreData.directorSubmittedDate),
+      incident_date: formatDateForAPI(step4PreData.incidentDate),
+      // filing type
       complaint_filing_type: filingTypeForAPI,
       new_complaint: complaintFilingType === "new",
       add_more_complaint_to_ref: complaintFilingType === "additional",
       group_work: complaintFilingType === "committee",
+      // additional references
       additional_reference_number1: step3PreData.additionalReference1 || "",
-      additional_reference_date1: step3PreData.additionalReferenceDate1 || "",
+      additional_reference_date1: formatDateForAPI(step3PreData.additionalReferenceDate1),
       additional_reference_number2: step3PreData.additionalReference2 || "",
-      additional_reference_date2: step3PreData.additionalReferenceDate2 || "",
+      additional_reference_date2: formatDateForAPI(step3PreData.additionalReferenceDate2),
     };
     try {
       await UpdateAssignmentCompleteByAdmin(defaultData.id, assignmentPayload);
