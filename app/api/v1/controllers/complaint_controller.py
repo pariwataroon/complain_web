@@ -493,7 +493,43 @@ def update_complaint_from_structured(
         if "subdistrict_name" in location_data and hasattr(complaint, "incident_subdistrict"):
             complaint.incident_subdistrict = location_data.get("subdistrict_name")
 
-    # (6) ช่องทางร้องเรียน (ถ้าส่งมาใน payload ระดับ root แบบ POST)
+    # (6) Reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+    step3_general = payload.get("step3", {}).get("general", {})
+    if step3_general:
+        def _parse_date_field(val):
+            if not val or val is None or val == "":
+                return None
+            if isinstance(val, str):
+                try:
+                    if "T" in val:
+                        return datetime.fromisoformat(val.replace("Z", "+00:00").replace("+00:00", ""))
+                    return datetime.strptime(val, "%Y-%m-%d")
+                except (ValueError, TypeError):
+                    return None
+            return val
+
+        if "reference_number" in step3_general:
+            complaint.reference_number = step3_general.get("reference_number") or None
+        if "reference_date" in step3_general:
+            complaint.reference_date = _parse_date_field(step3_general.get("reference_date"))
+        if "reference_number2" in step3_general:
+            complaint.reference_number2 = step3_general.get("reference_number2") or None
+        if "reference_date2" in step3_general:
+            complaint.reference_date2 = _parse_date_field(step3_general.get("reference_date2"))
+        if "reference_number3" in step3_general:
+            complaint.reference_number3 = step3_general.get("reference_number3") or None
+        if "reference_date3" in step3_general:
+            complaint.reference_date3 = _parse_date_field(step3_general.get("reference_date3"))
+        if "reference_number4" in step3_general:
+            complaint.reference_number4 = step3_general.get("reference_number4") or None
+        if "reference_date4" in step3_general:
+            complaint.reference_date4 = _parse_date_field(step3_general.get("reference_date4"))
+        if "document_number" in step3_general:
+            complaint.document_number = step3_general.get("document_number") or None
+        if "document_date" in step3_general:
+            complaint.document_date = _parse_date_field(step3_general.get("document_date"))
+
+    # (7) ช่องทางร้องเรียน (ถ้าส่งมาใน payload ระดับ root แบบ POST)
     complaint_channel_id = None
     if "complaint_channel_id" in payload:
         try:
