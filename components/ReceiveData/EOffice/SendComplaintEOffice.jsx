@@ -4,7 +4,7 @@
  * ทำงานเหมือน Opm1111/SendComplaintOPm.jsx แต่ส่งข้อมูลผ่าน REST API (JSON)
  * ฟอร์มนี้ใช้สำหรับส่งผลการดำเนินการจากระบบ MOF กลับไปยัง EOffice
  */
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -89,18 +89,20 @@ const SendComplaintEOffice = () => {
   const [loading, setLoading] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "info" });
 
+  // ── Address cascade: set ทีละ step (province → district → sub_district) ──
+  const [pendingAddress, setPendingAddress] = useState({ district: "", sub_district: "" });
+  const districtSetRef = useRef(false);
+  const subDistrictSetRef = useRef(false);
+
   useEffect(() => {
     // รอ router query พร้อมก่อน (Next.js: router.query เป็น {} ตอน render แรก)
     if (!router.isReady) return;
 
     if (prefillCaseId) {
+      // ถ้ามากจากหน้า detail (มี case_id ใน URL) → prefill ให้เลย
       setFormData((prev) => ({ ...prev, case_id: prefillCaseId }));
-    } else {
-      // ไม่มี EOffice ID → กลับไปหน้า list (ต้องมากจากหน้า detail เสมอ)
-      // เพราะ complaint_number จาก MOF ไม่ใช่ EOffice id → ส่งไป SetOrgSummaryResult จะ error 400
-      alertError("ไม่พบ EOffice ID", "กรุณาเข้าจากหน้ารายละเอียดเรื่องร้องทุกข์ (กดปุ่ม 'ส่งผลพิจารณา')");
-      router.push("/admin/edit/eoffice");
     }
+    // ไม่มี prefillCaseId ก็ไม่เป็นไร — user จะค้นหาเรื่องจาก GetEnhancedComplaintsService เอง
   }, [router.isReady, prefillCaseId]);
 
   const isFormValid = useMemo(() => {
@@ -171,12 +173,18 @@ const SendComplaintEOffice = () => {
       setFormData((prev) => {
         const next = { ...prev };
 
-        // เลขที่รับเรื่อง:
+        // เลขที่รับเรื่อง (case_id):
         // - ถ้ามี prefillCaseId จาก URL (มาจาก EOffice detail page) → ใช้ค่าเดิม ไม่เขียนทับ
-        //   เพราะ complaint_number เป็นเลข MOF ไม่ใช่ EOffice id → ส่งไป API จะ error 400
-        // - ถ้าไม่มี (เข้าหน้า send ตรงๆ) → ใช้ complaint_number เป็น fallback
-        if (!prefillCaseId && complaint.complaint_number && complaint.complaint_number !== '-') {
-          next.case_id = complaint.complaint_number;
+        // - ถ้าไม่มี → ใช้ reference_number5 (EOffice case_id) เป็นหลัก
+        //   เพราะ complaint_number เป็นเลข MOF ส่งไป EOffice API จะ error 400
+        if (!prefillCaseId) {
+          const eofficeId = complaint.reference_number5 || complaint.additional_reference_number1;
+          if (eofficeId && eofficeId !== '-' && eofficeId !== '0') {
+            next.case_id = String(eofficeId);
+          } else if (complaint.complaint_number && complaint.complaint_number !== '-') {
+            // fallback: ถ้าไม่มี reference_number5 จริงๆ
+            next.case_id = complaint.complaint_number;
+          }
         }
 
         // ชื่อ-นามสกุลผู้รายงาน
@@ -213,21 +221,47 @@ const SendComplaintEOffice = () => {
           next.date_created = complaint.created_at;
         }
 
-        // ข้อมูลที่อยู่ — set พร้อมกันทีเดียวเพื่อไม่ให้ province onChange รีเซ็ต district/sub_district
+        // ข้อมูลที่อยู่ — set province ก่อน แล้ว cascade district → sub_district ทีละ step
         if (complaint.province_name && complaint.province_name !== '-') {
           next.province = complaint.province_id || '';
         }
-        if (complaint.district_name && complaint.district_name !== '-') {
-          next.district = complaint.district_id || '';
-        }
-        if (complaint.subdistrict_name && complaint.subdistrict_name !== '-') {
-          next.sub_district = complaint.subdistrict_id || complaint.sub_district_id || '';
-        }
+        // district + sub_district จะ set ผ่าน useEffect cascade (ต้องรอ API โหลดก่อน)
 
         return next;
       });
+
+      // เก็บ pending district/sub_district → useEffect จะ cascade set ให้หลัง API โหลดเสร็จ
+      districtSetRef.current = false;
+      subDistrictSetRef.current = false;
+      const dId = complaint.district_id || '';
+      const sdId = complaint.subdistrict_id || complaint.sub_district_id || '';
+      setPendingAddress({ district: dId, sub_district: sdId });
     }
   }, [prefillCaseId]);
+
+  // ── Cascade: set district หลัง districts API โหลดเสร็จ ──
+  useEffect(() => {
+    if (!pendingAddress.district || districtSetRef.current) return;
+    if (formData.province) {
+      const timer = setTimeout(() => {
+        setFormData((prev) => ({ ...prev, district: pendingAddress.district }));
+        districtSetRef.current = true;
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [formData.province, pendingAddress.district]);
+
+  // ── Cascade: set sub_district หลัง sub_districts API โหลดเสร็จ ──
+  useEffect(() => {
+    if (!pendingAddress.sub_district || subDistrictSetRef.current) return;
+    if (formData.district) {
+      const timer = setTimeout(() => {
+        setFormData((prev) => ({ ...prev, sub_district: pendingAddress.sub_district }));
+        subDistrictSetRef.current = true;
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [formData.district, pendingAddress.sub_district]);
 
   return (
     <div>
@@ -284,7 +318,7 @@ const SendComplaintEOffice = () => {
                 ✅ เลือก: {selectedComplaintData.complaint_number}
                 {formData.case_id && formData.case_id !== selectedComplaintData.complaint_number && (
                   <Typography component="span" variant="caption" sx={{ ml: 1, color: '#6b7280' }}>
-                    (EOffice ID: {formData.case_id})
+                    → ส่งกลับด้วย EOffice ID: {formData.case_id}
                   </Typography>
                 )}
               </Typography>
