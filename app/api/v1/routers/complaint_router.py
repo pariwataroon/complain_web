@@ -210,6 +210,15 @@ async def create_new_complaint(
         from config.dotenv import RABBITMQ_URL
         from app.services.complaint_queue_service import ComplaintQueueService
 
+        # 🔍 Debug: ดูว่า frontend ส่ง reference fields มาครบมั้ย
+        step3g = request_data.get("step3", {}).get("general", {})
+        import logging
+        _log = logging.getLogger(__name__)
+        _log.info(f"🔍 [ROUTER] step3.general keys: {list(step3g.keys()) if step3g else 'EMPTY'}")
+        _log.info(f"🔍 [ROUTER] reference_number: '{step3g.get('reference_number')}'")
+        _log.info(f"🔍 [ROUTER] document_number: '{step3g.get('document_number')}'")
+        _log.info(f"🔍 [ROUTER] reference_number2: '{step3g.get('reference_number2')}'")
+
         with ComplaintQueueService(RABBITMQ_URL) as queue_service:
             task_id = queue_service.queue_complaint_creation(request_data, current_user)
             

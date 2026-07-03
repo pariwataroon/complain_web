@@ -625,9 +625,9 @@ def prepare_complaint_model_data(
 
     # ✅ ดึง reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
     step3_general = complaint_data.get("step3", {}).get("general", {})
-    print(f"🔍 [CREATE] step3_general keys: {list(step3_general.keys()) if step3_general else 'EMPTY'}")
-    print(f"🔍 [CREATE] reference_number: '{step3_general.get('reference_number')}'")
-    print(f"🔍 [CREATE] document_number: '{step3_general.get('document_number')}'")
+    logger.info(f"🔍 [CREATE] step3_general keys: {list(step3_general.keys()) if step3_general else 'EMPTY'}")
+    logger.info(f"🔍 [CREATE] reference_number: '{step3_general.get('reference_number')}'")
+    logger.info(f"🔍 [CREATE] document_number: '{step3_general.get('document_number')}'")
 
     def parse_date_field(val):
         """แปลงค่าวันที่จาก string/ISO เป็น datetime object"""
@@ -3489,9 +3489,9 @@ def prepare_complaint_model_data(
 
     # ✅ ดึง reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
     step3_general = complaint_data.get("step3", {}).get("general", {})
-    print(f"🔍 [CREATE] step3_general keys: {list(step3_general.keys()) if step3_general else 'EMPTY'}")
-    print(f"🔍 [CREATE] reference_number: '{step3_general.get('reference_number')}'")
-    print(f"🔍 [CREATE] document_number: '{step3_general.get('document_number')}'")
+    logger.info(f"🔍 [CREATE] step3_general keys: {list(step3_general.keys()) if step3_general else 'EMPTY'}")
+    logger.info(f"🔍 [CREATE] reference_number: '{step3_general.get('reference_number')}'")
+    logger.info(f"🔍 [CREATE] document_number: '{step3_general.get('document_number')}'")
 
     def parse_date_field(val):
         """แปลงค่าวันที่จาก string/ISO เป็น datetime object"""
