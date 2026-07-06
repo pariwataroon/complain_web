@@ -72,9 +72,14 @@ const EOfficeComplaints = () => {
         year: 0,
       });
 
+      console.log("[EOffice] 🔍 API response keys:", Object.keys(response || {}));
+      console.log("[EOffice] 🔍 totalSize:", response?.totalSize, "total:", response?.total, "count:", response?.count, "totalItems:", response?.totalItems);
+
       const items = response?.data || [];
       setAllComplaints(items.map(mapItem));
-      setTotalCount(response?.totalSize || items.length);
+      // รองรับหลาย field name สำหรับ total count
+      const total = response?.totalSize || response?.total || response?.count || response?.totalItems || items.length;
+      setTotalCount(total);
       closeAlert();
       setIsDataLoaded(true);
       setIsRefreshing(false);
@@ -106,7 +111,8 @@ const EOfficeComplaints = () => {
 
       const items = response?.data || [];
       setAllComplaints((prev) => [...prev, ...items.map(mapItem)]);
-      setTotalCount(response?.totalSize || totalCount);
+      const total = response?.totalSize || response?.total || response?.count || response?.totalItems || totalCount;
+      setTotalCount(total);
       setIsFetchingMore(false);
     } catch (error) {
       console.error("Error fetching more:", error);
