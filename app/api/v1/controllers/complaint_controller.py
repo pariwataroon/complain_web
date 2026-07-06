@@ -476,6 +476,32 @@ def update_complaint_from_structured(
     if accepted is not None and hasattr(complaint, "terms_accepted"):
         complaint.terms_accepted = bool(accepted)
 
+    # (4.1) reference_number5 → additional_reference_number1 (EOffice/OPM ID)
+    # รองรับทั้ง step4.general.reference_number5 (structured) และ reference_number5 (flat)
+    ref5 = (
+        payload.get("step4", {}).get("general", {}).get("reference_number5", "")
+        or payload.get("reference_number5", "")
+    )
+    if ref5 and hasattr(complaint, "additional_reference_number1"):
+        complaint.additional_reference_number1 = str(ref5)
+
+    # (4.2) Flat reference fields (เลขที่หนังสือ, สป.กค., สป.สร.)
+    # รองรับ flat payload จาก frontend (ไม่ผ่าน step3)
+    flat_ref_mapping = {
+        "document_number": "document_number",
+        "document_date": "document_date",
+        "reference_number": "reference_number",
+        "reference_date": "reference_date",
+        "reference_number1": "reference_number",
+        "reference_date1": "reference_date",
+        "reference_number2": "reference_number2",
+        "reference_date2": "reference_date2",
+    }
+    for payload_key, model_field in flat_ref_mapping.items():
+        val = payload.get(payload_key)
+        if val is not None and hasattr(complaint, model_field):
+            setattr(complaint, model_field, val)
+
     # (5) Location mapping (ถ้ามี ก็อัพเดต)
     if location_data:
         if "province_id" in location_data and hasattr(complaint, "incident_province_id"):
@@ -3603,7 +3629,10 @@ def get_complaint_by_id_with_assignment_data(db: Session, complaint: Complaint) 
             "step1": parse_complainant_data(complaint.complainant_data, complaint.delegate_data, db),
             "step2": parse_respondent_data(complaint.respondent_data, db),
             "step3": parse_incident_data(complaint),
-            "step4": {"general": {"accepted": complaint.terms_accepted}},
+            "step4": {"general": {
+                "accepted": complaint.terms_accepted,
+                "reference_number5": complaint.additional_reference_number1 or "",
+            }},
             "status": complaint.status,
             "status_history": format_status_history(complaint.status_history),
             "created_at": complaint.created_at.isoformat(),
@@ -3857,7 +3886,10 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "step1": parse_complainant_data(complaint.complainant_data, complaint.delegate_data, db),
             "step2": parse_respondent_data(complaint.respondent_data, db),
             "step3": parse_incident_data(complaint),
-            "step4": {"general": {"accepted": complaint.terms_accepted}},
+            "step4": {"general": {
+                "accepted": complaint.terms_accepted,
+                "reference_number5": complaint.additional_reference_number1 or "",
+            }},
             "status": complaint.status,
             "status_history": format_status_history(complaint.status_history),
             "created_at": complaint.created_at.isoformat(),
