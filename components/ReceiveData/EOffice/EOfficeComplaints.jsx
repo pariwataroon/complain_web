@@ -46,7 +46,6 @@ const EOfficeComplaints = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [statusType, setStatusType] = useState("P");
   const router = useRouter();
   const fetchingRef = useRef(false);
@@ -57,7 +56,7 @@ const EOfficeComplaints = () => {
     return allComplaints.filter((item) => item.status === statusType);
   }, [allComplaints, statusType]);
 
-  // ── Fetch ชุดแรก ──
+  // ── Fetch ทั้งหมด (โหลดทีละ 50 จนกว่าจะไม่มีข้อมูล) ──
   const fetchComplaints = useCallback(async () => {
     try {
       showLoading("กำลังเชื่อมต่อ EOffice...");
@@ -65,21 +64,32 @@ const EOfficeComplaints = () => {
       const token = Cookies.get("eoffice_token");
       if (!token) throw new Error("Login ล้มเหลว — ไม่ได้ token");
 
-      const response = await GetEOfficeComplaints({
-        take: BATCH_SIZE,
-        skip: 0,
-        folder_id: 271,
-        year: 0,
-      });
+      let allItems = [];
+      let skip = 0;
+      let hasMore = true;
 
-      console.log("[EOffice] 🔍 API response keys:", Object.keys(response || {}));
-      console.log("[EOffice] 🔍 totalSize:", response?.totalSize, "total:", response?.total, "count:", response?.count, "totalItems:", response?.totalItems);
+      while (hasMore) {
+        const response = await GetEOfficeComplaints({
+          take: BATCH_SIZE,
+          skip,
+          folder_id: 271,
+          year: 0,
+        });
 
-      const items = response?.data || [];
-      setAllComplaints(items.map(mapItem));
-      // รองรับหลาย field name สำหรับ total count
-      const total = response?.totalSize || response?.total || response?.count || response?.totalItems || items.length;
-      setTotalCount(total);
+        const items = response?.data || [];
+        allItems = [...allItems, ...items.map(mapItem)];
+        skip += items.length;
+
+        // ถ้าได้น้อยกว่า BATCH_SIZE หรือไม่มีข้อมูล → หยุด
+        if (items.length < BATCH_SIZE || items.length === 0) {
+          hasMore = false;
+        }
+
+        setAllComplaints([...allItems]);
+        setTotalCount(allItems.length);
+      }
+
+      console.log(`[EOffice] ✅ โหลดเสร็จ ${allItems.length} รายการ`);
       closeAlert();
       setIsDataLoaded(true);
       setIsRefreshing(false);
@@ -91,36 +101,6 @@ const EOfficeComplaints = () => {
       setIsRefreshing(false);
     }
   }, []);
-
-  // ── Fetch หน้าถัดไป (เรียกจาก TableListEOffice เมื่อกด page) ──
-  const fetchMore = useCallback(async () => {
-    if (fetchingRef.current || allComplaints.length >= totalCount) return;
-    try {
-      fetchingRef.current = true;
-      setIsFetchingMore(true);
-
-      const token = Cookies.get("eoffice_token");
-      if (!token) throw new Error("No token");
-
-      const response = await GetEOfficeComplaints({
-        take: BATCH_SIZE,
-        skip: allComplaints.length,
-        folder_id: 271,
-        year: 0,
-      });
-
-      const items = response?.data || [];
-      setAllComplaints((prev) => [...prev, ...items.map(mapItem)]);
-      const total = response?.totalSize || response?.total || response?.count || response?.totalItems || totalCount;
-      setTotalCount(total);
-      setIsFetchingMore(false);
-    } catch (error) {
-      console.error("Error fetching more:", error);
-      setIsFetchingMore(false);
-    } finally {
-      fetchingRef.current = false;
-    }
-  }, [allComplaints.length, totalCount]);
 
   useEffect(() => { fetchComplaints(); }, []);
 
@@ -151,8 +131,8 @@ const EOfficeComplaints = () => {
         data={complaints}
         totalCount={totalCount}
         loadedCount={allComplaints.length}
-        isLoadingMore={isFetchingMore}
-        onFetchMore={fetchMore}
+        isLoadingMore={false}
+        onFetchMore={() => {}}
         title="รับเรื่องราวร้องทุกข์จากระบบสารบรรณอิเล็กทรอนิกส์"
         statusType={statusType}
         statusTypeOptions={statusTypeOptions}
