@@ -212,19 +212,36 @@ const SendComplaintEOffice = () => {
           next.date_created = complaint.created_at;
         }
 
-        // ข้อมูลที่อยู่ — set พร้อมกันทีเดียวเพื่อไม่ให้ province onChange รีเซ็ต district/sub_district
+        // ข้อมูลที่อยู่ — set province ทันที (district/sub_district cascade ตามหลัง)
         if (complaint.province_name && complaint.province_name !== '-') {
           next.province = complaint.province_id || '';
-        }
-        if (complaint.district_name && complaint.district_name !== '-') {
-          next.district = complaint.district_id || '';
-        }
-        if (complaint.subdistrict_name && complaint.subdistrict_name !== '-') {
-          next.sub_district = complaint.subdistrict_id || complaint.sub_district_id || '';
         }
 
         return next;
       });
+
+      // ── Cascade ที่อยู่: province → รอ districts โหลด → set district → รอ sub_districts โหลด → set sub_district ──
+      const provinceId = complaint.province_id || '';
+      const districtId = complaint.district_id || '';
+      const subDistrictId = complaint.subdistrict_id || complaint.sub_district_id || '';
+
+      if (provinceId && districtId) {
+        setTimeout(() => {
+          setFormData((prev) => {
+            if (prev.province !== provinceId) return prev;
+            return { ...prev, district: districtId };
+          });
+
+          if (subDistrictId) {
+            setTimeout(() => {
+              setFormData((prev) => {
+                if (prev.district !== districtId) return prev;
+                return { ...prev, sub_district: subDistrictId };
+              });
+            }, 800);
+          }
+        }, 800);
+      }
     }
   }, [prefillCaseId]);
 
