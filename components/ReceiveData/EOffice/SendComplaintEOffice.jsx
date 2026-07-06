@@ -94,13 +94,10 @@ const SendComplaintEOffice = () => {
     if (!router.isReady) return;
 
     if (prefillCaseId) {
+      // ถ้ามากจากหน้า detail (มี case_id ใน URL) → prefill ให้เลย
       setFormData((prev) => ({ ...prev, case_id: prefillCaseId }));
-    } else {
-      // ไม่มี EOffice ID → กลับไปหน้า list (ต้องมากจากหน้า detail เสมอ)
-      // เพราะ complaint_number จาก MOF ไม่ใช่ EOffice id → ส่งไป SetOrgSummaryResult จะ error 400
-      alertError("ไม่พบ EOffice ID", "กรุณาเข้าจากหน้ารายละเอียดเรื่องร้องทุกข์ (กดปุ่ม 'ส่งผลพิจารณา')");
-      router.push("/admin/edit/eoffice");
     }
+    // ไม่มี prefillCaseId ก็ไม่เป็นไร — user จะค้นหาเรื่องจาก GetEnhancedComplaintsService เอง
   }, [router.isReady, prefillCaseId]);
 
   const isFormValid = useMemo(() => {
@@ -171,12 +168,14 @@ const SendComplaintEOffice = () => {
       setFormData((prev) => {
         const next = { ...prev };
 
-        // เลขที่รับเรื่อง:
-        // - ถ้ามี prefillCaseId จาก URL (มาจาก EOffice detail page) → ใช้ค่าเดิม ไม่เขียนทับ
-        //   เพราะ complaint_number เป็นเลข MOF ไม่ใช่ EOffice id → ส่งไป API จะ error 400
-        // - ถ้าไม่มี (เข้าหน้า send ตรงๆ) → ใช้ complaint_number เป็น fallback
-        if (!prefillCaseId && complaint.complaint_number && complaint.complaint_number !== '-') {
-          next.case_id = complaint.complaint_number;
+        // เลขที่รับเรื่อง (case_id) — ต้องใช้ EOffice ID (reference_number5) เท่านั้น
+        // complaint_number เป็นเลข MOF ส่งไป EOffice API จะ error 400
+        if (!prefillCaseId) {
+          const eofficeId = complaint.reference_number5 || complaint.additional_reference_number1;
+          if (eofficeId && eofficeId !== '-' && eofficeId !== '0') {
+            next.case_id = String(eofficeId);
+          }
+          // ไม่มี EOffice ID → ไม่ตั้งค่า case_id (ให้ user กรอกเอง)
         }
 
         // ชื่อ-นามสกุลผู้รายงาน
@@ -375,7 +374,10 @@ const SendComplaintEOffice = () => {
                 name="province"
                 placeholder="เลือกจังหวัด"
                 value={formData.province}
-                onChange={(val) => setFormData((prev) => ({ ...prev, province: val, district: "", sub_district: "" }))}
+                onChange={(e) => {
+                  const val = e?.target?.value ?? e;
+                  setFormData((prev) => ({ ...prev, province: val, district: "", sub_district: "" }));
+                }}
                 size="small"
                 required={false}
               />
@@ -386,7 +388,10 @@ const SendComplaintEOffice = () => {
                 name="district"
                 placeholder="เลือกอำเภอ"
                 value={formData.district}
-                onChange={(val) => setFormData((prev) => ({ ...prev, district: val, sub_district: "" }))}
+                onChange={(e) => {
+                  const val = e?.target?.value ?? e;
+                  setFormData((prev) => ({ ...prev, district: val, sub_district: "" }));
+                }}
                 disabled={!formData.province}
                 selectedProvince={formData.province}
                 size="small"
@@ -399,7 +404,10 @@ const SendComplaintEOffice = () => {
                 name="subdistrict"
                 placeholder="เลือกตำบล"
                 value={formData.sub_district}
-                onChange={(val) => setFormData((prev) => ({ ...prev, sub_district: val }))}
+                onChange={(e) => {
+                  const val = e?.target?.value ?? e;
+                  setFormData((prev) => ({ ...prev, sub_district: val }));
+                }}
                 disabled={!formData.district}
                 selectedProvince={formData.province}
                 selectedDistrict={formData.district}
