@@ -75,6 +75,7 @@ const EOfficeComplaints = () => {
 
       const firstItems = firstResponse?.data || [];
       setAllComplaints(firstItems.map(mapItem));
+      setTotalCount(firstItems.length);
       setHasMore(firstItems.length >= BATCH_SIZE);
       closeAlert();
       setIsDataLoaded(true);
@@ -98,6 +99,7 @@ const EOfficeComplaints = () => {
         skip += items.length;
 
         setAllComplaints([...allItems]);
+        setTotalCount(allItems.length);
         setHasMore(items.length >= BATCH_SIZE);
 
         if (items.length < BATCH_SIZE || items.length === 0) {
@@ -105,6 +107,7 @@ const EOfficeComplaints = () => {
         }
       }
 
+      setHasMore(false);
       console.log(`[EOffice] ✅ โหลดเบื้องหลังเสร็จ ${allItems.length} รายการ`);
     } catch (error) {
       console.error("Error fetching EOffice complaints:", error);

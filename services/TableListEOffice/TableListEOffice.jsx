@@ -191,9 +191,9 @@ const TableListEOffice = ({
           <span className={styles.headerTitle}>{title}</span>
           <Stack direction="row" spacing={1}>
             <Chip
-              label={`ทั้งหมด ${totalCount} รายการ`}
+              label={hasMore ? `โหลดแล้ว ${loadedCount} รายการ (กำลังโหลด...)` : `ทั้งหมด ${totalCount} รายการ`}
               size="small"
-              sx={{ color: "white", backgroundColor: "rgba(255,255,255,0.2)" }}
+              sx={{ color: "white", backgroundColor: hasMore ? "rgba(255,152,0,0.3)" : "rgba(255,255,255,0.2)" }}
             />
           </Stack>
         </div>
