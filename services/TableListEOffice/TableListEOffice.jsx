@@ -53,6 +53,7 @@ const TableListEOffice = ({
   loadedCount = 0,
   isLoadingMore = false,
   onFetchMore = () => {},
+  hasMore = false,
   title = "",
   statusType = "P",
   statusTypeOptions = [],
@@ -517,6 +518,18 @@ const TableListEOffice = ({
                   },
                 }}
               />
+            )}
+
+            {/* ปุ่มโหลดเพิ่ม */}
+            {hasMore && (
+              <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+                <ButtonSent
+                  label={isLoadingMore ? "กำลังโหลด..." : `โหลดเพิ่ม (${loadedCount} รายการ)`}
+                  onClick={onFetchMore}
+                  disabled={isLoadingMore}
+                  icon={isLoadingMore ? <CircularProgress size={16} sx={{ color: "white" }} /> : undefined}
+                />
+              </Box>
             )}
           </>
         )}
