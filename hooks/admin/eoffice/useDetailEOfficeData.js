@@ -286,81 +286,22 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
         return null;
       }
 
-      // ── พบซ้ำ → ข้าม (หรืออัปเดต subject + reference fields) ──
+      // ── พบซ้ำ → บังคับอัปเดต reference fields + EOffice ID เสมอ ──
       if (found) {
-        console.log(`[EOffice] ⏭️ เรื่อง ${caseDetail.case_id} มีอยู่แล้ว ตรวจสอบข้อมูล...`);
-
-        const currentSubject = existingItem.subject || existingItem.issue || "";
-        const correctSubject = caseDetail.subject || caseDetail.title || caseDetail.content_title || caseDetail.description || "";
-
-        // ── ตรวจสอบว่า reference fields ขาดหรือไม่ ──
-        const needsRefUpdate = (
-          caseDetail.opsDocNo ||
-          caseDetail.book_no ||
-          caseDetail.ministerDocNo
-        ) && (
-          !existingItem.reference_number && !existingItem.reference_number1 ||
-          !existingItem.document_number ||
-          !existingItem.reference_number2
-        );
-
-        const needsSubjectUpdate = (
-          (currentSubject === "" || currentSubject === "-" || /^\d+$/.test(String(currentSubject))) &&
-          correctSubject !== "" && correctSubject !== "-"
-        );
-
-        if (needsSubjectUpdate || needsRefUpdate) {
-          try {
-            const updatePayload = {};
-            const step3General = {};
-            const updateAssignmentForm = {};
-
-            // อัปเดต subject
-            if (needsSubjectUpdate) {
-              step3General.subject = correctSubject;
-              console.log(`[EOffice] 🔄 กำลัง update subject: "${currentSubject}" → "${correctSubject}"`);
-            }
-
-            // อัปเดต reference fields (สป.กค., สป.สร., เลขที่หนังสือ)
-            if (needsRefUpdate) {
-              const docNo = caseDetail.book_no || "";
-              const docDate = caseDetail.book_date || caseDetail.date_received || null;
-              const refNo1 = caseDetail.opsDocNo || "";
-              const refDate1 = caseDetail.opsReceivedDate || null;
-              const refNo2 = caseDetail.ministerDocNo || "";
-              const refDate2 = caseDetail.ministerDocDate || null;
-
-              // step3.general
-              step3General.document_number = docNo;
-              step3General.document_date = docDate;
-              step3General.reference_number = refNo1;
-              step3General.reference_date = refDate1;
-              step3General.reference_number2 = refNo2;
-              step3General.reference_date2 = refDate2;
-
-              // assignment_form
-              updateAssignmentForm.document_number = docNo;
-              updateAssignmentForm.document_date = docDate;
-              updateAssignmentForm.reference_number = refNo1;
-              updateAssignmentForm.reference_date = refDate1;
-              updateAssignmentForm.reference_number1 = refNo1;
-              updateAssignmentForm.reference_date1 = refDate1;
-              updateAssignmentForm.reference_number2 = refNo2;
-              updateAssignmentForm.reference_date2 = refDate2;
-
-              console.log(`[EOffice] 🔄 กำลัง update reference fields:`, { docNo, refNo1, refNo2 });
-            }
-
-            if (Object.keys(step3General).length > 0) updatePayload.step3 = { general: step3General };
-            if (Object.keys(updateAssignmentForm).length > 0) updatePayload.assignment_form = updateAssignmentForm;
-
-            await UpdateComplaint(existingItem.id, updatePayload);
-            console.log(`[EOffice] ✅ อัปเดตข้อมูลสำเร็จสำหรับเรื่อง ${caseDetail.case_id}`);
-          } catch (updateErr) {
-            console.warn("[EOffice] ⚠️ อัปเดตข้อมูลล้มเหลว:", updateErr.message);
-          }
-        } else {
-          console.log(`[EOffice] ℹ️ ข้อมูลถูกต้องอยู่แล้ว ข้าม`);
+        console.log(`[EOffice] ⏭️ เรื่อง ${caseDetail.case_id} มีอยู่แล้ว — บังคับอัปเดตข้อมูล`);
+        try {
+          await UpdateComplaint(existingItem.id, {
+            reference_number5: String(caseDetail.case_id || ""),
+            document_number: caseDetail.book_no || null,
+            document_date: parseEOfficeDate(caseDetail.book_date) || null,
+            reference_number: caseDetail.opsDocNo || null,
+            reference_date: parseEOfficeDate(caseDetail.opsReceivedDate) || null,
+            reference_number2: caseDetail.ministerDocNo || null,
+            reference_date2: parseEOfficeDate(caseDetail.ministerDocDate) || null,
+          });
+          console.log(`[EOffice] ✅ บันทึก reference fields + EOffice ID สำเร็จสำหรับเรื่อง ${caseDetail.case_id}`);
+        } catch (updateErr) {
+          console.warn("[EOffice] ⚠️ บันทึก reference fields ล้มเหลว:", updateErr.message);
         }
         return null;
       }
@@ -376,25 +317,22 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
       const result = await createComplaintAPI(apiData);
       console.log(`[EOffice] ✅ สร้าง complaint เรื่อง ${caseDetail.case_id} สำเร็จ!`, result);
 
-      // ── Backend ไม่เก็บ reference fields จาก step3.general → ต้อง update ทีหลังด้วย flat payload ──
+      // ── บังคับบันทึก reference fields + EOffice ID ทุกครั้ง (ไม่เช็คเงื่อนไข) ──
       const newComplaintId = result?.res_data?.id || result?.res_data?.complaint_id;
       if (newComplaintId) {
-        const hasRefData = caseDetail.opsDocNo || caseDetail.book_no || caseDetail.ministerDocNo;
-        if (hasRefData) {
-          try {
-            await UpdateComplaint(newComplaintId, {
-              reference_number: caseDetail.opsDocNo || null,
-              reference_date: parseEOfficeDate(caseDetail.opsReceivedDate) || null,
-              reference_number2: caseDetail.ministerDocNo || null,
-              reference_date2: parseEOfficeDate(caseDetail.ministerDocDate) || null,
-              document_number: caseDetail.book_no || null,
-              document_date: parseEOfficeDate(caseDetail.book_date) || null,
-              reference_number5: String(caseDetail.case_id || ""),
-            });
-            console.log(`[EOffice] ✅ Update reference fields สำเร็จสำหรับ ${newComplaintId}`);
-          } catch (refErr) {
-            console.warn("[EOffice] ⚠️ Update reference fields ล้มเหลว:", refErr?.response?.data || refErr?.message);
-          }
+        try {
+          await UpdateComplaint(newComplaintId, {
+            reference_number5: String(caseDetail.case_id || ""),
+            document_number: caseDetail.book_no || null,
+            document_date: parseEOfficeDate(caseDetail.book_date) || null,
+            reference_number: caseDetail.opsDocNo || null,
+            reference_date: parseEOfficeDate(caseDetail.opsReceivedDate) || null,
+            reference_number2: caseDetail.ministerDocNo || null,
+            reference_date2: parseEOfficeDate(caseDetail.ministerDocDate) || null,
+          });
+          console.log(`[EOffice] ✅ บันทึก reference fields + EOffice ID สำเร็จสำหรับ ${newComplaintId}`);
+        } catch (refErr) {
+          console.warn("[EOffice] ⚠️ บันทึก reference fields ล้มเหลว:", refErr?.response?.data || refErr?.message);
         }
       }
 
