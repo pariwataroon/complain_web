@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"\\(Get-Content 'E:\\\\WORK_SYSTEM\\\\MOF\\\\capts_mof_api\\\\app\\\\api\\\\v1\\\\controllers\\\\complaint_assignment_controller.py'\\)[416..432]\")",
+      "Bash(python3 -c ' *)",
+      "Bash(ls \"e:\\\\WORK_SYSTEM\\\\MOF\")",
+      "Read(//e/WORK_SYSTEM/MOF/**)",
+      "Bash(where pandoc *)",
+      "Bash(where npx *)",
+      "Bash(ls -la \"C:\\\\Users\\\\Acer\\\\Downloads\\\\API_Documentation_OR4.pdf\")",
+      "Read(//c/Users/Acer/Downloads/**)",
+      "Bash(winget install *)",
+      "Bash(pandoc \"C:\\\\Users\\\\Acer\\\\Downloads\\\\API_Documentation_OR4.md\" -o \"C:\\\\Users\\\\Acer\\\\Downloads\\\\API_Documentation_OR4.docx\" --reference-doc=\"\")",
+      "PowerShell($env:Path += \";$env:LOCALAPPDATA\\\\Pandoc\"; pandoc \"C:\\\\Users\\\\Acer\\\\Downloads\\\\API_Documentation_OR4.md\" -o \"C:\\\\Users\\\\Acer\\\\Downloads\\\\API_Documentation_OR4.docx\"; if \\(Test-Path \"C:\\\\Users\\\\Acer\\\\Downloads\\\\API_Documentation_OR4.docx\"\\) { \\(Get-Item \"C:\\\\Users\\\\Acer\\\\Downloads\\\\API_Documentation_OR4.docx\"\\).Length })",
+      "PowerShell(Invoke-WebRequest -Uri 'https://fonts.google.com/download?family=Sarabun' -OutFile \"$env:TEMP\\\\Sarabun.zip\" -UseBasicParsing -UserAgent 'Mozilla/5.0 \\(Windows NT 10.0; Win64; x64\\)')",
+      "PowerShell(\\(Get-Item \"$env:TEMP\\\\Sarabun.zip\"\\).Length)"
+    ],
+    "additionalDirectories": [
+      "e:\\WORK_SYSTEM\\MOF\\capts_mof_web",
+      "E:\\WORK_SYSTEM\\MOF\\capts_mof_web"
+    ]
+  }
+}

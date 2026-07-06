@@ -476,32 +476,6 @@ def update_complaint_from_structured(
     if accepted is not None and hasattr(complaint, "terms_accepted"):
         complaint.terms_accepted = bool(accepted)
 
-    # (4.1) reference_number5 → additional_reference_number1 (EOffice/OPM ID)
-    # รองรับทั้ง step4.general.reference_number5 (structured) และ reference_number5 (flat)
-    ref5 = (
-        payload.get("step4", {}).get("general", {}).get("reference_number5", "")
-        or payload.get("reference_number5", "")
-    )
-    if ref5 and hasattr(complaint, "additional_reference_number1"):
-        complaint.additional_reference_number1 = str(ref5)
-
-    # (4.2) Flat reference fields (เลขที่หนังสือ, สป.กค., สป.สร.)
-    # รองรับ flat payload จาก frontend (ไม่ผ่าน step3)
-    flat_ref_mapping = {
-        "document_number": "document_number",
-        "document_date": "document_date",
-        "reference_number": "reference_number",
-        "reference_date": "reference_date",
-        "reference_number1": "reference_number",
-        "reference_date1": "reference_date",
-        "reference_number2": "reference_number2",
-        "reference_date2": "reference_date2",
-    }
-    for payload_key, model_field in flat_ref_mapping.items():
-        val = payload.get(payload_key)
-        if val is not None and hasattr(complaint, model_field):
-            setattr(complaint, model_field, val)
-
     # (5) Location mapping (ถ้ามี ก็อัพเดต)
     if location_data:
         if "province_id" in location_data and hasattr(complaint, "incident_province_id"):
@@ -519,7 +493,43 @@ def update_complaint_from_structured(
         if "subdistrict_name" in location_data and hasattr(complaint, "incident_subdistrict"):
             complaint.incident_subdistrict = location_data.get("subdistrict_name")
 
-    # (6) ช่องทางร้องเรียน (ถ้าส่งมาใน payload ระดับ root แบบ POST)
+    # (6) Reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+    step3_general = payload.get("step3", {}).get("general", {})
+    if step3_general:
+        def _parse_date_field(val):
+            if not val or val is None or val == "":
+                return None
+            if isinstance(val, str):
+                try:
+                    if "T" in val:
+                        return datetime.fromisoformat(val.replace("Z", "+00:00").replace("+00:00", ""))
+                    return datetime.strptime(val, "%Y-%m-%d")
+                except (ValueError, TypeError):
+                    return None
+            return val
+
+        if "reference_number" in step3_general:
+            complaint.reference_number = step3_general.get("reference_number") or None
+        if "reference_date" in step3_general:
+            complaint.reference_date = _parse_date_field(step3_general.get("reference_date"))
+        if "reference_number2" in step3_general:
+            complaint.reference_number2 = step3_general.get("reference_number2") or None
+        if "reference_date2" in step3_general:
+            complaint.reference_date2 = _parse_date_field(step3_general.get("reference_date2"))
+        if "reference_number3" in step3_general:
+            complaint.reference_number3 = step3_general.get("reference_number3") or None
+        if "reference_date3" in step3_general:
+            complaint.reference_date3 = _parse_date_field(step3_general.get("reference_date3"))
+        if "reference_number4" in step3_general:
+            complaint.reference_number4 = step3_general.get("reference_number4") or None
+        if "reference_date4" in step3_general:
+            complaint.reference_date4 = _parse_date_field(step3_general.get("reference_date4"))
+        if "document_number" in step3_general:
+            complaint.document_number = step3_general.get("document_number") or None
+        if "document_date" in step3_general:
+            complaint.document_date = _parse_date_field(step3_general.get("document_date"))
+
+    # (7) ช่องทางร้องเรียน (ถ้าส่งมาใน payload ระดับ root แบบ POST)
     complaint_channel_id = None
     if "complaint_channel_id" in payload:
         try:
@@ -609,10 +619,29 @@ def prepare_complaint_model_data(
     
     # สร้างเลขที่เรื่องร้องเรียน
     complaint_number = generate_complaint_number(db)
-    
+
     # ประมวลผลข้อมูลที่อยู่ พร้อมแก้ไขข้อมูลที่ไม่สมบูรณ์
     location_data = extract_location_data(complaint_data, db)
-    
+
+    # ✅ ดึง reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+    step3_general = complaint_data.get("step3", {}).get("general", {})
+    print(f"🔍 [CREATE] step3_general keys: {list(step3_general.keys()) if step3_general else 'EMPTY'}")
+    print(f"🔍 [CREATE] reference_number: '{step3_general.get('reference_number')}'")
+    print(f"🔍 [CREATE] document_number: '{step3_general.get('document_number')}'")
+
+    def parse_date_field(val):
+        """แปลงค่าวันที่จาก string/ISO เป็น datetime object"""
+        if not val or val is None or val == "":
+            return None
+        if isinstance(val, str):
+            try:
+                if "T" in val:
+                    return datetime.fromisoformat(val.replace("Z", "+00:00").replace("+00:00", ""))
+                return datetime.strptime(val, "%Y-%m-%d")
+            except (ValueError, TypeError):
+                return None
+        return val
+
     return {
         "id": uuid.uuid4(),
         "complaint_number": complaint_number,
@@ -642,6 +671,17 @@ def prepare_complaint_model_data(
         "progress_percentage": 0,
         # ✅ อ่าน reference_number5 จาก step4.general (สำหรับ EOffice/OPM dedup)
         "additional_reference_number1": complaint_data.get("step4", {}).get("general", {}).get("reference_number5", ""),
+        # ✅ อ่าน reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+        "reference_number": step3_general.get("reference_number") or None,
+        "reference_date": parse_date_field(step3_general.get("reference_date")),
+        "reference_number2": step3_general.get("reference_number2") or None,
+        "reference_date2": parse_date_field(step3_general.get("reference_date2")),
+        "reference_number3": step3_general.get("reference_number3") or None,
+        "reference_date3": parse_date_field(step3_general.get("reference_date3")),
+        "reference_number4": step3_general.get("reference_number4") or None,
+        "reference_date4": parse_date_field(step3_general.get("reference_date4")),
+        "document_number": step3_general.get("document_number") or None,
+        "document_date": parse_date_field(step3_general.get("document_date")),
     }
 
 def extract_location_data(complaint_data: Dict, db: Session = None) -> Dict:
@@ -3443,10 +3483,29 @@ def prepare_complaint_model_data(
     
     # สร้างเลขที่เรื่องร้องเรียน
     complaint_number = generate_complaint_number(db)
-    
+
     # ประมวลผลข้อมูลที่อยู่ พร้อมแก้ไขข้อมูลที่ไม่สมบูรณ์
     location_data = extract_location_data(complaint_data, db)
-    
+
+    # ✅ ดึง reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+    step3_general = complaint_data.get("step3", {}).get("general", {})
+    print(f"🔍 [CREATE] step3_general keys: {list(step3_general.keys()) if step3_general else 'EMPTY'}")
+    print(f"🔍 [CREATE] reference_number: '{step3_general.get('reference_number')}'")
+    print(f"🔍 [CREATE] document_number: '{step3_general.get('document_number')}'")
+
+    def parse_date_field(val):
+        """แปลงค่าวันที่จาก string/ISO เป็น datetime object"""
+        if not val or val is None or val == "":
+            return None
+        if isinstance(val, str):
+            try:
+                if "T" in val:
+                    return datetime.fromisoformat(val.replace("Z", "+00:00").replace("+00:00", ""))
+                return datetime.strptime(val, "%Y-%m-%d")
+            except (ValueError, TypeError):
+                return None
+        return val
+
     return {
         "id": uuid.uuid4(),
         "complaint_number": complaint_number,
@@ -3476,6 +3535,17 @@ def prepare_complaint_model_data(
         "progress_percentage": 0,
         # ✅ อ่าน reference_number5 จาก step4.general (สำหรับ EOffice/OPM dedup)
         "additional_reference_number1": complaint_data.get("step4", {}).get("general", {}).get("reference_number5", ""),
+        # ✅ อ่าน reference fields จาก step3.general (สป.กค., สป.สร., เลขที่หนังสือ)
+        "reference_number": step3_general.get("reference_number") or None,
+        "reference_date": parse_date_field(step3_general.get("reference_date")),
+        "reference_number2": step3_general.get("reference_number2") or None,
+        "reference_date2": parse_date_field(step3_general.get("reference_date2")),
+        "reference_number3": step3_general.get("reference_number3") or None,
+        "reference_date3": parse_date_field(step3_general.get("reference_date3")),
+        "reference_number4": step3_general.get("reference_number4") or None,
+        "reference_date4": parse_date_field(step3_general.get("reference_date4")),
+        "document_number": step3_general.get("document_number") or None,
+        "document_date": parse_date_field(step3_general.get("document_date")),
     }
 
 def add_related_complaint(db: Session, complaint_id: UUID, related_complaint_id: UUID) -> bool:
@@ -3629,10 +3699,7 @@ def get_complaint_by_id_with_assignment_data(db: Session, complaint: Complaint) 
             "step1": parse_complainant_data(complaint.complainant_data, complaint.delegate_data, db),
             "step2": parse_respondent_data(complaint.respondent_data, db),
             "step3": parse_incident_data(complaint),
-            "step4": {"general": {
-                "accepted": complaint.terms_accepted,
-                "reference_number5": complaint.additional_reference_number1 or "",
-            }},
+            "step4": {"general": {"accepted": complaint.terms_accepted}},
             "status": complaint.status,
             "status_history": format_status_history(complaint.status_history),
             "created_at": complaint.created_at.isoformat(),
@@ -3886,10 +3953,7 @@ def get_complaint_by_id_with_assignment(db: Session, complaint_id: UUID) -> Dict
             "step1": parse_complainant_data(complaint.complainant_data, complaint.delegate_data, db),
             "step2": parse_respondent_data(complaint.respondent_data, db),
             "step3": parse_incident_data(complaint),
-            "step4": {"general": {
-                "accepted": complaint.terms_accepted,
-                "reference_number5": complaint.additional_reference_number1 or "",
-            }},
+            "step4": {"general": {"accepted": complaint.terms_accepted}},
             "status": complaint.status,
             "status_history": format_status_history(complaint.status_history),
             "created_at": complaint.created_at.isoformat(),
