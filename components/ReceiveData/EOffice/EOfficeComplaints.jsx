@@ -128,9 +128,9 @@ const EOfficeComplaints = () => {
     router.push(`/admin/edit/eoffice/${item.case_id}/`);
   };
 
-  // ส่งผลพิจารณา — ส่ง case_id (EOffice ID) ไปหน้า send ผ่าน URL
-  const handleSendClick = (item) => {
-    router.push(`/admin/edit/eoffice/send?case_id=${item.case_id}`);
+  // ส่งผลพิจารณา — ไปหน้า send (user จะค้นหาเรื่องจาก GetEnhancedComplaintsService เอง)
+  const handleSendClick = () => {
+    router.push("/admin/edit/eoffice/send");
   };
 
   return (

@@ -287,6 +287,13 @@ const TableListEOffice = ({
             <ButtonSent label="รีเฟรช" onClick={onRefresh} disabled={isRefreshing} />
             <ButtonSent label="ล้างค้นหา" onClick={handleResetFilters} disabled={isRefreshing} />
           </div>
+          <div className={styles.buttonGroup}>
+            <ButtonSent
+              label="ส่งผลพิจารณา"
+              onClick={onSendClick}
+              icon={<SendIcon sx={{ fontSize: 18, mr: 0.5 }} />}
+            />
+          </div>
         </div>
       </Box>
 
@@ -333,7 +340,6 @@ const TableListEOffice = ({
                           {col.label}
                         </TableCell>
                       ))}
-                      <TableCell sx={{ width: 80, textAlign: "center" }}>ดำเนินการ</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -427,15 +433,6 @@ const TableListEOffice = ({
                               )}
                             </TableCell>
                           ))}
-                          {/* ปุ่มส่งผลพิจารณา — ส่ง case_id ของ EOffice ไปหน้า send */}
-                          <TableCell align="center" sx={{ width: 80 }}>
-                            <ButtonSent
-                              label="ส่งผล"
-                              size="small"
-                              onClick={(e) => { e.stopPropagation(); onSendClick(item); }}
-                              icon={<SendIcon sx={{ fontSize: 14 }} />}
-                            />
-                          </TableCell>
                         </TableRow>
                       ))
                     )}
