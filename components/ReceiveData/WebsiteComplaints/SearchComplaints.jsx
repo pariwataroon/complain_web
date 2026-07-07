@@ -1035,7 +1035,9 @@ useEffect(() => {
       } else {
         setComplainantType("individual");
         setDelegateType("delegate");
-        defaultDelegateRef.current = step1General.delegate || null;
+        // ✅ หา delegate จากหลายที่ (รวมถึง nested ใน complainant data)
+        const s1Inner = step1General.general || {};
+        defaultDelegateRef.current = step1General.delegate || s1Inner.delegate || s1Inner.signer || step1General.signer || null;
       }
 
       // ตรวจสอบประเภทผู้ถูกร้องเรียนจากข้อมูล
