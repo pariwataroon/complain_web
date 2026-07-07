@@ -139,6 +139,9 @@ const buildStep12Payload = ({
   if (complainantType === "government") {
     step1Structure.general = {
       government: packPerson(generalData),
+      ...(delegateData && Object.keys(delegateData).length
+        ? { delegate: packPerson(delegateData) }
+        : {}),
     };
   } else if (complainantType === "corporate") {
     step1Structure.general = {

@@ -1038,7 +1038,8 @@ useEffect(() => {
         defaultDelegateRef.current = step1General.signer || null;
       } else if (step1General.government && Object.keys(step1General.government).length > 0) {
         setComplainantType("government");
-        defaultDelegateRef.current = null;
+        setDelegateType("delegate");
+        defaultDelegateRef.current = step1General.delegate || null;
       } else {
         setComplainantType("individual");
         setDelegateType("delegate");
@@ -1072,10 +1073,9 @@ useEffect(() => {
       const s1G = data?.step1?.general || {};
       defaultGeneralRef.current = s1G.corporate || s1G.government || s1G.general || {};
 
-      // reset form อื่น
+      // reset form อื่น (delegate ต้อง reset เสมอ ไม่ว่าจะมีข้อมูลหรือไม่)
       generalMethods.reset(defaultGeneralRef.current);
-      if (defaultDelegateRef.current)
-        delegateMethods.reset(defaultDelegateRef.current);
+      delegateMethods.reset(defaultDelegateRef.current || {});
       step2Methods.reset(defaultStep2Ref.current);
       step4Methods.reset(defaultStep4Ref.current);
 
@@ -1243,6 +1243,9 @@ useEffect(() => {
     if (complainantType === "government") {
       step1General = {
         government: packPerson(generalData || {}),
+        ...(hasAnyValue(delegateData)
+          ? { delegate: packPerson(delegateData) }
+          : {}),
       };
     } else if (complainantType === "corporate") {
       step1General = {
@@ -1525,8 +1528,8 @@ const handleSubmit = async () => {
           ? { corporate: generalData }
           : { general: generalData }),
         ...(complainantType === "corporate"
-          ? { signer: defaultDelegateRef.current ? delegateData : null }
-          : { delegate: defaultDelegateRef.current ? delegateData : null }),
+          ? { signer: delegateData && Object.keys(delegateData).length > 0 ? delegateData : null }
+          : { delegate: delegateData && Object.keys(delegateData).length > 0 ? delegateData : null }),
       },
     },
     step2: {
