@@ -1071,8 +1071,10 @@ useEffect(() => {
       defaultGeneralRef.current = s1G.corporate || s1G.government || s1G.general || {};
 
       // reset form อื่น (delegate ต้อง reset เสมอ ไม่ว่าจะมีข้อมูลหรือไม่)
+      console.log("[fetchComplaints] BEFORE reset - defaultDelegateRef:", defaultDelegateRef.current);
       generalMethods.reset(defaultGeneralRef.current);
       delegateMethods.reset(defaultDelegateRef.current || {});
+      console.log("[fetchComplaints] AFTER reset - delegateMethods.getValues():", delegateMethods.getValues());
       step2Methods.reset(defaultStep2Ref.current);
       step4Methods.reset(defaultStep4Ref.current);
 
