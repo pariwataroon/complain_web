@@ -681,22 +681,146 @@ useEffect(() => {
   const handleComplainantTabChange = (newType) => {
     const currentData = generalMethods.getValues();
     setComplainantType(newType);
-    generalMethods.reset(packPerson(currentData));
+
+    // ✅ สร้างข้อมูลตามประเภทที่เลือก (ไม่เก็บ field เก่า)
+    const baseData = packPerson(currentData);
+    let newData;
+
+    if (newType === "government") {
+      newData = {
+        idCard: baseData.idCard,
+        fullName: baseData.fullName || baseData.name || "",
+        agencyName: baseData.agencyName || "",
+        address: baseData.address,
+        phone: baseData.phone,
+        email: baseData.email,
+        province: baseData.province,
+        districts: baseData.districts,
+        subdistricts: baseData.subdistricts,
+        zipcode: baseData.zipcode,
+      };
+    } else if (newType === "corporate") {
+      newData = {
+        idCard: baseData.idCard,
+        companyName: baseData.companyName || baseData.name || "",
+        address: baseData.address,
+        phone: baseData.phone,
+        email: baseData.email,
+        province: baseData.province,
+        districts: baseData.districts,
+        subdistricts: baseData.subdistricts,
+        zipcode: baseData.zipcode,
+      };
+    } else {
+      newData = {
+        idCard: baseData.idCard,
+        name: baseData.name || baseData.fullName || baseData.companyName || "",
+        address: baseData.address,
+        phone: baseData.phone,
+        email: baseData.email,
+        province: baseData.province,
+        districts: baseData.districts,
+        subdistricts: baseData.subdistricts,
+        zipcode: baseData.zipcode,
+      };
+    }
+
+    // ✅ ล้าง form แล้ว set ข้อมูลใหม่
+    generalMethods.reset({});
+    setTimeout(() => {
+      generalMethods.reset(newData);
+    }, 0);
+
     if (newType === "corporate") {
       setDelegateType("signer");
       const currentDelegateData = delegateMethods.getValues();
-      delegateMethods.reset(packPerson(currentDelegateData));
+      const baseDelegate = packPerson(currentDelegateData);
+      delegateMethods.reset({});
+      setTimeout(() => {
+        delegateMethods.reset({
+          idCard: baseDelegate.idCard,
+          signatoryName: baseDelegate.signatoryName || baseDelegate.name || "",
+          address: baseDelegate.address,
+          phone: baseDelegate.phone,
+          email: baseDelegate.email,
+          province: baseDelegate.province,
+          districts: baseDelegate.districts,
+          subdistricts: baseDelegate.subdistricts,
+          zipcode: baseDelegate.zipcode,
+        });
+      }, 0);
     } else {
       setDelegateType("delegate");
       const currentDelegateData = delegateMethods.getValues();
-      delegateMethods.reset(packPerson(currentDelegateData));
+      const baseDelegate = packPerson(currentDelegateData);
+      delegateMethods.reset({});
+      setTimeout(() => {
+        delegateMethods.reset({
+          idCard: baseDelegate.idCard,
+          name: baseDelegate.name || baseDelegate.signatoryName || "",
+          address: baseDelegate.address,
+          phone: baseDelegate.phone,
+          email: baseDelegate.email,
+          province: baseDelegate.province,
+          districts: baseDelegate.districts,
+          subdistricts: baseDelegate.subdistricts,
+          zipcode: baseDelegate.zipcode,
+        });
+      }, 0);
     }
   };
 
   const handleRespondentTabChange = (newType) => {
     const currentData = step2Methods.getValues();
     setRespondentType(newType);
-    step2Methods.reset(packPerson(currentData));
+
+    // ✅ สร้างข้อมูลตามประเภทที่เลือก
+    const baseData = packPerson(currentData);
+    let newData;
+
+    if (newType === "government") {
+      newData = {
+        idCard: baseData.idCard,
+        fullName: baseData.fullName || baseData.name || "",
+        agencyName: baseData.agencyName || "",
+        address: baseData.address,
+        phone: baseData.phone,
+        email: baseData.email,
+        province: baseData.province,
+        districts: baseData.districts,
+        subdistricts: baseData.subdistricts,
+        zipcode: baseData.zipcode,
+      };
+    } else if (newType === "corporate") {
+      newData = {
+        idCard: baseData.idCard,
+        companyName: baseData.companyName || baseData.name || "",
+        address: baseData.address,
+        phone: baseData.phone,
+        email: baseData.email,
+        province: baseData.province,
+        districts: baseData.districts,
+        subdistricts: baseData.subdistricts,
+        zipcode: baseData.zipcode,
+      };
+    } else {
+      newData = {
+        idCard: baseData.idCard,
+        name: baseData.name || baseData.fullName || baseData.companyName || "",
+        address: baseData.address,
+        phone: baseData.phone,
+        email: baseData.email,
+        province: baseData.province,
+        districts: baseData.districts,
+        subdistricts: baseData.subdistricts,
+        zipcode: baseData.zipcode,
+      };
+    }
+
+    step2Methods.reset({});
+    setTimeout(() => {
+      step2Methods.reset(newData);
+    }, 0);
   };
 
   useEffect(() => {
@@ -1560,8 +1684,30 @@ const handleSubmit = async () => {
       return;
     }
 
-    // ✅ updateStep12() ได้บันทึก step1/step2 (จากฟอร์มปัจจุบัน) + attachment ไปแล้ว
-    // ไม่ต้องเรียก UpdateComplaint ซ้ำอีก (จะเขียนทับข้อมูลใหม่ด้วย defaultData เก่า)
+    // Update complaint with attachment changes
+    // ✅ ส่ง step1+step2 จากฟอร์มปัจจุบัน (ไม่ใช่ defaultData เก่า)
+    console.log("📎 Updating attachments:", existingAttachments);
+    const currentGeneralData = generalMethods.getValues();
+    const currentDelegateData = delegateMethods.getValues();
+    const currentStep2Data = step2Methods.getValues();
+    const currentStep12 = buildStep12Payload({
+      generalData: currentGeneralData,
+      delegateData: currentDelegateData,
+      delegateType,
+      step2Data: currentStep2Data,
+      respondentType,
+      complainantType,
+    });
+    await UpdateComplaint(defaultData.id, {
+      ...currentStep12,
+      step3: {
+        ...defaultData?.step3,
+        general: {
+          ...defaultData?.step3?.general,
+          attachment: existingAttachments,
+        }
+      }
+    });
 
     const res = await UpdateAssignmentCompleteByAdmin(
       defaultData.id,
