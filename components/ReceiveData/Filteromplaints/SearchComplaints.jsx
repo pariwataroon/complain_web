@@ -1185,11 +1185,11 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       complainantType, // เพิ่ม complainantType เพื่อบันทึกประเภทผู้ร้องที่ถูกต้อง
     });
 
-    // เพิ่ม step3 เข้าไปใน payload เพื่อรักษา attachments
+    // ✅ ส่ง step3 จากฟอร์มปัจจุบัน (ไม่ใช่ defaultData เก่า)
+    const currentStep3 = step3Methods.getValues();
     payload12.step3 = {
-      ...defaultData?.step3,
       general: {
-        ...defaultData?.step3?.general,
+        ...currentStep3,
         attachment: existingAttachments,
       },
     };
