@@ -1475,6 +1475,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
   };
 
   const handleComplainantTabChange = (newType) => {
+    console.log(`[FilterTabChange] Switching to: ${newType}`);
     const currentData = generalMethods.getValues();
     const baseData = packPerson(currentData);
 
