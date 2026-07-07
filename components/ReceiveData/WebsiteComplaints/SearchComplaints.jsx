@@ -253,16 +253,8 @@ useEffect(() => {
       setSubComplaintTypes(subTypes);
 
       // Reset forms with normalized field names (use complaintType instead of complaintTypeId)
-      // ✅ รองรับทุกประเภทผู้ร้อง (individual/corporate/government)
-      const s1General = merged?.step1?.general || {};
-      const s1Complainant = s1General.corporate || s1General.government || s1General.general || {};
-      const s1Delegate = s1General.signer || s1General.delegate || {};
-      generalMethods.reset(s1Complainant);
-      delegateMethods.reset(s1Delegate);
-      // ✅ รองรับทุกประเภทผู้ถูกร้อง
-      const s2General = merged?.step2?.general || {};
-      const s2Respondent = s2General[s2General.activeType] || s2General.individual || s2General.corporate || s2General.government || {};
-      step2Methods.reset(s2Respondent);
+      // ✅ ไม่ reset form ที่นี่ - ให้ fetchComplaints จัดการ (มี type detection ที่ถูกต้องกว่า)
+      // fetchAll แค่โหลดข้อมูล master data (types, channels, departments)
       step3Methods.reset({
         ...merged?.step3?.general,
         complaintType: complaintTypeId ? String(complaintTypeId) : "",

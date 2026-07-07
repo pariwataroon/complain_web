@@ -61,7 +61,7 @@ const ComplaintIDService = ({ complaint }) => {
     // หนังสือร้องเรียนถึง กค.
     complainant = governmentData;
     complainantType = "government";
-    delegate = {}; // หน่วยงานรัฐไม่มีผู้รับมอบอำนาจ
+    delegate = delegateData || {};
     console.log('✅ ComplaintIDService: แสดง หนังสือร้องเรียนถึง กค.');
   } else if (hasData(corporateData)) {
     // นิติบุคคล

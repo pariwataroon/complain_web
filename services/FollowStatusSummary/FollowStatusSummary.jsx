@@ -152,7 +152,7 @@ const FollowStatusSummary = ({ data = {} }) => {
   if (hasRealData(government)) {
     complainantType = "government";
     activeComplainant = government;
-    activeDelegate = {};
+    activeDelegate = delegate || {};
   } else if (hasRealData(corporate)) {
     complainantType = "corporate";
     activeComplainant = corporate;

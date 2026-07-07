@@ -597,7 +597,7 @@ const handleSubmit = async () => {
   if (hasRealData(step1General.government)) {
     complainant = step1General.government;
     complainantType = "government";
-    delegate = {};
+    delegate = step1General.delegate || {};
   } else if (hasRealData(step1General.corporate)) {
     complainant = step1General.corporate;
     complainantType = "corporate";

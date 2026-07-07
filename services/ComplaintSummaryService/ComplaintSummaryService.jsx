@@ -114,7 +114,7 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
     // หนังสือร้องเรียนถึง กค.
     complainant = governmentDataStep1;
     complainantType2 = "government";
-    delegate = {}; // หน่วยงานรัฐไม่มีผู้รับมอบอำนาจ
+    delegate = delegateDataStep1 || data?.delegate || {};
     console.log('✅ ComplaintSummaryService: แสดง หนังสือร้องเรียนถึง กค.');
   } else if (hasRealData(corporateDataStep1)) {
     // นิติบุคคล
