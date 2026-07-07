@@ -1,4 +1,4 @@
-import { useRouter } from "next/router";
+﻿import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import {
   GetComplaintByID,
@@ -1975,7 +1975,7 @@ const handleSubmit = async () => {
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
-                      key={`delegate-${delegateType}`}
+                      key={`delegate-form-${delegateType}`}
                       data={defaultDelegateRef.current}
                       formType={delegateType === "signer" ? "signer" : "delegate"}
                     />

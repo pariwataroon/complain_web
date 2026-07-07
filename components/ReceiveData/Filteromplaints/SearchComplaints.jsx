@@ -1,4 +1,4 @@
-import { useRouter } from "next/router";
+﻿import { useRouter } from "next/router";
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import {
   Dialog,
@@ -1879,7 +1879,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
-                      key={`delegate-${delegateType}`}
+                      key={`delegate-form-${delegateType}`}
                       data={delegateData}
                       formType={
                         delegateType === "signer" ? "signer" : "delegate"
