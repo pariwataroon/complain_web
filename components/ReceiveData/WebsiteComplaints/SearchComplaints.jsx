@@ -1943,6 +1943,7 @@ const handleSubmit = async () => {
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
+                      key={`complainant-${complainantType}`}
                       data={defaultGeneralRef.current}
                       formType={
                         complainantType === "government"
@@ -1968,6 +1969,7 @@ const handleSubmit = async () => {
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
+                      key={`delegate-${delegateType}`}
                       data={defaultDelegateRef.current}
                       formType={delegateType === "signer" ? "signer" : "delegate"}
                     />
@@ -2027,6 +2029,7 @@ const handleSubmit = async () => {
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
+                      key={`respondent-${respondentType}`}
                       data={defaultStep2Ref.current}
                       formType={respondentType}
                     />

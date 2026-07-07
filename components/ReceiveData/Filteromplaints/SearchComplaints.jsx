@@ -1848,6 +1848,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
+                      key={`complainant-${complainantType}`}
                       data={complainantData}
                       formType={
                         complainantType === "government"
@@ -1857,11 +1858,6 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                           : "individual"
                       }
                     />
-                    {console.log('🔧 ComplaintPersonalFormAPI props:', {
-                      complainantType,
-                      formType: complainantType === "government" ? "government" : complainantType === "corporate" ? "corporate" : "individual",
-                      dataKeys: Object.keys(complainantData || {})
-                    })}
                   </div>
                 </div>
               </FormProvider>
@@ -1878,6 +1874,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
+                      key={`delegate-${delegateType}`}
                       data={delegateData}
                       formType={
                         delegateType === "signer" ? "signer" : "delegate"
@@ -1949,6 +1946,7 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
                   </div>
                   <div className={styles.sectionContent}>
                     <ComplaintPersonalFormAPI
+                      key={`respondent-${respondentType}`}
                       data={respondentData}
                       formType={respondentType}
                     />
