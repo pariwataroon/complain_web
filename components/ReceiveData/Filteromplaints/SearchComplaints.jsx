@@ -104,21 +104,25 @@ const getRespondentTypeAndData = (step2) => {
   return { type: "unknown", data: {} };
 };
 
-const packPerson = (p = {}) => ({
-  idCard: p.idCard || "",
-  name: p.name || p.fullName || "",
-  fullName: p.fullName || p.name || "",
-  agencyName: p.agencyName || "",
-  companyName: p.companyName || "",
-  signatoryName: p.signatoryName || "",
-  address: p.address || "",
-  phone: p.phone || "",
-  province: p.province ?? null,
-  districts: p.districts ?? null,
-  subdistricts: p.subdistricts ?? null,
-  zipcode: p.zipcode ?? null,
-  email: p.email || "",
-});
+const packPerson = (p = {}) => {
+  // ✅ Normalize ชื่อเป็น `name` เดียวทุกประเภท (ใช้ function เดียวกัน)
+  const normalizedName = p.name || p.fullName || p.companyName || p.signatoryName || "";
+  return {
+    idCard: p.idCard || "",
+    name: normalizedName,
+    fullName: p.fullName || normalizedName,
+    agencyName: p.agencyName || "",
+    companyName: p.companyName || normalizedName,
+    signatoryName: p.signatoryName || normalizedName,
+    address: p.address || "",
+    phone: p.phone || "",
+    province: p.province ?? null,
+    districts: p.districts ?? null,
+    subdistricts: p.subdistricts ?? null,
+    zipcode: p.zipcode ?? null,
+    email: p.email || "",
+  };
+};
 
 const buildStep12Payload = ({
   generalData,
