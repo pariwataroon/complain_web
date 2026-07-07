@@ -22,7 +22,11 @@ const ComplaintPersonalFormAPI = ({
 
   // ✅ เมื่อ formType เปลี่ยน → unregister field เก่า + reset form
   React.useEffect(() => {
-    if (!control || !unregister || !reset || !getValues) return;
+    console.log(`[ComplaintPersonalFormAPI] useEffect formType=${formType}, hasControl=${!!control}, hasUnregister=${!!unregister}, hasReset=${!!reset}`);
+    if (!control || !unregister || !reset || !getValues) {
+      console.log(`[ComplaintPersonalFormAPI] SKIP - missing methods`);
+      return;
+    }
     const currentValues = getValues();
     const commonFields = {
       idCard: currentValues.idCard || "",
