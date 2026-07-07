@@ -18,14 +18,13 @@ const ComplaintPersonalFormAPI = ({
   data = {}
 }) => {
   const methods = useFormContext();
-  const { control, reset, getValues } = methods || {};
+  const { control, reset, getValues, unregister } = methods || {};
 
-  // ✅ เมื่อ formType เปลี่ยน → ล้าง field เก่า + set ข้อมูลใหม่
+  // ✅ เมื่อ formType เปลี่ยน → unregister field เก่า + set ข้อมูลใหม่
   React.useEffect(() => {
-    console.log(`[ComplaintPersonalFormAPI] formType changed to: ${formType}, hasControl: ${!!control}, hasReset: ${!!reset}`);
     if (!control || !reset || !getValues) return;
+
     const currentValues = getValues();
-    // 保留ข้อมูลที่มีอยู่ แต่ไม่เก็บ field เก่า
     const commonFields = {
       idCard: currentValues.idCard || "",
       address: currentValues.address || "",
@@ -36,6 +35,24 @@ const ComplaintPersonalFormAPI = ({
       subdistricts: currentValues.subdistricts || null,
       zipcode: currentValues.zipcode || null,
     };
+
+    // ✅ _unregister field ที่ไม่ใช้ใน formType ปัจจุบัน_
+    const allNameFields = ["name", "fullName", "companyName", "signatoryName", "agencyName"];
+    const currentNameField = formType === "government" ? "fullName"
+      : formType === "corporate" ? "companyName"
+      : formType === "signer" ? "signatoryName"
+      : "name";
+
+    // Unregister field ที่ไม่ใช้
+    if (unregister) {
+      allNameFields.forEach(field => {
+        if (field !== currentNameField) {
+          unregister(field, { keepDefaultValue: false });
+        }
+      });
+    }
+
+    // Reset form ด้วยข้อมูลใหม่
     if (formType === "government") {
       reset({
         ...commonFields,
