@@ -704,8 +704,13 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       console.log('Complainant Data:', cData);
 
       // Step 1: Delegate (รองรับทั้ง delegate และ signer สำหรับ corporate)
-      const delegate = data?.step1?.general?.delegate || data?.step1?.general?.signer || {};
-      const { type: dType, data: dData } = getDelegateTypeAndData(delegate);
+      // ✅ หาจากหลายที่ (รวมถึง nested ใน complainant data)
+      const s1Inner = data?.step1?.general?.general || {};
+      const delegateParent = {
+        delegate: data?.step1?.general?.delegate || s1Inner.delegate || null,
+        signer: data?.step1?.general?.signer || s1Inner.signer || null,
+      };
+      const { type: dType, data: dData } = getDelegateTypeAndData(delegateParent);
       setDelegateType(dType);
       setDelegateData(dData);
       defaultDelegateRef.current = dData;
