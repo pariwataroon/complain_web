@@ -18,64 +18,7 @@ const ComplaintPersonalFormAPI = ({
   data = {}
 }) => {
   const methods = useFormContext();
-  const { control, reset, getValues, unregister } = methods || {};
-
-  // ✅ เมื่อ formType เปลี่ยน → unregister field เก่า + set ข้อมูลใหม่
-  React.useEffect(() => {
-    if (!control || !reset || !getValues) return;
-
-    const currentValues = getValues();
-    const commonFields = {
-      idCard: currentValues.idCard || "",
-      address: currentValues.address || "",
-      phone: currentValues.phone || "",
-      email: currentValues.email || "",
-      province: currentValues.province || null,
-      districts: currentValues.districts || null,
-      subdistricts: currentValues.subdistricts || null,
-      zipcode: currentValues.zipcode || null,
-    };
-
-    // ✅ _unregister field ที่ไม่ใช้ใน formType ปัจจุบัน_
-    const allNameFields = ["name", "fullName", "companyName", "signatoryName", "agencyName"];
-    const currentNameField = formType === "government" ? "fullName"
-      : formType === "corporate" ? "companyName"
-      : formType === "signer" ? "signatoryName"
-      : "name";
-
-    // Unregister field ที่ไม่ใช้
-    if (unregister) {
-      allNameFields.forEach(field => {
-        if (field !== currentNameField) {
-          unregister(field, { keepDefaultValue: false });
-        }
-      });
-    }
-
-    // Reset form ด้วยข้อมูลใหม่
-    if (formType === "government") {
-      reset({
-        ...commonFields,
-        fullName: currentValues.fullName || currentValues.name || currentValues.companyName || "",
-        agencyName: currentValues.agencyName || "",
-      });
-    } else if (formType === "corporate") {
-      reset({
-        ...commonFields,
-        companyName: currentValues.companyName || currentValues.name || currentValues.fullName || "",
-      });
-    } else if (formType === "signer") {
-      reset({
-        ...commonFields,
-        signatoryName: currentValues.signatoryName || currentValues.name || "",
-      });
-    } else {
-      reset({
-        ...commonFields,
-        name: currentValues.name || currentValues.fullName || currentValues.companyName || "",
-      });
-    }
-  }, [formType]);
+  const { control } = methods || {};
 
   // ถ้ามี data prop แต่ไม่มี form context ให้แสดงแบบ read-only
   const isReadOnly = !control && data && Object.keys(data).length > 0;
@@ -83,20 +26,6 @@ const ComplaintPersonalFormAPI = ({
   const isCorporate = formType === "corporate";
   const isGovernment = formType === "government";
   const isSigner = formType === "signer";
-
-  const nameFieldKey = isGovernment ? "fullName"
-    : isCorporate ? "companyName"
-    : isSigner ? "signatoryName"
-    : "name";
-
-  const nameLabel = isCorporate ? "ชื่อบริษัท"
-    : isSigner ? "ชื่อผู้มีอำนาจลงนาม"
-    : "ชื่อ - นามสกุล";
-
-  const nameValue = isGovernment ? data?.fullName
-    : isCorporate ? data?.companyName
-    : isSigner ? data?.signatoryName
-    : data?.name;
 
   const idCardLabel = isCorporate ? "เลขทะเบียนนิติบุคคล" : "เลขบัตรประจำตัวประชาชน";
 
@@ -198,10 +127,11 @@ const ComplaintPersonalFormAPI = ({
   }
 
   // แสดงแบบใช้ react-hook-form (สำหรับการแก้ไข)
+  // ✅ ใช้ key={formType} เพื่อบังคับ unmount/remount เมื่อ formType เปลี่ยน
   return (
     <Box>
       <Typography className={styles.title}>{title}</Typography>
-      <Grid container spacing={2}>
+      <Grid container spacing={2} key={formType}>
         <Grid item xs={12}>
           <Controller
             name="idCard"
@@ -232,12 +162,13 @@ const ComplaintPersonalFormAPI = ({
 
         <Grid item xs={12} sm={6}>
           <Controller
-            name={nameFieldKey}
+            key={`${formType}-name`}
+            name={isGovernment ? "fullName" : isCorporate ? "companyName" : isSigner ? "signatoryName" : "name"}
             control={control}
             render={({ field }) => (
               <InputText
-                label={nameLabel}
-                placeholder={nameLabel}
+                label={isCorporate ? "ชื่อบริษัท" : isSigner ? "ชื่อผู้มีอำนาจลงนาม" : "ชื่อ - นามสกุล"}
+                placeholder={isCorporate ? "ชื่อบริษัท" : isSigner ? "ชื่อผู้มีอำนาจลงนาม" : "ชื่อ - นามสกุล"}
                 {...field}
                 required
                 disabled={dis}
