@@ -1038,6 +1038,9 @@ useEffect(() => {
         // ✅ หา delegate จากหลายที่ (รวมถึง nested ใน complainant data)
         const s1Inner = step1General.general || {};
         defaultDelegateRef.current = step1General.delegate || s1Inner.delegate || s1Inner.signer || step1General.signer || null;
+        console.log("[fetchComplaints] individual delegate:", defaultDelegateRef.current);
+        console.log("[fetchComplaints] step1General:", step1General);
+        console.log("[fetchComplaints] s1Inner:", s1Inner);
       }
 
       // ตรวจสอบประเภทผู้ถูกร้องเรียนจากข้อมูล
