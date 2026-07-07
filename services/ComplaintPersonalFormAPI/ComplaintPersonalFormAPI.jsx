@@ -18,7 +18,38 @@ const ComplaintPersonalFormAPI = ({
   data = {}
 }) => {
   const methods = useFormContext();
-  const { control } = methods || {};
+  const { control, unregister, reset, getValues } = methods || {};
+
+  // ✅ เมื่อ formType เปลี่ยน → unregister field เก่า + reset form
+  React.useEffect(() => {
+    if (!control || !unregister || !reset || !getValues) return;
+    const currentValues = getValues();
+    const commonFields = {
+      idCard: currentValues.idCard || "",
+      address: currentValues.address || "",
+      phone: currentValues.phone || "",
+      email: currentValues.email || "",
+      province: currentValues.province || null,
+      districts: currentValues.districts || null,
+      subdistricts: currentValues.subdistricts || null,
+      zipcode: currentValues.zipcode || null,
+    };
+    const normalizedName = currentValues.name || currentValues.fullName || currentValues.companyName || currentValues.signatoryName || "";
+    // Unregister ทุก name field ก่อน
+    ["name", "fullName", "companyName", "signatoryName", "agencyName"].forEach(f => {
+      try { unregister(f); } catch(e) {}
+    });
+    // Reset form ด้วยข้อมูลใหม่ตาม formType
+    if (formType === "government") {
+      reset({ ...commonFields, fullName: normalizedName, agencyName: currentValues.agencyName || "" });
+    } else if (formType === "corporate") {
+      reset({ ...commonFields, companyName: normalizedName });
+    } else if (formType === "signer") {
+      reset({ ...commonFields, signatoryName: normalizedName });
+    } else {
+      reset({ ...commonFields, name: normalizedName });
+    }
+  }, [formType]);
 
   // ถ้ามี data prop แต่ไม่มี form context ให้แสดงแบบ read-only
   const isReadOnly = !control && data && Object.keys(data).length > 0;
