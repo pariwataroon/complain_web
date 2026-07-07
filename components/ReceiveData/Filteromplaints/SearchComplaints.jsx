@@ -95,13 +95,33 @@ const getDelegateTypeAndData = (data) => {
 
 const getRespondentTypeAndData = (step2) => {
   const activeType = step2?.activeType;
-  if (activeType) {
-    if (step2[activeType]) return { type: activeType, data: step2[activeType] };
+  let data = {};
+  let type = "individual";
+
+  if (activeType && step2[activeType]) {
+    data = step2[activeType];
+    type = activeType;
+  } else if (step2?.government) {
+    data = step2.government;
+    type = "government";
+  } else if (step2?.corporate) {
+    data = step2.corporate;
+    type = "corporate";
+  } else if (step2?.individual) {
+    data = step2.individual;
+    type = "individual";
   }
-  if (step2?.individual) return { type: "individual", data: step2.individual };
-  if (step2?.corporate) return { type: "corporate", data: step2.corporate };
-  if (step2?.government) return { type: "government", data: step2.government };
-  return { type: "unknown", data: {} };
+
+  // ✅ ถ้า activeType เป็น individual แต่มี agencyName → ถือว่าเป็น government
+  if (type === "individual" && data.agencyName && data.agencyName !== "") {
+    type = "government";
+  }
+  // ✅ ถ้า activeType เป็น individual แต่มี companyName → ถือว่าเป็น corporate
+  if (type === "individual" && data.companyName && data.companyName !== "") {
+    type = "corporate";
+  }
+
+  return { type, data };
 };
 
 const packPerson = (p = {}) => {

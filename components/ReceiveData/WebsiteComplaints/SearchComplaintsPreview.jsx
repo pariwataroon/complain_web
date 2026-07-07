@@ -608,11 +608,22 @@ const handleSubmit = async () => {
     delegate = step1General.delegate || {};
   }
   const respondentActiveType = step2.general?.activeType;
-  const respondent = respondentActiveType === "corporate"
+  const respondentRaw = respondentActiveType === "corporate"
     ? step2.general?.corporate || {}
     : respondentActiveType === "government"
     ? step2.general?.government || {}
     : step2.general?.individual || step2.general?.corporate || step2.general?.government || {};
+
+  // ✅ ถ้ามี agencyName → ถือว่าเป็น government (ไม่สน activeType)
+  const respondent = { ...respondentRaw };
+  const isActuallyGovernment = respondentActiveType === "government" ||
+    (respondent.agencyName && respondent.agencyName !== "");
+  const isActuallyCorporate = respondentActiveType === "corporate" ||
+    (respondent.companyName && respondent.companyName !== "" && !isActuallyGovernment);
+
+  const effectiveRespondentType = isActuallyGovernment ? "government"
+    : isActuallyCorporate ? "corporate"
+    : respondentActiveType || "individual";
 
   // ข้อมูลจาก step3 (เรื่องร้องทุกข์)
   const complaint = step3.general || {};
@@ -896,9 +907,9 @@ const handleSubmit = async () => {
                 label={respondentActiveType === "corporate" ? "เลขทะเบียนนิติบุคคล" : "หมายเลขประจำตัวประชาชน"}
                 value={formatCitizenId_null(respondent.idCard)}
               />
-              {respondentActiveType === "corporate" ? (
+              {effectiveRespondentType === "corporate" ? (
                 <InfoItem label="ชื่อบริษัท" value={respondent.companyName || respondentName.firstName || "-"} />
-              ) : respondentActiveType === "government" ? (
+              ) : effectiveRespondentType === "government" ? (
                 <>
                   <InfoItem label="หน่วยงาน" value={respondent.agencyName || "-"} />
                   <InfoItem label="ชื่อ - นามสกุล" value={respondent.fullName || "-"} />

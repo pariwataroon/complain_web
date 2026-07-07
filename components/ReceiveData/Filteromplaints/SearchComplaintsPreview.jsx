@@ -569,11 +569,26 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
 
   // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)
   const respondentActiveType = step2.general?.activeType;
-  const respondent = respondentActiveType === "corporate"
+  const respondentRaw = respondentActiveType === "corporate"
     ? step2.general?.corporate || {}
     : respondentActiveType === "government"
     ? step2.general?.government || {}
     : step2.general?.individual || step2.general?.corporate || step2.general?.government || {};
+
+  // ✅ ถ้ามี agencyName → ถือว่าเป็น government (ไม่สน activeType)
+  const respondent = { ...respondentRaw };
+  console.log("[Preview] respondentActiveType:", respondentActiveType);
+  console.log("[Preview] respondent:", respondent);
+  console.log("[Preview] respondent.agencyName:", respondent.agencyName);
+  console.log("[Preview] step2.general:", step2.general);
+  const isActuallyGovernment = respondentActiveType === "government" ||
+    (respondent.agencyName && respondent.agencyName !== "");
+  const isActuallyCorporate = respondentActiveType === "corporate" ||
+    (respondent.companyName && respondent.companyName !== "" && !isActuallyGovernment);
+
+  const effectiveRespondentType = isActuallyGovernment ? "government"
+    : isActuallyCorporate ? "corporate"
+    : respondentActiveType || "individual";
 
   const { title: respondentTitle, firstName: respondentFirstName, lastName: respondentLastName } = (() => {
     const t = resolveTitleFromList(
@@ -1068,12 +1083,12 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
             </Typography>
             <Grid container spacing={2} mb={3}>
               <InfoItem
-                label={respondentActiveType === "corporate" ? "เลขทะเบียนนิติบุคคล" : "หมายเลขประจำตัวประชาชน"}
+                label={effectiveRespondentType === "corporate" ? "เลขทะเบียนนิติบุคคล" : "หมายเลขประจำตัวประชาชน"}
                 value={formatCitizenId_null(respondent.idCard)}
               />
-              {respondentActiveType === "corporate" ? (
+              {effectiveRespondentType === "corporate" ? (
                 <InfoItem label="ชื่อบริษัท" value={respondent.companyName || respondentFirstName || "-"} />
-              ) : respondentActiveType === "government" ? (
+              ) : effectiveRespondentType === "government" ? (
                 <>
                   <InfoItem label="หน่วยงาน" value={respondent.agencyName || "-"} />
                   <InfoItem label="ชื่อ - นามสกุล" value={respondent.fullName || "-"} />

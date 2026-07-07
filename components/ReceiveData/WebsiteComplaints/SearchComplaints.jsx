@@ -1046,8 +1046,17 @@ useEffect(() => {
       // ตรวจสอบประเภทผู้ถูกร้องเรียนจากข้อมูล
       const step2General = data?.step2?.general || {};
       if (step2General.activeType) {
-        setRespondentType(step2General.activeType);
-        defaultStep2Ref.current = step2General[step2General.activeType] || {};
+        let detectedType = step2General.activeType;
+        const detectedData = step2General[step2General.activeType] || {};
+        // ✅ ถ้า activeType เป็น individual แต่มี agencyName → ถือว่าเป็น government
+        if (detectedType === "individual" && detectedData.agencyName && detectedData.agencyName !== "") {
+          detectedType = "government";
+        }
+        if (detectedType === "individual" && detectedData.companyName && detectedData.companyName !== "") {
+          detectedType = "corporate";
+        }
+        setRespondentType(detectedType);
+        defaultStep2Ref.current = detectedData;
       } else if (step2General.corporate && Object.keys(step2General.corporate).length > 0) {
         setRespondentType("corporate");
         defaultStep2Ref.current = step2General.corporate;
