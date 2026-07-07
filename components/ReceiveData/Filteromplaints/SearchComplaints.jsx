@@ -1476,143 +1476,132 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
 
   const handleComplainantTabChange = (newType) => {
     const currentData = generalMethods.getValues();
-    setComplainantType(newType);
-
     const baseData = packPerson(currentData);
-    let newData;
 
+    let newData;
     if (newType === "government") {
       newData = {
-        idCard: baseData.idCard,
+        idCard: baseData.idCard || "",
         fullName: baseData.fullName || baseData.name || "",
         agencyName: baseData.agencyName || "",
-        address: baseData.address,
-        phone: baseData.phone,
-        email: baseData.email,
-        province: baseData.province,
-        districts: baseData.districts,
-        subdistricts: baseData.subdistricts,
-        zipcode: baseData.zipcode,
+        address: baseData.address || "",
+        phone: baseData.phone || "",
+        email: baseData.email || "",
+        province: baseData.province || null,
+        districts: baseData.districts || null,
+        subdistricts: baseData.subdistricts || null,
+        zipcode: baseData.zipcode || null,
       };
     } else if (newType === "corporate") {
       newData = {
-        idCard: baseData.idCard,
+        idCard: baseData.idCard || "",
         companyName: baseData.companyName || baseData.name || "",
-        address: baseData.address,
-        phone: baseData.phone,
-        email: baseData.email,
-        province: baseData.province,
-        districts: baseData.districts,
-        subdistricts: baseData.subdistricts,
-        zipcode: baseData.zipcode,
+        address: baseData.address || "",
+        phone: baseData.phone || "",
+        email: baseData.email || "",
+        province: baseData.province || null,
+        districts: baseData.districts || null,
+        subdistricts: baseData.subdistricts || null,
+        zipcode: baseData.zipcode || null,
       };
     } else {
       newData = {
-        idCard: baseData.idCard,
+        idCard: baseData.idCard || "",
         name: baseData.name || baseData.fullName || baseData.companyName || "",
-        address: baseData.address,
-        phone: baseData.phone,
-        email: baseData.email,
-        province: baseData.province,
-        districts: baseData.districts,
-        subdistricts: baseData.subdistricts,
-        zipcode: baseData.zipcode,
+        address: baseData.address || "",
+        phone: baseData.phone || "",
+        email: baseData.email || "",
+        province: baseData.province || null,
+        districts: baseData.districts || null,
+        subdistricts: baseData.subdistricts || null,
+        zipcode: baseData.zipcode || null,
       };
     }
 
-    generalMethods.reset({});
-    setTimeout(() => { generalMethods.reset(newData); }, 0);
+    generalMethods.reset(newData, { keepDefaultValues: false });
+    setComplainantType(newType);
+
+    const currentDelegateData = delegateMethods.getValues();
+    const baseDelegate = packPerson(currentDelegateData);
 
     if (newType === "corporate") {
       setDelegateType("signer");
-      const currentDelegateData = delegateMethods.getValues();
-      const baseDelegate = packPerson(currentDelegateData);
-      delegateMethods.reset({});
-      setTimeout(() => {
-        delegateMethods.reset({
-          idCard: baseDelegate.idCard,
-          signatoryName: baseDelegate.signatoryName || baseDelegate.name || "",
-          address: baseDelegate.address,
-          phone: baseDelegate.phone,
-          email: baseDelegate.email,
-          province: baseDelegate.province,
-          districts: baseDelegate.districts,
-          subdistricts: baseDelegate.subdistricts,
-          zipcode: baseDelegate.zipcode,
-        });
-      }, 0);
+      delegateMethods.reset({
+        idCard: baseDelegate.idCard || "",
+        signatoryName: baseDelegate.signatoryName || baseDelegate.name || "",
+        address: baseDelegate.address || "",
+        phone: baseDelegate.phone || "",
+        email: baseDelegate.email || "",
+        province: baseDelegate.province || null,
+        districts: baseDelegate.districts || null,
+        subdistricts: baseDelegate.subdistricts || null,
+        zipcode: baseDelegate.zipcode || null,
+      }, { keepDefaultValues: false });
     } else if (newType === "government") {
       setDelegateType("delegate");
-      delegateMethods.reset({});
+      delegateMethods.reset({}, { keepDefaultValues: false });
     } else {
       setDelegateType("delegate");
-      const currentDelegateData = delegateMethods.getValues();
-      const baseDelegate = packPerson(currentDelegateData);
-      delegateMethods.reset({});
-      setTimeout(() => {
-        delegateMethods.reset({
-          idCard: baseDelegate.idCard,
-          name: baseDelegate.name || baseDelegate.signatoryName || "",
-          address: baseDelegate.address,
-          phone: baseDelegate.phone,
-          email: baseDelegate.email,
-          province: baseDelegate.province,
-          districts: baseDelegate.districts,
-          subdistricts: baseDelegate.subdistricts,
-          zipcode: baseDelegate.zipcode,
-        });
-      }, 0);
+      delegateMethods.reset({
+        idCard: baseDelegate.idCard || "",
+        name: baseDelegate.name || baseDelegate.signatoryName || "",
+        address: baseDelegate.address || "",
+        phone: baseDelegate.phone || "",
+        email: baseDelegate.email || "",
+        province: baseDelegate.province || null,
+        districts: baseDelegate.districts || null,
+        subdistricts: baseDelegate.subdistricts || null,
+        zipcode: baseDelegate.zipcode || null,
+      }, { keepDefaultValues: false });
     }
   };
 
   const handleRespondentTabChange = (newType) => {
     const currentData = step2Methods.getValues();
-    setRespondentType(newType);
-
     const baseData = packPerson(currentData);
-    let newData;
 
+    let newData;
     if (newType === "government") {
       newData = {
-        idCard: baseData.idCard,
+        idCard: baseData.idCard || "",
         fullName: baseData.fullName || baseData.name || "",
         agencyName: baseData.agencyName || "",
-        address: baseData.address,
-        phone: baseData.phone,
-        email: baseData.email,
-        province: baseData.province,
-        districts: baseData.districts,
-        subdistricts: baseData.subdistricts,
-        zipcode: baseData.zipcode,
+        address: baseData.address || "",
+        phone: baseData.phone || "",
+        email: baseData.email || "",
+        province: baseData.province || null,
+        districts: baseData.districts || null,
+        subdistricts: baseData.subdistricts || null,
+        zipcode: baseData.zipcode || null,
       };
     } else if (newType === "corporate") {
       newData = {
-        idCard: baseData.idCard,
+        idCard: baseData.idCard || "",
         companyName: baseData.companyName || baseData.name || "",
-        address: baseData.address,
-        phone: baseData.phone,
-        email: baseData.email,
-        province: baseData.province,
-        districts: baseData.districts,
-        subdistricts: baseData.subdistricts,
-        zipcode: baseData.zipcode,
+        address: baseData.address || "",
+        phone: baseData.phone || "",
+        email: baseData.email || "",
+        province: baseData.province || null,
+        districts: baseData.districts || null,
+        subdistricts: baseData.subdistricts || null,
+        zipcode: baseData.zipcode || null,
       };
     } else {
       newData = {
-        idCard: baseData.idCard,
+        idCard: baseData.idCard || "",
         name: baseData.name || baseData.fullName || baseData.companyName || "",
-        address: baseData.address,
-        phone: baseData.phone,
-        email: baseData.email,
-        province: baseData.province,
-        districts: baseData.districts,
-        subdistricts: baseData.subdistricts,
-        zipcode: baseData.zipcode,
+        address: baseData.address || "",
+        phone: baseData.phone || "",
+        email: baseData.email || "",
+        province: baseData.province || null,
+        districts: baseData.districts || null,
+        subdistricts: baseData.subdistricts || null,
+        zipcode: baseData.zipcode || null,
       };
     }
 
-    step2Methods.reset({});
-    setTimeout(() => { step2Methods.reset(newData); }, 0);
+    step2Methods.reset(newData, { keepDefaultValues: false });
+    setRespondentType(newType);
   };
 
   // useEffect subComplaintTypes
