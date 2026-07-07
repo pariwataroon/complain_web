@@ -53,8 +53,26 @@ const SearchComplaints = () => {
       const data = res?.res_data;
       setDefaultData(data);
 
-      const general = data?.step1?.general?.general || {};
-      const delegate = data?.step1?.general?.delegate || null;
+      // ✅ ตรวจจับประเภทผู้ร้องทุกข์จาก step1
+      const step1General = data?.step1?.general || {};
+      const hasRealData = (obj) => obj && typeof obj === "object" && Object.keys(obj).length > 0 && Object.values(obj).some(v => v !== null && v !== undefined && v !== "");
+
+      let general = {};
+      let delegate = null;
+
+      if (hasRealData(step1General.government)) {
+        general = step1General.government;
+        delegate = null; // หน่วยงานรัฐไม่มีผู้รับมอบอำนาจ
+        setActive(2); // Tab ส่วนราชการ
+      } else if (hasRealData(step1General.corporate)) {
+        general = step1General.corporate;
+        delegate = step1General.signer || null;
+        setActive(1); // Tab นิติบุคคล
+      } else {
+        general = step1General.general || {};
+        delegate = step1General.delegate || null;
+        setActive(0); // Tab บุคคลทั่วไป
+      }
 
       defaultGeneralRef.current = general;
       defaultDelegateRef.current = delegate;

@@ -143,48 +143,83 @@ const FollowStatusSummary = ({ data = {} }) => {
     agencyReports = [],
   } = data;
 
-  // ผู้ร้อง: เลือกทีละฟิลด์ (เหมือน ComplaintSummaryService)
+  // ✅ ตรวจจับประเภทผู้ร้องทุกข์
+  const hasRealData = (obj) => obj && typeof obj === "object" && Object.keys(obj).length > 0 && Object.values(obj).some(v => v !== null && v !== undefined && v !== "");
+  let complainantType = "individual";
+  let activeComplainant = complainant;
+  let activeDelegate = delegate;
+
+  if (hasRealData(government)) {
+    complainantType = "government";
+    activeComplainant = government;
+    activeDelegate = {};
+  } else if (hasRealData(corporate)) {
+    complainantType = "corporate";
+    activeComplainant = corporate;
+    activeDelegate = signer;
+  } else {
+    complainantType = "individual";
+    activeComplainant = complainant;
+    activeDelegate = delegate;
+  }
+
+  // ✅ ตรวจจับประเภทผู้ถูกร้อง
+  let respondentType = "individual";
+  let activeRespondent = respondent;
+  if (hasRealData(government) && !hasRealData(respondent) && !hasRealData(corporateS2)) {
+    respondentType = "government";
+    activeRespondent = government;
+  } else if (hasRealData(corporateS2)) {
+    respondentType = "corporate";
+    activeRespondent = corporateS2;
+  } else if (hasRealData(respondent)) {
+    respondentType = "individual";
+    activeRespondent = respondent;
+  }
+
+  // ผู้ร้อง: เลือกตามประเภท
   const left = {
-    idCard: complainant.idCard ?? corporate.idCard,
-    name: complainant.name ?? corporate.name,
-    address: complainant.address ?? corporate.address,
-    subdistricts: complainant.subdistricts ?? corporate.subdistricts,
-    district: complainant.district ?? corporate.district,
-    province: complainant.province ?? corporate.province,
-    zipcode: complainant.zipcode ?? corporate.zipcode,
-    phone: complainant.phone ?? corporate.phone,
-    email: complainant.email ?? corporate.email,
+    idCard: activeComplainant.idCard,
+    name: activeComplainant.name || activeComplainant.fullName,
+    agencyName: activeComplainant.agencyName,
+    fullName: activeComplainant.fullName,
+    companyName: activeComplainant.companyName,
+    address: activeComplainant.address,
+    subdistricts: activeComplainant.subdistricts,
+    district: activeComplainant.district,
+    province: activeComplainant.province,
+    zipcode: activeComplainant.zipcode,
+    phone: activeComplainant.phone,
+    email: activeComplainant.email,
   };
 
-  // ผู้ถูกร้อง/หน่วยงานที่เกี่ยวข้อง
+  // ผู้ถูกร้อง: เลือกตามประเภท
   const right = {
-    idCard: respondent.idCard ?? corporateS2.idCard ?? government.idCard,
-    name: respondent.name ?? corporateS2.name ?? government.name,
-    address: respondent.address ?? corporateS2.address ?? government.address,
-    subdistricts:
-      respondent.subdistricts ??
-      corporateS2.subdistricts ??
-      government.subdistricts,
-    district:
-      respondent.district ?? corporateS2.district ?? government.district,
-    province:
-      respondent.province ?? corporateS2.province ?? government.province,
-    zipcode: respondent.zipcode ?? corporateS2.zipcode ?? government.zipcode,
-    phone: respondent.phone ?? corporateS2.phone ?? government.phone,
-    email: respondent.email ?? corporateS2.email ?? government.email,
+    idCard: activeRespondent.idCard,
+    name: activeRespondent.name || activeRespondent.fullName,
+    agencyName: activeRespondent.agencyName,
+    fullName: activeRespondent.fullName,
+    companyName: activeRespondent.companyName,
+    address: activeRespondent.address,
+    subdistricts: activeRespondent.subdistricts,
+    district: activeRespondent.district,
+    province: activeRespondent.province,
+    zipcode: activeRespondent.zipcode,
+    phone: activeRespondent.phone,
+    email: activeRespondent.email,
   };
 
-  // ผู้รับมอบอำนาจ (delegate/signer)
+  // ผู้รับมอบอำนาจ (delegate/signer) - ใช้ signatoryName สำหรับนิติบุคคล
   const proxy = {
-    idCard: delegate.idCard ?? signer.idCard,
-    name: delegate.name ?? signer.name,
-    address: delegate.address ?? signer.address,
-    subdistricts: delegate.subdistricts ?? signer.subdistricts,
-    district: delegate.district ?? signer.district,
-    province: delegate.province ?? signer.province,
-    zipcode: delegate.zipcode ?? signer.zipcode,
-    phone: delegate.phone ?? signer.phone,
-    email: delegate.email ?? signer.email,
+    idCard: activeDelegate.idCard,
+    name: activeDelegate.signatoryName || activeDelegate.name,
+    address: activeDelegate.address,
+    subdistricts: activeDelegate.subdistricts,
+    district: activeDelegate.district,
+    province: activeDelegate.province,
+    zipcode: activeDelegate.zipcode,
+    phone: activeDelegate.phone,
+    email: activeDelegate.email,
   };
 
   // ดึง assignment_form ถ้ามี (เผื่อมาจาก data ตรงๆ)
@@ -331,59 +366,38 @@ const FollowStatusSummary = ({ data = {} }) => {
               <Section title="ข้อมูลผู้ร้องทุกข์">
                 <Grid container spacing={2} mb={3}>
                   <InfoItem
-                    label="หมายเลขประจำตัวประชาชน"
-                    value={formatCitizenId_null(
-                      complainant.idCard || corporate.idCard
-                    )}
+                    label={complainantType === "corporate" ? "เลขทะเบียนนิติบุคคล" : "หมายเลขประจำตัวประชาชน"}
+                    value={formatCitizenId_null(left.idCard)}
                   />
-                  <InfoItem
-                    label="ชื่อ - นามสกุล"
-                    value={complainant.name || corporate.name}
-                  />
-                  <InfoItem
-                    label="ที่อยู่ที่ติดต่อได้"
-                    value={complainant.address || corporate.address}
-                  />
-                  <InfoItem
-                    label="ตำบล/แขวง"
-                    value={complainant.subdistricts || corporate.subdistricts}
-                  />
-                  <InfoItem
-                    label="อำเภอ/เขต"
-                    value={complainant.district || corporate.district}
-                  />
-                  <InfoItem
-                    label="จังหวัด"
-                    value={complainant.province || corporate.province}
-                  />
-                  <InfoItem
-                    label="รหัสไปรษณีย์"
-                    value={complainant.zipcode || corporate.zipcode}
-                  />
-                  <InfoItem
-                    label="อีเมล"
-                    value={complainant.email || corporate.email}
-                  />
-                  <InfoItem
-                    label="หมายเลขโทรศัพท์"
-                    value={formatPhoneNumber_null(
-                      complainant.phone || corporate.phone
-                    )}
-                  />
+                  {complainantType === "government" ? (
+                    <>
+                      <InfoItem label="หน่วยงาน" value={left.agencyName || "-"} />
+                      <InfoItem label="ชื่อ - นามสกุล" value={left.fullName || left.name || "-"} />
+                    </>
+                  ) : complainantType === "corporate" ? (
+                    <InfoItem label="ชื่อบริษัท/องค์กร" value={left.companyName || left.name || "-"} />
+                  ) : (
+                    <InfoItem label="ชื่อ - นามสกุล" value={left.name || "-"} />
+                  )}
+                  <InfoItem label="ที่อยู่ที่ติดต่อได้" value={left.address} />
+                  <InfoItem label="ตำบล/แขวง" value={left.subdistricts} />
+                  <InfoItem label="อำเภอ/เขต" value={left.district} />
+                  <InfoItem label="จังหวัด" value={left.province} />
+                  <InfoItem label="รหัสไปรษณีย์" value={left.zipcode} />
+                  <InfoItem label="อีเมล" value={left.email} />
+                  <InfoItem label="หมายเลขโทรศัพท์" value={formatPhoneNumber_null(left.phone)} />
                 </Grid>
               </Section>
 
-              <Section title="ผู้รับมอบอำนาจร้องเรียน">
+              <Section title={complainantType === "corporate" ? "ผู้มีอำนาจลงนาม" : "ผู้รับมอบอำนาจร้องเรียน"}>
                 <Grid container spacing={2} mb={3}>
                   <InfoItem
                     label="หมายเลขประจำตัวประชาชน"
-                    value={formatCitizenId_null(
-                      delegate.idCard || signer.idCard
-                    )}
+                    value={formatCitizenId_null(proxy.idCard)}
                   />
                   <InfoItem
-                    label="ชื่อ - นามสกุล"
-                    value={delegate.name || signer.name}
+                    label={complainantType === "corporate" ? "ชื่อผู้มีอำนาจลงนาม" : "ชื่อ - นามสกุล"}
+                    value={proxy.name || "-"}
                   />
                   <InfoItem
                     label="ที่อยู่ที่ติดต่อได้"
@@ -421,19 +435,19 @@ const FollowStatusSummary = ({ data = {} }) => {
               <Section title="ข้อมูลผู้ถูกร้อง (ข้อมูลจากผู้ร้องทุกข์)">
                 <Grid container spacing={2} mb={3}>
                   <InfoItem
-                    label="หมายเลขประจำตัวประชาชน"
-                    value={formatCitizenId_null(
-                      respondent.idCard ||
-                        corporateS2.idCard ||
-                        government.idCard
-                    )}
+                    label={respondentType === "corporate" ? "เลขทะเบียนนิติบุคคล" : "หมายเลขประจำตัวประชาชน"}
+                    value={formatCitizenId_null(right.idCard)}
                   />
-                  <InfoItem
-                    label="ชื่อ - นามสกุล"
-                    value={
-                      respondent.name || corporateS2.name || government.name
-                    }
-                  />
+                  {respondentType === "corporate" ? (
+                    <InfoItem label="ชื่อบริษัท/องค์กร" value={right.companyName || right.name || "-"} />
+                  ) : respondentType === "government" ? (
+                    <>
+                      <InfoItem label="หน่วยงาน" value={right.agencyName || "-"} />
+                      <InfoItem label="ชื่อ - นามสกุล" value={right.fullName || right.name || "-"} />
+                    </>
+                  ) : (
+                    <InfoItem label="ชื่อ - นามสกุล" value={right.name || "-"} />
+                  )}
                   <InfoItem
                     label="ที่อยู่ที่ติดต่อได้"
                     value={

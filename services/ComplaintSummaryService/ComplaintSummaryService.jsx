@@ -539,8 +539,8 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
                   value={formatCitizenId_null(delegate.idCard || signer.idCard)}
                 />
                 <InfoItem
-                  label="ชื่อ - นามสกุล"
-                  value={delegate.name || signer.name}
+                  label={complainantType2 === "corporate" ? "ชื่อผู้มีอำนาจลงนาม" : "ชื่อ - นามสกุล"}
+                  value={delegate.signatoryName || signer.signatoryName || delegate.name || signer.name}
                 />
                 <InfoItem
                   label="ที่อยู่ที่ติดต่อได้"
@@ -580,15 +580,33 @@ const ComplaintSummaryService = ({ data = {}, handleSubmit = {}, onRefresh }) =>
             {hasData(respondent) || hasData(corporateS2) || hasData(government) ? (
               <Grid container spacing={2} mb={3}>
                 <InfoItem
-                  label="หมายเลขประจำตัวประชาชน"
+                  label={respondentType === "corporate" ? "เลขทะเบียนนิติบุคคล" : "หมายเลขประจำตัวประชาชน"}
                   value={formatCitizenId_null(
                     respondent.idCard || corporateS2.idCard || government.idCard
                   )}
                 />
-                <InfoItem
-                  label="ชื่อ - นามสกุล"
-                  value={respondent.name || corporateS2.name || government.name}
-                />
+                {respondentType === "corporate" ? (
+                  <InfoItem
+                    label="ชื่อบริษัท/องค์กร"
+                    value={corporateS2.companyName || respondent.companyName || respondent.name || "-"}
+                  />
+                ) : respondentType === "government" ? (
+                  <>
+                    <InfoItem
+                      label="หน่วยงาน"
+                      value={government.agencyName || respondent.agencyName || "-"}
+                    />
+                    <InfoItem
+                      label="ชื่อ - นามสกุล"
+                      value={government.fullName || respondent.fullName || respondent.name || "-"}
+                    />
+                  </>
+                ) : (
+                  <InfoItem
+                    label="ชื่อ - นามสกุล"
+                    value={respondent.name || corporateS2.name || government.name}
+                  />
+                )}
                 <InfoItem
                   label="ที่อยู่ที่ติดต่อได้"
                   value={

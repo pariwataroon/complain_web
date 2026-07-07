@@ -48,7 +48,7 @@ const useSearchComplaintsPreview = () => {
         // ข้อมูลผู้รับผิดชอบ
         assigned_officer_id: assignedOfficerId || "",
         assigned_remark: "",
-        assigned_date: currentDateTime,
+        assigned_date: formData?.assignment_form?.assigned_date || formData?.assigned_date || currentDateTime,
         assignment_reason: "",
 
         // ข้อมูลประเภทเรื่องร้องเรียน
@@ -57,8 +57,8 @@ const useSearchComplaintsPreview = () => {
         complaint_subtype_id: step3Data.complaintSubType || "",
         complaint_channel_id: step3Data.complaintChannel || "",
 
-        // วันที่ลงทะเบียน
-        registration_date: currentDateTime,
+        // วันที่ลงทะเบียน - ใช้ค่าเดิมถ้ามี ไม่ทับด้วยวันปัจจุบัน
+        registration_date: additionalDetails.officerReceivedDate || formData?.assignment_form?.registration_date || currentDateTime,
 
         // ระดับความลับและความเร่งด่วน
         confidentiality_level: (() => {

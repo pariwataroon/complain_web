@@ -206,11 +206,12 @@ const useFilteromplaintsPreview = () => {
       // Note: registration_date และ director_submission_date จะถูกตั้งค่าข้างบนแล้วถ้ามีข้อมูล
       // ถ้าไม่มี registration_date จากฟอร์ม ให้ใช้เวลาปัจจุบัน
       if (!preparedData.registration_date) {
-        preparedData.registration_date = currentDateTime || "";
+        preparedData.registration_date = additionalDetails.officerReceivedDate || formData?.assignment_form?.registration_date || currentDateTime || "";
       }
       preparedData.assigned_officer_id = assignedOfficerId;
       preparedData.assigned_remark = additionalDetails.screeningRemarks || "";
-      preparedData.assigned_date = currentDateTime;
+      // ใช้ assigned_date เดิมถ้ามี ไม่ทับด้วยวันปัจจุบัน
+      preparedData.assigned_date = formData?.assignment_form?.assigned_date || formData?.assigned_date || currentDateTime;
       preparedData.assignment_reason = "";
 
       // Debug ช่วยตรวจสอบ payload ก่อนส่ง

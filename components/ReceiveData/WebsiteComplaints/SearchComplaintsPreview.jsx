@@ -324,17 +324,39 @@ const handleSubmit = async () => {
     console.log("complaintChannelId:", complaintChannelId);
 
     // --- เตรียมข้อมูล mappedFormData ---
+    // ✅ Detect ประเภทผู้ร้องจาก step1 ที่โหลดมา (ไม่ hardcode)
+    const s1General = formData?.step1?.general || {};
+    let complainantType = "individual";
+    if (s1General.government && Object.keys(s1General.government).length > 0) {
+      complainantType = "government";
+    } else if (s1General.corporate && Object.keys(s1General.corporate).length > 0) {
+      complainantType = "corporate";
+    }
+    const complainantData = s1General[complainantType] || s1General.general || {};
+    const delegateData = s1General.signer || s1General.delegate || {};
+
+    // ✅ Detect ประเภทผู้ถูกร้องจาก step2 ที่โหลดมา (ไม่ hardcode)
+    const s2General = formData?.step2?.general || {};
+    const respondentType = s2General.activeType
+      || (s2General.government && Object.keys(s2General.government).length > 0 ? "government"
+        : s2General.corporate && Object.keys(s2General.corporate).length > 0 ? "corporate"
+        : "individual");
+    const respondentData = s2General[respondentType] || s2General.individual || {};
+
     const mappedFormData = {
       ...formData,
       step1: {
         general: {
-          general: formData?.step1?.general?.general || {},
-          delegate: formData?.step1?.general?.delegate || {},
+          [complainantType]: complainantData,
+          ...(complainantType === "corporate"
+            ? { signer: delegateData }
+            : { delegate: delegateData }),
         },
       },
       step2: {
         general: {
-          individual: formData?.step2?.general?.individual || {},
+          activeType: respondentType,
+          [respondentType]: respondentData,
         },
       },
       step3: {
@@ -673,7 +695,7 @@ const handleSubmit = async () => {
     : complainantType === "corporate"
     ? { title: "-", firstName: complainant.companyName || "-", lastName: "-" }
     : splitThaiName(complainant.name);
-  const delegateName = splitThaiName(delegate?.name);
+  const delegateName = splitThaiName(delegate?.signatoryName || delegate?.name);
   const respondentName = splitThaiName(respondent?.name);
   return (
     <>
@@ -871,15 +893,23 @@ const handleSubmit = async () => {
             </Typography>
             <Grid container spacing={2} mb={3}>
               <InfoItem
-                label="หมายเลขประจำตัวประชาชน"
+                label={respondentActiveType === "corporate" ? "เลขทะเบียนนิติบุคคล" : "หมายเลขประจำตัวประชาชน"}
                 value={formatCitizenId_null(respondent.idCard)}
               />
-              <InfoItem label="คำนำหน้า" value={respondentName.title || "-"} />
-              <InfoItem label="ชื่อ" value={respondentName.firstName || "-"} />
-              <InfoItem
-                label="นามสกุล"
-                value={respondentName.lastName || "-"}
-              />
+              {respondentActiveType === "corporate" ? (
+                <InfoItem label="ชื่อบริษัท" value={respondent.companyName || respondentName.firstName || "-"} />
+              ) : respondentActiveType === "government" ? (
+                <>
+                  <InfoItem label="หน่วยงาน" value={respondent.agencyName || "-"} />
+                  <InfoItem label="ชื่อ - นามสกุล" value={respondent.fullName || "-"} />
+                </>
+              ) : (
+                <>
+                  <InfoItem label="คำนำหน้า" value={respondentName.title || "-"} />
+                  <InfoItem label="ชื่อ" value={respondentName.firstName || "-"} />
+                  <InfoItem label="นามสกุล" value={respondentName.lastName || "-"} />
+                </>
+              )}
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
                 value={respondent.address || "-"}
@@ -984,6 +1014,27 @@ const handleSubmit = async () => {
                 label="ประเภทเรื่องร้องเรียน"
                 value={complaint.complaintType || "-"}
               />
+              <InfoItem
+                label="ประเภทการยื่นเรื่อง"
+                value={
+                  complaint.complaint_filing_type === "new" || complaint.isNewComplaint ? "เรื่องใหม่"
+                  : complaint.complaint_filing_type === "additional" || complaint.isAdditionalComplaint ? "เรื่องเพิ่มเติม"
+                  : complaint.complaint_filing_type === "committee" || complaint.complaint_filing_type === "anonymous" || complaint.isCommitteeComplaint ? "กลุ่มงาน"
+                  : "-"
+                }
+              />
+              {complaint.complaint_filing_type === "additional" || complaint.isAdditionalComplaint ? (
+                <>
+                  <InfoItem label="เลขที่อ้างอิงเพิ่มเติม 1" value={complaint.additionalReference1 || "-"} />
+                  <InfoItem label="วันที่อ้างอิงเพิ่มเติม 1" value={complaint.additionalReferenceDate1 ? safeFormatThaiDateTime(complaint.additionalReferenceDate1) : "-"} />
+                </>
+              ) : null}
+              {complaint.complaint_filing_type === "committee" || complaint.complaint_filing_type === "anonymous" || complaint.isCommitteeComplaint ? (
+                <>
+                  <InfoItem label="เลขที่อ้างอิงเพิ่มเติม 2" value={complaint.additionalReference2 || "-"} />
+                  <InfoItem label="วันที่อ้างอิงเพิ่มเติม 2" value={complaint.additionalReferenceDate2 ? safeFormatThaiDateTime(complaint.additionalReferenceDate2) : "-"} />
+                </>
+              ) : null}
              <InfoItem
                 label="วันและเวลาที่เกิดเหตุ"
                 value={
@@ -1013,8 +1064,8 @@ const handleSubmit = async () => {
               <InfoItem
                 label="วันที่รับเรื่องของเจ้าพนักงาน"
                 value={
-                  formData?.assignment_form?.registration_date
-                    ? safeFormatThaiDateTime(formData.assignment_form.registration_date)
+                  additionalDetails.officerReceivedDate || formData?.assignment_form?.registration_date
+                    ? safeFormatThaiDateTime(additionalDetails.officerReceivedDate || formData?.assignment_form?.registration_date)
                     : "-"
                 }
               />
@@ -1023,6 +1074,14 @@ const handleSubmit = async () => {
                 value={
                   additionalDetails.directorSubmittedDate
                     ? safeFormatThaiDateTime(additionalDetails.directorSubmittedDate)
+                    : "-"
+                }
+              />
+              <InfoItem
+                label="วันที่เกิดเหตุ"
+                value={
+                  additionalDetails.incidentDateTime
+                    ? safeFormatThaiDateTime(additionalDetails.incidentDateTime)
                     : "-"
                 }
               />

@@ -555,15 +555,16 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
     firstName: delegateFirstName,
     lastName: delegateLastName,
   } = (() => {
+    const delegateName = delegate.signatoryName || delegate.name || "";
     const t = resolveTitleFromList(delegate.title_id, delegate.prefix_other, titleOptions);
     if (t) {
       return {
         title: t,
-        firstName: delegate.first_name || splitThaiName(delegate.name).firstName,
-        lastName: delegate.last_name || splitThaiName(delegate.name).lastName,
+        firstName: delegate.first_name || splitThaiName(delegateName).firstName,
+        lastName: delegate.last_name || splitThaiName(delegateName).lastName,
       };
     }
-    return splitThaiName(delegate.name);
+    return splitThaiName(delegateName);
   })();
 
   // ข้อมูลจาก step2 (ผู้ถูกร้องเรียน)
@@ -1067,12 +1068,23 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
             </Typography>
             <Grid container spacing={2} mb={3}>
               <InfoItem
-                label="หมายเลขประจำตัวประชาชน"
+                label={respondentActiveType === "corporate" ? "เลขทะเบียนนิติบุคคล" : "หมายเลขประจำตัวประชาชน"}
                 value={formatCitizenId_null(respondent.idCard)}
               />
-              <InfoItem label="คำนำหน้า" value={respondentTitle || "-"} />
-              <InfoItem label="ชื่อ" value={respondentFirstName || "-"} />
-              <InfoItem label="นามสกุล" value={respondentLastName || "-"} />
+              {respondentActiveType === "corporate" ? (
+                <InfoItem label="ชื่อบริษัท" value={respondent.companyName || respondentFirstName || "-"} />
+              ) : respondentActiveType === "government" ? (
+                <>
+                  <InfoItem label="หน่วยงาน" value={respondent.agencyName || "-"} />
+                  <InfoItem label="ชื่อ - นามสกุล" value={respondent.fullName || "-"} />
+                </>
+              ) : (
+                <>
+                  <InfoItem label="คำนำหน้า" value={respondentTitle || "-"} />
+                  <InfoItem label="ชื่อ" value={respondentFirstName || "-"} />
+                  <InfoItem label="นามสกุล" value={respondentLastName || "-"} />
+                </>
+              )}
               <InfoItem
                 label="ที่อยู่ที่ติดต่อได้"
                 value={respondent.address || "-"}
@@ -1209,6 +1221,27 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
                   previewData.complaintTypeLabel || assignmentForm.complaint_type_name || "-"
                 }
               />
+              <InfoItem
+                label="ประเภทการยื่นเรื่อง"
+                value={
+                  complaint.complaint_filing_type === "new" || complaint.isNewComplaint ? "เรื่องใหม่"
+                  : complaint.complaint_filing_type === "additional" || complaint.isAdditionalComplaint ? "เรื่องเพิ่มเติม"
+                  : complaint.complaint_filing_type === "committee" || complaint.complaint_filing_type === "anonymous" || complaint.isCommitteeComplaint ? "กลุ่มงาน"
+                  : "-"
+                }
+              />
+              {complaint.complaint_filing_type === "additional" || complaint.isAdditionalComplaint ? (
+                <>
+                  <InfoItem label="เลขที่อ้างอิงเพิ่มเติม 1" value={complaint.additionalReference1 || "-"} />
+                  <InfoItem label="วันที่อ้างอิงเพิ่มเติม 1" value={complaint.additionalReferenceDate1 ? formatThaiDateTime(complaint.additionalReferenceDate1) : "-"} />
+                </>
+              ) : null}
+              {complaint.complaint_filing_type === "committee" || complaint.complaint_filing_type === "anonymous" || complaint.isCommitteeComplaint ? (
+                <>
+                  <InfoItem label="เลขที่อ้างอิงเพิ่มเติม 2" value={complaint.additionalReference2 || "-"} />
+                  <InfoItem label="วันที่อ้างอิงเพิ่มเติม 2" value={complaint.additionalReferenceDate2 ? formatThaiDateTime(complaint.additionalReferenceDate2) : "-"} />
+                </>
+              ) : null}
               <InfoItem
                 label="วันและเวลาที่เกิดเหตุ"
                 value={formatThaiDateTime(

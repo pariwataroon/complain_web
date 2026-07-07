@@ -177,12 +177,31 @@ const SearchComplaints = () => {
   };
 
   const complaint = complaintData || {};
-  const complainant = complaint.step1?.general?.general || {};
-  const delegate = complaint.step2?.general || {};
   const complaintDetails = complaint.step3?.general || {};
-  const files = complaintDetails.attachment || [];
+  const files = complaintDetails.attachment || {};
 
-  const isComplainantCorporate = false;
+  // ✅ ตรวจจับประเภทผู้ร้องทุกข์จาก step1
+  const step1General = complaint.step1?.general || {};
+  const hasRealData = (obj) => obj && typeof obj === "object" && Object.keys(obj).length > 0 && Object.values(obj).some(v => v !== null && v !== undefined && v !== "");
+  let complainantType = "individual";
+  let complainant = {};
+  let delegate = {};
+
+  if (hasRealData(step1General.government)) {
+    complainant = step1General.government;
+    complainantType = "government";
+    delegate = {};
+  } else if (hasRealData(step1General.corporate)) {
+    complainant = step1General.corporate;
+    complainantType = "corporate";
+    delegate = step1General.signer || {};
+  } else {
+    complainant = step1General.general || {};
+    complainantType = "individual";
+    delegate = step1General.delegate || {};
+  }
+
+  const isComplainantCorporate = complainantType === "corporate";
 
   // ตรวจสอบข้อมูลผู้ถูกร้อง จาก step2
   const respondentData = complaint.step2?.general;
@@ -403,13 +422,14 @@ const SearchComplaints = () => {
             ข้อมูลผู้ร้องทุกข์
           </Typography>
           <Grid container spacing={2} mb={3}>
-            {!isComplainantCorporate ? (
+            {complainantType === "government" ? (
               <>
                 <InfoItem
                   label="หมายเลขประจำตัวประชาชน"
                   value={formatCitizenId_null(complainant.idCard)}
                 />
-                <InfoItem label="ชื่อ - นามสกุล" value={complainant.name} />
+                <InfoItem label="หน่วยงาน" value={complainant.agencyName || "-"} />
+                <InfoItem label="ชื่อ - นามสกุล" value={complainant.fullName || "-"} />
                 <InfoItem
                   label="ที่อยู่ที่ติดต่อได้"
                   value={complainant.address}
@@ -424,7 +444,7 @@ const SearchComplaints = () => {
                   value={formatPhoneNumber_null(complainant.phone)}
                 />
               </>
-            ) : (
+            ) : complainantType === "corporate" ? (
               <>
                 <InfoItem
                   label="เลขทะเบียนนิติบุคคล"
@@ -448,92 +468,63 @@ const SearchComplaints = () => {
                   value={formatPhoneNumber_null(complainant.phone)}
                 />
               </>
+            ) : (
+              <>
+                <InfoItem
+                  label="หมายเลขประจำตัวประชาชน"
+                  value={formatCitizenId_null(complainant.idCard)}
+                />
+                <InfoItem label="ชื่อ - นามสกุล" value={complainant.name} />
+                <InfoItem
+                  label="ที่อยู่ที่ติดต่อได้"
+                  value={complainant.address}
+                />
+                <InfoItem label="จังหวัด" value={complainant.province} />
+                <InfoItem label="อำเภอ/เขต" value={complainant.districts} />
+                <InfoItem label="ตำบล/แขวง" value={complainant.subdistricts} />
+                <InfoItem label="รหัสไปรษณีย์" value={complainant.zipcode} />
+                <InfoItem label="อีเมล" value={complainant.email} />
+                <InfoItem
+                  label="หมายเลขโทรศัพท์"
+                  value={formatPhoneNumber_null(complainant.phone)}
+                />
+              </>
             )}
           </Grid>
 
           {/* ผู้รับมอบอำนาจร้องเรียน */}
           <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-            ผู้รับมอบอำนาจร้องเรียน
+            {complainantType === "corporate" ? "ผู้มีอำนาจลงนาม" : "ผู้รับมอบอำนาจร้องเรียน"}
           </Typography>
           <Grid container spacing={2} mb={3}>
-            {delegate.activeType === "individual" &&
-            delegate.individual?.category !== "NO_DATA_PROVIDED" ? (
+            {delegate && Object.keys(delegate).length > 0 && delegate.category !== "NO_DATA_PROVIDED" ? (
               <>
                 <InfoItem
                   label="หมายเลขประจำตัวประชาชน"
-                  value={formatCitizenId_null(delegate.individual?.idCard)}
+                  value={formatCitizenId_null(delegate.idCard)}
                 />
                 <InfoItem
-                  label="ชื่อ - นามสกุล"
-                  value={delegate.individual?.name}
-                />
-                <InfoItem
-                  label="ที่อยู่ที่ติดต่อได้"
-                  value={delegate.individual?.address}
-                />
-                <InfoItem
-                  label="จังหวัด"
-                  value={delegate.individual?.province}
-                />
-                <InfoItem
-                  label="อำเภอ/เขต"
-                  value={delegate.individual?.districts}
-                />
-                <InfoItem
-                  label="ตำบล/แขวง"
-                  value={delegate.individual?.subdistricts}
-                />
-                <InfoItem
-                  label="รหัสไปรษณีย์"
-                  value={delegate.individual?.zipcode}
-                />
-                <InfoItem label="อีเมล" value={delegate.individual?.email} />
-                <InfoItem
-                  label="หมายเลขโทรศัพท์"
-                  value={formatPhoneNumber_null(delegate.individual?.phone)}
-                />
-              </>
-            ) : delegate.activeType === "corporate" &&
-              delegate.corporate?.category !== "NO_DATA_PROVIDED" ? (
-              <>
-                <InfoItem
-                  label="หมายเลขประจำตัวประชาชน"
-                  value={formatCitizenId_null(delegate.corporate?.idCard)}
-                />
-                <InfoItem
-                  label="ชื่อผู้มีอำนาจลงนาม"
-                  value={delegate.corporate?.signatoryName}
+                  label={complainantType === "corporate" ? "ชื่อผู้มีอำนาจลงนาม" : "ชื่อ - นามสกุล"}
+                  value={delegate.signatoryName || delegate.name || "-"}
                 />
                 <InfoItem
                   label="ที่อยู่ที่ติดต่อได้"
-                  value={delegate.corporate?.address}
+                  value={delegate.address}
                 />
-                <InfoItem
-                  label="จังหวัด"
-                  value={delegate.corporate?.province}
-                />
-                <InfoItem
-                  label="อำเภอ/เขต"
-                  value={delegate.corporate?.districts}
-                />
-                <InfoItem
-                  label="ตำบล/แขวง"
-                  value={delegate.corporate?.subdistricts}
-                />
-                <InfoItem
-                  label="รหัสไปรษณีย์"
-                  value={delegate.corporate?.zipcode}
-                />
-                <InfoItem label="อีเมล" value={delegate.corporate?.email} />
+                <InfoItem label="จังหวัด" value={delegate.province} />
+                <InfoItem label="อำเภอ/เขต" value={delegate.districts} />
+                <InfoItem label="ตำบล/แขวง" value={delegate.subdistricts} />
+                <InfoItem label="รหัสไปรษณีย์" value={delegate.zipcode} />
+                <InfoItem label="อีเมล" value={delegate.email} />
                 <InfoItem
                   label="หมายเลขโทรศัพท์"
-                  value={formatPhoneNumber_null(delegate.corporate?.phone)}
+                  value={formatPhoneNumber_null(delegate.phone)}
                 />
               </>
             ) : (
               <Grid item xs={12}>
                 <Typography fontSize={16} color="text.secondary">
-                  ไม่มีข้อมูลผู้รับมอบอำนาจ
+                  {complainantType === "government" ? "หน่วยงานรัฐไม่มีผู้รับมอบอำนาจ" : "ไม่มีข้อมูลผู้รับมอบอำนาจ"}
                 </Typography>
               </Grid>
             )}

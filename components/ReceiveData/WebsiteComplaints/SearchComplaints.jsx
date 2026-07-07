@@ -1560,20 +1560,8 @@ const handleSubmit = async () => {
       return;
     }
 
-    // Update complaint with attachment changes first
-    // ✅ ส่ง step1+step2 ไปด้วยเพื่อป้องกัน backend เขียนทับข้อมูลเดิม
-    console.log("📎 Updating attachments:", existingAttachments);
-    await UpdateComplaint(defaultData.id, {
-      step1: defaultData?.step1,
-      step2: defaultData?.step2,
-      step3: {
-        ...defaultData?.step3,
-        general: {
-          ...defaultData?.step3?.general,
-          attachment: existingAttachments,
-        }
-      }
-    });
+    // ✅ updateStep12() ได้บันทึก step1/step2 (จากฟอร์มปัจจุบัน) + attachment ไปแล้ว
+    // ไม่ต้องเรียก UpdateComplaint ซ้ำอีก (จะเขียนทับข้อมูลใหม่ด้วย defaultData เก่า)
 
     const res = await UpdateAssignmentCompleteByAdmin(
       defaultData.id,
