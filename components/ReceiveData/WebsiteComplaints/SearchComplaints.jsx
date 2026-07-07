@@ -1288,11 +1288,11 @@ useEffect(() => {
       complainantType,
     });
 
-    // Include updated attachments in payload
+    // ✅ ส่ง step3 จากฟอร์มปัจจุบัน (ไม่ใช่ defaultData เก่า)
+    const currentStep3 = step3Methods.getValues();
     payload.step3 = {
-      ...defaultData?.step3,
       general: {
-        ...defaultData?.step3?.general,
+        ...currentStep3,
         attachment: existingAttachments,
       }
     };
@@ -1683,12 +1683,13 @@ const handleSubmit = async () => {
       respondentType,
       complainantType,
     });
+    // ✅ ส่ง step3 จากฟอร์มปัจจุบัน (ไม่ใช่ defaultData เก่า)
+    const currentStep3Data = step3Methods.getValues();
     await UpdateComplaint(defaultData.id, {
       ...currentStep12,
       step3: {
-        ...defaultData?.step3,
         general: {
-          ...defaultData?.step3?.general,
+          ...currentStep3Data,
           attachment: existingAttachments,
         }
       }
