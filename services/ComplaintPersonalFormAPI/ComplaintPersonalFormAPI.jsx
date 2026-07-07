@@ -22,6 +22,7 @@ const ComplaintPersonalFormAPI = ({
 
   // ✅ เมื่อ formType เปลี่ยน → ล้าง field เก่า + set ข้อมูลใหม่
   React.useEffect(() => {
+    console.log(`[ComplaintPersonalFormAPI] formType changed to: ${formType}, hasControl: ${!!control}, hasReset: ${!!reset}`);
     if (!control || !reset || !getValues) return;
     const currentValues = getValues();
     // 保留ข้อมูลที่มีอยู่ แต่ไม่เก็บ field เก่า

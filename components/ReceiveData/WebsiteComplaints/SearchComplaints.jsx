@@ -679,6 +679,7 @@ useEffect(() => {
   const [respondentType, setRespondentType] = useState("individual");
 
   const handleComplainantTabChange = (newType) => {
+    console.log(`[TabChange] Switching to: ${newType}`);
     const currentData = generalMethods.getValues();
     const baseData = packPerson(currentData);
 
