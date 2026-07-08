@@ -801,6 +801,9 @@ const SearchComplaintsPreview = ({ data, onBack }) => {
     additionalDetails.directorSubmittedDate ||
     assignmentForm.director_submission_date ||
     null;
+  console.log("[Preview] directorSubmitted:", directorSubmitted);
+  console.log("[Preview] additionalDetails.directorSubmittedDate:", additionalDetails.directorSubmittedDate);
+  console.log("[Preview] assignmentForm.director_submission_date:", assignmentForm.director_submission_date);
 
   return (
     <>

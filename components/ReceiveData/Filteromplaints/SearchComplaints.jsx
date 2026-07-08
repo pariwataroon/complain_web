@@ -871,6 +871,10 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       step2Methods.reset(rData);
       step3Methods.reset(step3DataWithDefaults);
       // step4Methods.reset(step4Data);
+      console.log("[fetchComplaints] step4DataMerged:", JSON.stringify(step4DataMerged));
+      console.log("[fetchComplaints] assignmentForm.director_submission_date:", assignmentForm.director_submission_date);
+      console.log("[fetchComplaints] step4Data:", JSON.stringify(step4Data));
+      console.log("[fetchComplaints] assignmentForm (full):", JSON.stringify(assignmentForm));
       step4Methods.reset(step4DataMerged);
 
       // === โหลดประเภทเรื่องย่อยหลัง reset (ถ้ามี complaintTypeId) ===
