@@ -242,9 +242,9 @@ const FollowStatusSummary = ({ data = {} }) => {
   const outDocNo = assignment.document_number || "-";
   const outDocDate = thaiDateOrDash(assignment.document_date);
 
-  // จำนวนการส่ง (ถ้าไม่มีในระบบ ใส่ค่าตามตัวอย่างหรือ 0)
-  const sendInCnt = assignment.send_in_count ?? 2; // ตัวอย่าง
-  const sendOutCnt = assignment.send_out_count ?? 3; // ตัวอย่าง
+  // จำนวนการส่ง (ถ้าไม่มีในระบบ ใส่ 0)
+  const sendInCnt = assignment.send_in_count ?? 0;
+  const sendOutCnt = assignment.send_out_count ?? 0;
 
   // สถานะไทย — แปลจาก code เป็น label ไทย
   const toThaiStatus = (code = "") => {
@@ -428,33 +428,31 @@ const FollowStatusSummary = ({ data = {} }) => {
                   />
                   <InfoItem
                     label="ที่อยู่ที่ติดต่อได้"
-                    value={delegate.address || signer.address}
+                    value={proxy.address}
                   />
                   <InfoItem
                     label="ตำบล/แขวง"
-                    value={delegate.subdistricts || signer.subdistricts}
+                    value={proxy.subdistricts}
                   />
                   <InfoItem
                     label="อำเภอ/เขต"
-                    value={delegate.district || signer.district}
+                    value={proxy.district}
                   />
                   <InfoItem
                     label="จังหวัด"
-                    value={delegate.province || signer.province}
+                    value={proxy.province}
                   />
                   <InfoItem
                     label="รหัสไปรษณีย์"
-                    value={delegate.zipcode || signer.zipcode}
+                    value={proxy.zipcode}
                   />
                   <InfoItem
                     label="อีเมล"
-                    value={delegate.email || signer.email}
+                    value={proxy.email}
                   />
                   <InfoItem
                     label="หมายเลขโทรศัพท์"
-                    value={formatPhoneNumber_null(
-                      delegate.phone || signer.phone
-                    )}
+                    value={formatPhoneNumber_null(proxy.phone)}
                   />
                 </Grid>
               </Section>
@@ -477,55 +475,31 @@ const FollowStatusSummary = ({ data = {} }) => {
                   )}
                   <InfoItem
                     label="ที่อยู่ที่ติดต่อได้"
-                    value={
-                      respondent.address ||
-                      corporateS2.address ||
-                      government.address
-                    }
+                    value={right.address}
                   />
                   <InfoItem
                     label="ตำบล/แขวง"
-                    value={
-                      respondent.subdistricts ||
-                      corporateS2.subdistricts ||
-                      government.subdistricts
-                    }
+                    value={right.subdistricts}
                   />
                   <InfoItem
                     label="อำเภอ/เขต"
-                    value={
-                      respondent.district ||
-                      corporateS2.district ||
-                      government.district
-                    }
+                    value={right.district}
                   />
                   <InfoItem
                     label="จังหวัด"
-                    value={
-                      respondent.province ||
-                      corporateS2.province ||
-                      government.province
-                    }
+                    value={right.province}
                   />
                   <InfoItem
                     label="รหัสไปรษณีย์"
-                    value={
-                      respondent.zipcode ||
-                      corporateS2.zipcode ||
-                      government.zipcode
-                    }
+                    value={right.zipcode}
                   />
                   <InfoItem
                     label="อีเมล"
-                    value={
-                      respondent.email || corporateS2.email || government.email
-                    }
+                    value={right.email}
                   />
                   <InfoItem
                     label="หมายเลขโทรศัพท์"
-                    value={formatPhoneNumber_null(
-                      respondent.phone || corporateS2.phone || government.phone
-                    )}
+                    value={formatPhoneNumber_null(right.phone)}
                   />
                 </Grid>
               </Section>
@@ -744,95 +718,6 @@ const FollowStatusSummary = ({ data = {} }) => {
               </Grid>
             ))}
 
-            <Typography variant="h6" fontWeight="bold" sx={{ mb: 2, mt: 3 }}>
-              รายงานผลการพิจารณาจากหน่วยงาน
-            </Typography>
-            {(Array.isArray(agencyReports) && agencyReports.length > 0
-              ? agencyReports
-              : [
-                  /** เคสไม่มีข้อมูล: render แถวว่าง 1 แถวที่เป็น "-" ทั้งหมด */ {},
-                ]
-            ).map((r, idx) => (
-              <Grid
-                key={idx} 
-                container
-                spacing={1}
-                data-pdf-block
-                className={styles.pdfBlock}
-              >
-                {/* คอลัมน์ซ้าย */}
-                <Grid item xs={12} md={6}>
-                  <InfoItem
-                    label="หน่วยงานรับเรื่อง"
-                    value={r?.agency_name || "-"}
-                  />
-                  <InfoItem label="สถานะเรื่อง" value={statusThai} />
-                  <InfoItem
-                    label="ดำเนินการภายใน"
-                    value={`${slaDays} วัน ( ${Math.ceil(slaDays / 365)} ปี )`}
-                  />
-                </Grid>
-
-                {/* คอลัมน์ขวา */}
-                <Grid item xs={12} md={6}>
-                  <InfoItem
-                    label="หนังสือส่งหน่วยงาน / ติดตามผล"
-                    value={`${outDocNo} ลว. ${outDocDate}`}
-                  />
-                  <InfoItem
-                    label="จำนวนครั้งการส่งหน่วยงาน"
-                    value={`${sendInCnt} ครั้ง (อยู่) / ${sendOutCnt} ครั้ง (ไม่อยู่)`}
-                  />
-                </Grid>
-
-                <Grid item xs={12} sx={{ mt: 1 }}>
-                  <Typography
-                    variant="subtitle1"
-                    fontWeight="bold"
-                    gutterBottom
-                  >
-                    เอกสารขอทราบผลการพิจารณา / ผลความคืบหน้า
-                  </Typography>
-
-                  <Box mb={3}>
-                    {Array.isArray(r?.attachments) &&
-                    r.attachments.length > 0 ? (
-                      r.attachments.map((af, j) => {
-                        const ext = getFileExt(af?.name || "");
-                        return (
-                          <Box
-                            key={`${idx}-${j}`}
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              border: "1px solid #ccc",
-                              borderRadius: "8px",
-                              px: 2,
-                              py: 1,
-                              mb: 1,
-                            }}
-                          >
-                            {getFileIcon(ext)}
-                            <Typography
-                              fontSize={14}
-                              color="text.secondary"
-                              sx={{ ml: 1 }}
-                            >
-                              {af?.name || `ไฟล์แนบ ${j + 1}`}
-                            </Typography>
-                          </Box>
-                        );
-                      })
-                    ) : (
-                      <Typography fontSize={14} color="text.secondary">
-                        ไม่มีไฟล์แนบ
-                      </Typography>
-                    )}
-                  </Box>
-                </Grid>
-              </Grid>
-            ))}
-
             {/* ช่องลงชื่อ */}
             <Grid container spacing={2} sx={{ mt: 2 }}>
               <Grid item xs={12} md={6}>
@@ -843,7 +728,7 @@ const FollowStatusSummary = ({ data = {} }) => {
                   : {normalizeValue(left.name)}
                 </Typography>
                 <Typography fontSize={13} color="text.secondary">
-                  วันที่ : {formatThaiDate()}
+                  วันที่ : {thaiDateOrDash(assignment.registration_date)}
                 </Typography>
               </Grid>
               <Grid item xs={12} md={6}>
@@ -854,7 +739,7 @@ const FollowStatusSummary = ({ data = {} }) => {
                   : {normalizeValue(proxy.name)}
                 </Typography>
                 <Typography fontSize={13} color="text.secondary">
-                  วันที่ : {formatThaiDate()}
+                  วันที่ : {thaiDateOrDash(assignment.registration_date)}
                 </Typography>
               </Grid>
               <Grid item xs={12} md={6}>
@@ -865,7 +750,7 @@ const FollowStatusSummary = ({ data = {} }) => {
                   : {normalizeValue(recorderName)}
                 </Typography>
                 <Typography fontSize={13} color="text.secondary">
-                  วันที่ : {formatThaiDate()}
+                  วันที่ : {thaiDateOrDash(assignment.registration_date)}
                 </Typography>
               </Grid>
               <Grid item xs={12} md={6}>
@@ -877,9 +762,7 @@ const FollowStatusSummary = ({ data = {} }) => {
                 </Typography>
                 <Typography fontSize={13} color="text.secondary">
                   วันที่ :{" "}
-                  {normalizeValue(
-                    agencyReports?.[0]?.report_date ?? formatThaiDate()
-                  )}
+                  {thaiDateOrDash(assignment.assigned_date || assignment.confirm_assigned_date)}
                 </Typography>
               </Grid>
             </Grid>

@@ -182,17 +182,17 @@ const TableList = ({
     central_service: "ศูนย์บริการร่วม",
   };
 
-  // สถานะภาษาไทย
+  // สถานะภาษาไทย — ค่าจริงจาก API /document-storage (ตรงกับ statusMapEnToTh ใน ComplaintArchives)
   const statusLabels = {
-    pending: "รอดำเนินการ",
-    in_progress: "กำลังดำเนินการ",
-    completed: "ดำเนินการเสร็จ",
-    closed: "ปิดเรื่อง",
-    reopened: "เปิดใหม่",
-    assigned: "มอบหมายแล้ว",
-    rejected: "ปฏิเสธ",
-    new: "เรื่องใหม่",
-    open: "เปิดอยู่",
+    submitted: "ส่งคำร้อง",
+    sent_to_agency: "มอบหมายเจ้าหน้าที่",
+    sent_to_external: "ส่งหน่วยงานภายนอก",
+    in_process: "อยู่ระหว่างดำเนินการ",
+    in_review: "อยู่ระหว่างการพิจารณา",
+    tracking: "ติดตามผลการพิจารณา",
+    reviewed: "แจ้งผลการพิจารณา",
+    completed: "เสร็จสิ้น",
+    cancelled: "ยกเลิก",
   };
 
   // แปลงข้อมูล — ใช้ nameRaw / subjectRaw (string) แทน React element
