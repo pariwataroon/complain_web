@@ -269,7 +269,7 @@ const PendingWorkfollowupComponents = () => {
     const transformedData = transformComplaintsData(allComplaints);
     let result = [...transformedData];
 
-    // filter เลข สรน. (MOF) - reference_number เช่น "MOF-25690227-00200"
+    // filter เลข สรร. (MOF) - reference_number เช่น "MOF-25690227-00200"
     if (filterData.receiptNumber && filterData.receiptNumber.trim() !== "") {
       const searchVal = filterData.receiptNumber.trim().toLowerCase();
       result = result.filter((item) => {
@@ -528,9 +528,12 @@ const PendingWorkfollowupComponents = () => {
   };
 
   // Map ข้อมูล API ให้ตรงกับ TableWorkFollow
+  // ใช้ complaint_id เป็น id หลัก เพราะ handleSubRowClick จะ navigate ไปหน้า detail
+  // ที่เรียก getDocumentStorageByComplaintId(id) ซึ่งต้องการ complaint_id ไม่ใช่ pending task item id
   const tableData = useMemo(() => {
     return filteredComplaints.map((item) => ({
-      id: item.id,
+      id: item.complaint_id || item.id,
+      _taskId: item.id, // เก็บ pending task item id ไว้สำหรับแก้ไขหมายเหตุ
       responsibleOfficer: item.assigned_officer_name || "-",
       receiptNumber: item.complaint_reference_number || item.receive_reference_number || "-",
       receiptDate: item.assigned_date
@@ -582,7 +585,7 @@ const PendingWorkfollowupComponents = () => {
       filingType: item.filing_type || "-",
       remark: item.remark || "",
       isSelected: selectedItems.includes(item.id),
-      // สำหรับการแก้ไขหมายเหตุ
+      // สำหรับการแก้ไขหมายเหตุ - ใช้ _taskId (pending task id) เพื่อเรียก UpdateAssignedRemark
       isEditingNote: currentNoteRow === item.id,
       noteValue: currentNoteRow === item.id ? newNoteText : (item.remark || ""),
       canEditNote: true,
@@ -661,9 +664,9 @@ const PendingWorkfollowupComponents = () => {
         filterFields={[
           {
             name: "receiptNumber",
-            label: "เลข สรน. (MOF)",
+            label: "เลข สรร. (MOF)",
             type: "text",
-            placeholder: "กรอกเลข สรน.",
+            placeholder: "กรอกเลข สรร.",
           },
           {
             name: "complaintNumber",

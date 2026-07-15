@@ -35,7 +35,6 @@ import ButtonService from "@services/ButtonService/ButtonService";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
 import { exportElementToPDF } from "@utils/exportPDF";
 import { exportReportToPDF } from "@utils/exportReportPDF";
-import { exportExcel } from "@utils/exportExcel";
 import * as XLSX from "xlsx-js-style";
 // --- Thai Date formatter helper (full month) ---
 function formatThaiDate(date) {
@@ -308,9 +307,10 @@ const TableWorkFollow = ({
 
     if (type === "new_complaint") {
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "สถานะ", "จำนวน (วัน)"],
+        columns: ["ลำดับ", "ชื่อผู้ร้อง", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
+          "ชื่อผู้ร้อง": item.complainantName ?? "",
           "เลขรับ สรร.": item.receiptNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
@@ -323,9 +323,10 @@ const TableWorkFollow = ({
       };
     } else if (type === "additional_complaint") {
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "เลขที่อ้างอิง", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "สถานะ", "จำนวน (วัน)"],
+        columns: ["ลำดับ", "ชื่อผู้ร้อง", "เลขรับ สรร.", "เลขที่อ้างอิง", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
+          "ชื่อผู้ร้อง": item.complainantName ?? "",
           "เลขรับ สรร.": item.receiptNumber ?? "",
           "เลขที่อ้างอิง": item.referenceNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
@@ -339,9 +340,10 @@ const TableWorkFollow = ({
       };
     } else if (type === "department_decision") {
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "หน่วยงานภายใน", "จำนวน (วัน)"],
+        columns: ["ลำดับ", "ชื่อผู้ร้อง", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "หน่วยงานภายใน", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
+          "ชื่อผู้ร้อง": item.complainantName ?? "",
           "เลขรับ สรร.": item.receiptNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
@@ -354,9 +356,10 @@ const TableWorkFollow = ({
       };
     } else {
       return {
-        columns: ["ลำดับ", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "สถานะ", "จำนวน (วัน)"],
+        columns: ["ลำดับ", "ชื่อผู้ร้อง", "เลขรับ สรร.", "ลงวันที่", "เรื่อง", "วันที่รับงาน", "วันที่เสนองาน ผอ.สรร.", "วันที่หนังสือ", "สถานะ", "จำนวน (วัน)"],
         dataMapping: (item, no) => ({
           "ลำดับ": no,
+          "ชื่อผู้ร้อง": item.complainantName ?? "",
           "เลขรับ สรร.": item.receiptNumber ?? "",
           "ลงวันที่": fmtDate(item.receiptDate),
           "เรื่อง": item.complaint ?? "",
@@ -494,11 +497,12 @@ const handleExportExcel = () => {
     currentRow++;
   });
 
-  // กำหนดความกว้างคอลัมน์ - ตาม Template
+  // กำหนดความกว้างคอลัมน์ - เพิ่ม ชื่อผู้ร้อง
   const colWidths = [];
   if (reportType === "new_complaint") {
     colWidths.push(
       { wch: 4 },  // ลำดับ
+      { wch: 20 }, // ชื่อผู้ร้อง
       { wch: 8 },  // เลขรับ สรร.
       { wch: 10 }, // ลงวันที่
       { wch: 22 }, // เรื่อง
@@ -511,6 +515,7 @@ const handleExportExcel = () => {
   } else if (reportType === "additional_complaint") {
     colWidths.push(
       { wch: 4 },  // ลำดับ
+      { wch: 20 }, // ชื่อผู้ร้อง
       { wch: 8 },  // เลขรับ สรร.
       { wch: 8 },  // เลขที่อ้างอิง
       { wch: 10 }, // ลงวันที่
@@ -524,6 +529,7 @@ const handleExportExcel = () => {
   } else if (reportType === "department_decision") {
     colWidths.push(
       { wch: 4 },  // ลำดับ
+      { wch: 20 }, // ชื่อผู้ร้อง
       { wch: 8 },  // เลขรับ สรร.
       { wch: 10 }, // ลงวันที่
       { wch: 22 }, // เรื่อง
@@ -536,6 +542,7 @@ const handleExportExcel = () => {
   } else {
     colWidths.push(
       { wch: 4 },  // ลำดับ
+      { wch: 20 }, // ชื่อผู้ร้อง
       { wch: 8 },  // เลขรับ สรร.
       { wch: 10 }, // ลงวันที่
       { wch: 22 }, // เรื่อง
@@ -550,10 +557,10 @@ const handleExportExcel = () => {
 
   // จัดรูปแบบเซลล์
   const borderStyle = {
-    top: { style: "thin" },
-    bottom: { style: "thin" },
-    left: { style: "thin" },
-    right: { style: "thin" }
+    top: { style: "thin", color: { rgb: "AAAAAA" } },
+    bottom: { style: "thin", color: { rgb: "AAAAAA" } },
+    left: { style: "thin", color: { rgb: "AAAAAA" } },
+    right: { style: "thin", color: { rgb: "AAAAAA" } }
   };
 
   const range = XLSX.utils.decode_range(ws['!ref']);
@@ -569,6 +576,7 @@ const handleExportExcel = () => {
   });
 
   // วนลูปทุกเซลล์เพื่อจัดรูปแบบ
+  let dataRowIndex = 0;
   for (let R = range.s.r; R <= range.e.r; ++R) {
     for (let C = range.s.c; C <= range.e.c; ++C) {
       const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
@@ -578,7 +586,7 @@ const handleExportExcel = () => {
 
       if (!ws[cellAddress].s) ws[cellAddress].s = {};
 
-      // จัดรูปแบบแถวที่ 0-2 (หัวข้อรายงาน) - ไม่ใส่เส้นตาราง
+      // จัดรูปแบบแถวที่ 0-2 (หัวข้อรายงาน)
       if (R >= 0 && R <= 2) {
         ws[cellAddress].s.alignment = {
           horizontal: "center",
@@ -587,49 +595,58 @@ const handleExportExcel = () => {
         };
         ws[cellAddress].s.font = {
           name: "Cordia New",
-          sz: 11
+          sz: 12,
+          bold: true,
         };
       }
-      // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์) - ใส่เส้นตาราง
+      // จัดรูปแบบแถวที่ 3 (หัวคอลัมน์) — พื้นน้ำเงิน ตัวขาว
       else if (R === 3) {
         ws[cellAddress].s.border = borderStyle;
+        ws[cellAddress].s.fill = { fgColor: { rgb: "1120A3" } };
+        ws[cellAddress].s.font = {
+          name: "Cordia New",
+          sz: 11,
+          bold: true,
+          color: { rgb: "FFFFFF" },
+        };
         ws[cellAddress].s.alignment = {
           horizontal: "center",
           vertical: "center",
           wrapText: true
         };
-        ws[cellAddress].s.font = {
-          name: "Cordia New",
-          sz: 11
-        };
       }
-      // แถวข้อมูล - ใส่เส้นตาราง
+      // แถวข้อมูล - ใส่เส้นตาราง + สลับสี
       else {
-        // ใส่เส้นตารางเฉพาะแถวข้อมูล
         ws[cellAddress].s.border = borderStyle;
 
         if (officerRows.has(R)) {
           // แถวเจ้าหน้าที่
           ws[cellAddress].s.font = {
             name: "Cordia New",
-            sz: 11
+            sz: 11,
+            bold: true,
+            color: { rgb: "1120A3" },
           };
           ws[cellAddress].s.alignment = {
             horizontal: "left",
             vertical: "center",
             wrapText: true
           };
+          dataRowIndex = 0;
         } else {
-          // แถวข้อมูลปกติ - จัดกลางทุกคอลัมน์
+          // แถวข้อมูลปกติ — สลับสีแถว
+          const isOdd = dataRowIndex % 2 === 1;
+          ws[cellAddress].s.fill = isOdd ? { fgColor: { rgb: "F5F7FF" } } : {};
+          ws[cellAddress].s.font = {
+            name: "Cordia New",
+            sz: 11
+          };
           ws[cellAddress].s.alignment = {
             horizontal: "center",
             vertical: "center",
             wrapText: true
           };
-          ws[cellAddress].s.font = {
-            name: "Cordia New",
-            sz: 11
-          };
+          dataRowIndex++;
         }
       }
     }

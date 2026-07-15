@@ -4,6 +4,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
 import Inventory2Icon from "@mui/icons-material/Inventory2";
 import { getDocumentStorageForCard } from "@pages/api/document/document";
+import { GetComplaintsByPageTypeCard, GetEnhancedComplaints } from "@pages/api/complaint/complaint";
 import { GetAllSubComplaintTypes, GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
@@ -61,6 +62,94 @@ const formatThaiDateFlexible = (dateStr) => {
 
 const displayOrDash = (v) =>
   v === undefined || v === null || v === "" ? "-" : v;
+
+/* ---------- แปลงข้อมูลจาก GetComplaintsByPageTypeCard -> แถวของตาราง ---------- */
+const transformCardComplaintData = (complaintItems, documentNumberMap = {}) => {
+  return complaintItems.map((item) => {
+    const clean = (s) =>
+      typeof s === "string" ? s.trim().replace(/\s+/g, " ") : s;
+
+    const outagencyRaw =
+      item.outagency ||
+      item.external_agency ||
+      item.outside_agency ||
+      item.externalDepartment?.name ||
+      item.outsideDepartment?.name ||
+      item.outside_department_name ||
+      item.incident_location ||
+      "-";
+    const outagency = clean(outagencyRaw);
+
+    const id = item.id || item.complaint_id;
+
+    const receiveDate =
+      (item.receiveDate && formatThaiDateFlexible(item.receiveDate)) !== "-"
+        ? formatThaiDateFlexible(item.receiveDate)
+        : formatThaiDateFlexible(item.created_at);
+
+    const agency = clean(displayOrDash(item.agency));
+
+    const claimantName =
+      item.complainant_name ||
+      item.complainant?.government?.fullName ||
+      item.complainant?.name ||
+      item.claimantName ||
+      "-";
+
+    const issue =
+      displayOrDash(item.subject) !== "-"
+        ? displayOrDash(item.subject)
+        : displayOrDash(item.issue ?? item.master_complaint?.subject);
+    const issueType = displayOrDash(item.issueType || item.complaint_type_name);
+    const subIssueType = displayOrDash(item.subIssueType);
+
+    const responsibleOfficer =
+      item.responsibleOfficer ??
+      item.assigned_officer?.name ??
+      item.assigned_to ??
+      "ไม่ได้มอบหมาย";
+
+    const statusEn = item.status || "-";
+    const statusTh = getThaiStatus(statusEn);
+
+    const complaintNumberSorn = displayOrDash(
+      item.complaint_number || item.master_complaint?.complaint_number
+    );
+
+    const complaintNumber = displayOrDash(
+      item.complaint_number || item.master_complaint?.complaint_number
+    );
+
+    const isMaster =
+      item.is_master !== undefined
+        ? item.is_master
+        : !!item.master_complaint?.is_master;
+
+    // เลข นร จาก enhanced complaints map
+    const docNum = documentNumberMap[id] || item.document_number || "";
+
+    return {
+      id,
+      receiveDate,
+      agency,
+      outagency,
+      claimantName,
+      issue,
+      issueType,
+      subIssueType,
+      responsibleOfficer,
+      status: statusTh,
+      statusEn: statusEn,
+      statusColor: getStatusColor(statusEn),
+      note: displayOrDash(item.note || item.assigned_remark),
+      complaintNumber,
+      isMaster,
+      complaintNumberSorn,
+      documentNumber: docNum,
+      created_at: item.created_at,
+    };
+  });
+};
 
 /* ---------- แปลงข้อมูลจาก API -> แถวของตาราง ---------- */
 const transformComplaintData = (apiItems) => {
@@ -326,57 +415,142 @@ const AnonymousLetterRepository = () => {
     const fetchDocumentStorage = async () => {
       try {
         setLoading(true);
+
+        // ── 1) ลอง getDocumentStorageForCard ก่อน (เดิม) ──
         const res = await getDocumentStorageForCard({ skip: 0, limit: 10000 });
-        const items = res?.res_data?.items ?? [];
+        let items = res?.res_data?.items ?? [];
 
-        // แปลงข้อมูลแสดงผล
-        const transformedData = transformComplaintData(items);
-        setAllComplaints(transformedData);
-        setFilteredComplaints(transformedData);
+        // ── 2) ถ้าว่าง → fallback ไป GetComplaintsByPageTypeCard ──
+        let usedFallbackApi = false;
+        if (items.length === 0) {
+          console.log("[คลังบัตรสนเทศ] document-storage ว่าง ลอง fallback → by-page-type...");
+          try {
+            const cardRes = await GetComplaintsByPageTypeCard({
+              pageType: "card",
+              skip: 0,
+              limit: 10000,
+            });
+            if (cardRes?.res_code === "0000" && Array.isArray(cardRes?.res_data?.items)) {
+              // API นี้ return items ที่แต่ละ item มี .complaint property
+              const complaints = cardRes.res_data.items
+                .map((entry) => entry?.complaint)
+                .filter(Boolean);
 
-        // สกัดฟิลเตอร์จาก API
-        const opts = extractFilterOptionsFromItems(items);
-        const allStatusTh = Array.from(
-          new Set([
-            ...Object.values(statusMapEnToTh),
-            ...opts.statusOptions.map((o) => o.value),
-          ])
-        ).map((v) => ({ value: v, label: v }));
+              if (complaints.length > 0) {
+                // ดึง enhanced complaints เพื่อเอา document_number (เลข นร)
+                let documentNumberMap = {};
+                try {
+                  const enhancedRes = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
+                  if (enhancedRes?.res_data?.items) {
+                    enhancedRes.res_data.items.forEach((c) => {
+                      const cId = c.id || c.complaint_id;
+                      const docNum = c.document_number || "";
+                      if (cId && docNum) {
+                        documentNumberMap[cId] = docNum;
+                      }
+                    });
+                  }
+                } catch (e) {
+                  console.warn("[คลังบัตรสนเทศ] Enhanced fetch failed:", e);
+                }
 
-        // ดึง sub-types จาก API จริง
-        let subTypeOpts = opts.subIssueTypeOptions;
-        try {
-          const subRes = await GetAllSubComplaintTypes();
-          if (subRes?.res_code === "0000" && Array.isArray(subRes?.res_data?.items)) {
-            const allSubs = subRes.res_data.items;
-            setAllApiSubTypes(allSubs);
-            subTypeOpts = allSubs
-              .map((item) => ({ value: item.name, label: item.name }))
-              .sort((a, b) => a.label.localeCompare(b.label, "th"));
+                const transformedCardData = transformCardComplaintData(complaints, documentNumberMap);
+                setAllComplaints(transformedCardData);
+                setFilteredComplaints(transformedCardData);
+
+                // สกัด filter options จากข้อมูลจริง
+                const opts = extractFilterOptionsFromItems(complaints);
+                const allStatusTh = Array.from(
+                  new Set([
+                    ...Object.values(statusMapEnToTh),
+                    ...opts.statusOptions.map((o) => o.value),
+                  ])
+                ).map((v) => ({ value: v, label: v }));
+
+                // ดึง sub-types จาก API
+                let subTypeOpts = opts.subIssueTypeOptions;
+                try {
+                  const subRes = await GetAllSubComplaintTypes();
+                  if (subRes?.res_code === "0000" && Array.isArray(subRes?.res_data?.items)) {
+                    const allSubs = subRes.res_data.items;
+                    setAllApiSubTypes(allSubs);
+                    subTypeOpts = allSubs
+                      .map((item) => ({ value: item.name, label: item.name }))
+                      .sort((a, b) => a.label.localeCompare(b.label, "th"));
+                  }
+                  const typeRes = await GetAllSelectComplaintTypes();
+                  if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data)) {
+                    const map = {};
+                    typeRes.res_data.forEach(t => { map[t.name] = t.id; });
+                    setTypeNameToId(map);
+                  }
+                } catch (e) {
+                  console.error("Error fetching sub complaint types:", e);
+                }
+
+                setFilterOptions({
+                  issueTypeOptions: opts.issueTypeOptions,
+                  subIssueTypeOptions: subTypeOpts,
+                  agencyOptions: opts.agencyOptions,
+                  responsibleOfficerOptions: opts.responsibleOfficerOptions,
+                  statusOptions: allStatusTh,
+                });
+
+                usedFallbackApi = true;
+                console.log(`[คลังบัตรสนเทศ] Fallback สำเร็จ: ${complaints.length} รายการ`);
+              }
+            }
+          } catch (e) {
+            console.error("[คลังบัตรสนเทศ] Fallback API error:", e);
           }
-          // ดึง complaint types เพื่อ map ชื่อ → UUID
-          const typeRes = await GetAllSelectComplaintTypes();
-          if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data)) {
-            const map = {};
-            typeRes.res_data.forEach(t => { map[t.name] = t.id; });
-            setTypeNameToId(map);
-          }
-        } catch (e) {
-          console.error("Error fetching sub complaint types:", e);
         }
 
-        setFilterOptions({
-          issueTypeOptions: opts.issueTypeOptions,
-          subIssueTypeOptions: subTypeOpts,
-          agencyOptions: opts.agencyOptions,
-          responsibleOfficerOptions: opts.responsibleOfficerOptions,
-          statusOptions: allStatusTh,
-        });
+        // ── 3) ถ้าไม่ได้ใช้ fallback → ใช้ข้อมูลเดิมจาก document-storage ──
+        if (!usedFallbackApi) {
+          const transformedData = transformComplaintData(items);
+          setAllComplaints(transformedData);
+          setFilteredComplaints(transformedData);
+
+          const opts = extractFilterOptionsFromItems(items);
+          const allStatusTh = Array.from(
+            new Set([
+              ...Object.values(statusMapEnToTh),
+              ...opts.statusOptions.map((o) => o.value),
+            ])
+          ).map((v) => ({ value: v, label: v }));
+
+          let subTypeOpts = opts.subIssueTypeOptions;
+          try {
+            const subRes = await GetAllSubComplaintTypes();
+            if (subRes?.res_code === "0000" && Array.isArray(subRes?.res_data?.items)) {
+              const allSubs = subRes.res_data.items;
+              setAllApiSubTypes(allSubs);
+              subTypeOpts = allSubs
+                .map((item) => ({ value: item.name, label: item.name }))
+                .sort((a, b) => a.label.localeCompare(b.label, "th"));
+            }
+            const typeRes = await GetAllSelectComplaintTypes();
+            if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data)) {
+              const map = {};
+              typeRes.res_data.forEach(t => { map[t.name] = t.id; });
+              setTypeNameToId(map);
+            }
+          } catch (e) {
+            console.error("Error fetching sub complaint types:", e);
+          }
+
+          setFilterOptions({
+            issueTypeOptions: opts.issueTypeOptions,
+            subIssueTypeOptions: subTypeOpts,
+            agencyOptions: opts.agencyOptions,
+            responsibleOfficerOptions: opts.responsibleOfficerOptions,
+            statusOptions: allStatusTh,
+          });
+        }
       } catch (err) {
         console.error("Error fetching document storage:", err);
         setAllComplaints([]);
         setFilteredComplaints([]);
-        // ถ้า error ให้ยังแสดงตัวเลือกสถานะจาก mapping ไว้ก่อน
         setFilterOptions((prev) => ({
           ...prev,
           statusOptions: Object.values(statusMapEnToTh).map((th) => ({

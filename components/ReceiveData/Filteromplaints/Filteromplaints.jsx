@@ -150,11 +150,56 @@ const Filteromplaints = () => {
 
   const mapItemToRow = (item, docNumMap = {}) => {
     const isAssigned = getIsAssigned(item);
-    const subjectRaw = item.subject || "-";
-    // ใช้ชื่อผู้ร้องที่ได้จากการดึงข้อมูลเต็ม (ถ้ามี)
-    const complainantName = (item.complainant_name && item.complainant_name.trim() !== "")
-      ? item.complainant_name
-      : "-";
+
+    // ===== ชื่อเรื่อง — ลองหลาย path =====
+    const subjectRaw =
+      item.subject ||
+      item.step3?.general?.subject ||
+      item.assignment_form?.subject ||
+      "-";
+
+    // ===== ชื่อผู้ร้อง — ลองหลาย path จาก step1 =====
+    const s1g = item.step1?.general ?? {};
+    const s1inner = s1g.general ?? {};
+    const gov = s1inner.government ?? s1g.government ?? null;
+    const corp = s1inner.corporate ?? s1g.corporate ?? null;
+
+    let complainantName = item.complainant_name || "";
+    if (!complainantName || complainantName.trim() === "-" || complainantName.trim() === "") {
+      // fallback: ลองจาก nested data
+      if (gov?.fullName || gov?.name) {
+        complainantName = gov.fullName || gov.name || "";
+      } else if (corp?.companyName || corp?.name) {
+        complainantName = corp.companyName || corp.name || "";
+      } else if (s1inner?.name || s1inner?.fullName) {
+        complainantName = s1inner.name || s1inner.fullName || "";
+      } else if (s1g?.general?.name || s1g?.general?.fullName) {
+        complainantName = s1g.general.name || s1g.general.fullName || "";
+      }
+    }
+    if (!complainantName || complainantName.trim() === "") complainantName = "-";
+
+    // ===== ชื่อผู้ถูกร้อง — ลองหลาย path จาก step2 =====
+    const s2g = item.step2?.general ?? {};
+    let respondentName = item.respondent_name || "";
+    if (!respondentName || respondentName.trim() === "-" || respondentName.trim() === "") {
+      const rInd = s2g.individual ?? {};
+      const rCorp = s2g.corporate ?? {};
+      const rGov = s2g.government ?? {};
+      const rType = s2g.activeType;
+      if (rType === "government" && (rGov?.fullName || rGov?.agencyName)) {
+        respondentName = rGov.fullName || rGov.agencyName || "";
+      } else if (rType === "corporate" && (rCorp?.companyName || rCorp?.name)) {
+        respondentName = rCorp.companyName || rCorp.name || "";
+      } else if (rInd?.name) {
+        respondentName = rInd.name || "";
+      } else if (rCorp?.name) {
+        respondentName = rCorp.name || "";
+      } else if (rGov?.agencyName) {
+        respondentName = rGov.agencyName || "";
+      }
+    }
+    if (!respondentName || respondentName.trim() === "") respondentName = "-";
 
     // ✅ Lookup complaint type name from UUID using complaintTypesMap
     let issueTypeName = item.complaint_type_name || "-";
@@ -165,14 +210,14 @@ const Filteromplaints = () => {
 
     return {
       id: item.id,
-      name: item.complainant_name || "-",
+      name: complainantName,
       issueType: issueTypeName,
 
       // แสดงชื่อเรื่องพร้อม "จุดสถานะ" นำหน้า
       subject: renderSubjectWithDot(subjectRaw, isAssigned),
       subjectRaw, // ใช้สำหรับค้นหา
 
-      respondentName: item.respondent_name || "-",
+      respondentName,
       docNo: item.reference_number
         // ? `${item.reference_number} (${formatDate(item.reference_date)})`
         ? `${item.reference_number}`
@@ -395,7 +440,7 @@ const Filteromplaints = () => {
 
   const handleSearch = useCallback(
     (filters) => {
-      const { claimantName, subject, issueType, respondentName, channel, caseCode, startDate, endDate } = filters;
+      const { claimantName, subject, issueType, respondentName, channel, outagency, caseCode, startDate, endDate } = filters;
 
       const hasFilters =
         !isEmpty(claimantName) ||
@@ -403,6 +448,7 @@ const Filteromplaints = () => {
         !isEmpty(issueType) ||
         !isEmpty(respondentName) ||
         !isEmpty(channel) ||
+        !isEmpty(outagency) ||
         !isEmpty(caseCode) ||
         startDate ||
         endDate;
@@ -443,6 +489,9 @@ const Filteromplaints = () => {
           if (!isEmpty(issueType) && !exactMatch(item.issueType, issueType)) return false;
 
           if (!isEmpty(respondentName) && !safeIncludes(item.respondentName, respondentName)) return false;
+
+          // ค้นหาด้วยหน่วยงานภายนอก
+          if (!isEmpty(outagency) && !safeIncludes(item.respondentName, outagency)) return false;
 
           // ค้นหาด้วยรหัสเรื่อง - ค้นหาในเลขอ้างอิงทั้งหมด (รวมเลข นร)
           if (!isEmpty(caseCode)) {

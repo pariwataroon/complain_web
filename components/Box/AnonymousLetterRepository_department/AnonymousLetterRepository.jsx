@@ -3,344 +3,260 @@ import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListBox from "@services/TableListBox/TableListBox";
 import { GetAllSubComplaintTypes, GetAllSelectComplaintTypes } from "@pages/api/allselect/allselect";
+import { GetComplaintsByPageTypeCard, GetEnhancedComplaints } from "@pages/api/complaint/complaint";
+import dayjs from "dayjs";
+import "dayjs/locale/th";
 
-const issueTypeOptions = [
-  { value: "ภารกิจ", label: "ภารกิจ" },
-  { value: "การแก้ไขปัญหาหนี้สิน", label: "การแก้ไขปัญหาหนี้สิน" },
-  {
-    value: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-    label: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-  },
-  { value: "นโยบายรัฐฯ ด้านสวัสดิการ", label: "นโยบายรัฐฯ ด้านสวัสดิการ" },
-];
+dayjs.locale("th");
 
-const subIssueTypeOptions = [];
+/* ---------- สถานะ: Mapping ---------- */
+const statusMapEnToTh = {
+  submitted: "ส่งคำร้อง",
+  sent_to_agency: "มอบหมายเจ้าหน้าที่",
+  sent_to_external: "ส่งหน่วยงานภายนอก",
+  in_process: "อยู่ระหว่างดำเนินการ",
+  in_review: "อยู่ระหว่างการพิจารณา",
+  tracking: "ติดตามผลการพิจารณา",
+  reviewed: "แจ้งผลการพิจารณา",
+  completed: "เสร็จสิ้น",
+  cancelled: "ยกเลิก",
+};
+const statusMapThToEn = Object.fromEntries(
+  Object.entries(statusMapEnToTh).map(([en, th]) => [th, en])
+);
+const getThaiStatus = (en) => statusMapEnToTh[en] ?? (en || "-");
+const getEnglishStatus = (th) => statusMapThToEn[th] ?? (th || "-");
 
-const agencyOptions = [
-  { value: "กรมสรรพากร", label: "กรมสรรพากร" },
-  { value: "กรมศุลกากร", label: "กรมศุลกากร" },
-  { value: "กรมบัญชีกลาง", label: "กรมบัญชีกลาง" },
-  { value: "สำนักงานเศรษฐกิจการคลัง", label: "สำนักงานเศรษฐกิจการคลัง" },
-  { value: "สำนักงานบริหารหนี้สาธารณะ", label: "สำนักงานบริหารหนี้สาธารณะ" },
-  { value: "ธนาคารแห่งประเทศไทย", label: "ธนาคารแห่งประเทศไทย" },
-];
+/* ---------- วันที่ ---------- */
+const formatThaiDateFlexible = (dateStr) => {
+  if (!dateStr || dateStr === null || dateStr === undefined || dateStr === "") return "-";
+  const d = dayjs(dateStr);
+  if (!d.isValid()) return "-";
+  const thaiMonths = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+  return `${d.date()} ${thaiMonths[d.month()]} ${d.$y}`;
+};
 
-const officerOptions = [
-  { value: "นายกานต์ วรากร", label: "นายกานต์ วรากร" },
-  { value: "นางกานต์รวี วรานี", label: "นางกานต์รวี วรานี" },
-  { value: "นายปิยภา ภูมิศา", label: "นายปิยภา ภูมิศา" },
-];
+const displayOrDash = (v) =>
+  v === undefined || v === null || v === "" ? "-" : v;
 
-const statusOptions = [
-  { value: "กำลังดำเนินการ", label: "กำลังดำเนินการ" },
-  { value: "ยุติ", label: "ยุติ" },
-];
+/* ---------- แปลงข้อมูลจาก GetComplaintsByPageTypeCard -> แถวของตาราง ---------- */
+const transformCardComplaintData = (complaintItems, documentNumberMap = {}) => {
+  return complaintItems.map((item) => {
+    const clean = (s) =>
+      typeof s === "string" ? s.trim().replace(/\s+/g, " ") : s;
 
-// 2) mock data
-// เพิ่มเป็น 20 รายการใน mockComplaints
-const mockComplaints = [
-  {
-    id: 1,
-    receiveDate: "01 ก.พ. 2568",
-    agency: "กรมสรรพากร",
-    claimantName: "สุนิสา มณีโชติ",
-    issue: "ขอสอบถามการยื่นภาษีออนไลน์",
-    issueType: "ภารกิจ",
-    subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
-    responsibleOfficer: "นายกานต์ วรากร",
-    status: "กำลังดำเนินการ",
-    note: "รอเจ้าหน้าที่ติดต่อกลับ",
-  },
-  {
-    id: 2,
-    receiveDate: "02 ก.พ. 2568",
-    agency: "กรมศุลกากร",
-    claimantName: "จุฑามาศ วิสุทธิ์",
-    issue: "สอบถามอัตราภาษีนำเข้า",
-    issueType: "การแก้ไขปัญหาหนี้สิน",
-    subIssueType: "หนี้นอกระบบ",
-    responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "ยุติ",
-    note: "ชำระค่าภาษีเรียบร้อย",
-  },
-  {
-    id: 3,
-    receiveDate: "03 ก.พ. 2568",
-    agency: "กรมบัญชีกลาง",
-    claimantName: "ภัทร์วดี ชื่นชม",
-    issue: "ขอข้อมูลผลการเบิกจ่ายงบประมาณ",
-    issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-    subIssueType: "โครงการสาธารณูปโภคพื้นฐาน",
-    responsibleOfficer: "นายปิยภา ภูมิศา",
-    status: "กำลังดำเนินการ",
-    note: "ส่งเรื่องไปยังส่วนกลาง",
-  },
-  {
-    id: 4,
-    receiveDate: "04 ก.พ. 2568",
-    agency: "สำนักงานเศรษฐกิจการคลัง",
-    claimantName: "ธีรภัทร ศิริรักษ์",
-    issue: "ขอคำชี้แจงดัชนีเศรษฐกิจ",
-    issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
-    subIssueType: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-    responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "ยุติ",
-    note: "ตอบกลับเรียบร้อย",
-  },
-  {
-    id: 5,
-    receiveDate: "05 ก.พ. 2568",
-    agency: "สำนักงานบริหารหนี้สาธารณะ",
-    claimantName: "อัครพล เทพเจริญ",
-    issue: "สอบถามการจัดการหนี้สาธารณะ",
-    issueType: "การแก้ไขปัญหาหนี้สิน",
-    subIssueType: "หนี้และสภาพหนี้ระบบ",
-    responsibleOfficer: "นายกานต์ วรากร",
-    status: "กำลังดำเนินการ",
-    note: "เตรียมข้อมูลเพิ่มเติม",
-  },
-  {
-    id: 6,
-    receiveDate: "06 ก.พ. 2568",
-    agency: "ธนาคารแห่งประเทศไทย",
-    claimantName: "สุดารัตน์ แสงสุริยา",
-    issue: "ขอรายละเอียดอัตราดอกเบี้ย",
-    issueType: "ภารกิจ",
-    subIssueType: "-",
-    responsibleOfficer: "นายปิยภา ภูมิศา",
-    status: "ยุติ",
-    note: "ดำเนินการสำเร็จ",
-  },
-  {
-    id: 7,
-    receiveDate: "07 ก.พ. 2568",
-    agency: "กรมบัญชีกลาง",
-    claimantName: "มธุรินท์ พรหมลิขิต",
-    issue: "ขอสำเนาใบสำคัญเบิกค่าใช้จ่าย",
-    issueType: "ภารกิจ",
-    subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
-    responsibleOfficer: "นายกานต์ วรากร",
-    status: "กำลังดำเนินการ",
-    note: "กำลังจัดเตรียมเอกสาร",
-  },
-  {
-    id: 8,
-    receiveDate: "08 ก.พ. 2568",
-    agency: "กรมสรรพากร",
-    claimantName: "อภิชาต วรรณชาติ",
-    issue: "ตรวจสอบสภาพหนี้ภาษี",
-    issueType: "การแก้ไขปัญหาหนี้สิน",
-    subIssueType: "หนี้นอกระบบ",
-    responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "ยุติ",
-    note: "แก้ไขยอดเรียบร้อย",
-  },
-  {
-    id: 9,
-    receiveDate: "09 ก.พ. 2568",
-    agency: "กรมศุลกากร",
-    claimantName: "กมลลักษณ์ ตั้งเจริญ",
-    issue: "สอบถามข้อยกเว้นภาษีนำเข้า",
-    issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-    subIssueType: "โครงการสาธารณูปโภคพื้นฐาน",
-    responsibleOfficer: "นายปิยภา ภูมิศา",
-    status: "กำลังดำเนินการ",
-    note: "รอการอนุมัติจากส่วนกลาง",
-  },
-  {
-    id: 10,
-    receiveDate: "10 ก.พ. 2568",
-    agency: "สำนักงานเศรษฐกิจการคลัง",
-    claimantName: "มนัสนันท์ วิไลวรรณ",
-    issue: "ขอเอกสารรายงานงบประมาณ",
-    issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
-    subIssueType: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-    responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "ยุติ",
-    note: "จัดส่งทางอีเมลแล้ว",
-  },
-  {
-    id: 11,
-    receiveDate: "11 ก.พ. 2568",
-    agency: "สำนักงานบริหารหนี้สาธารณะ",
-    claimantName: "สุธิดา ศรีสุวรรณ",
-    issue: "ขอแนวทางปรับโครงสร้างหนี้",
-    issueType: "การแก้ไขปัญหาหนี้สิน",
-    subIssueType: "หนี้และสภาพหนี้ระบบ",
-    responsibleOfficer: "นายกานต์ วรากร",
-    status: "กำลังดำเนินการ",
-    note: "ส่งให้ฝ่ายกฏหมายตรวจสอบ",
-  },
-  {
-    id: 12,
-    receiveDate: "12 ก.พ. 2568",
-    agency: "ธนาคารแห่งประเทศไทย",
-    claimantName: "ปุณยวีร์ ชัยยะ",
-    issue: "สอบถามมาตรการกระตุ้นเศรษฐกิจ",
-    issueType: "ภารกิจ",
-    subIssueType: "-",
-    responsibleOfficer: "นายปิยภา ภูมิศา",
-    status: "ยุติ",
-    note: "สรุปผลทางโทรศัพท์",
-  },
-  {
-    id: 13,
-    receiveDate: "13 ก.พ. 2568",
-    agency: "กรมสรรพากร",
-    claimantName: "ฐิติมา แซ่โต",
-    issue: "ขอยื่นภาษีย้อนหลัง",
-    issueType: "ภารกิจ",
-    subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
-    responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "กำลังดำเนินการ",
-    note: "รอแบบฟอร์มตอบกลับ",
-  },
-  {
-    id: 14,
-    receiveDate: "14 ก.พ. 2568",
-    agency: "กรมศุลกากร",
-    claimantName: "บุศรินทร์ เหลืองอุทัย",
-    issue: "เคลมค่าภาษีนำเข้าซ้ำซ้อน",
-    issueType: "การแก้ไขปัญหาหนี้สิน",
-    subIssueType: "หนี้นอกระบบ",
-    responsibleOfficer: "นายกานต์ วรากร",
-    status: "ยุติ",
-    note: "คืนเงินให้บัญชีแล้ว",
-  },
-  {
-    id: 15,
-    receiveDate: "15 ก.พ. 2568",
-    agency: "กรมบัญชีกลาง",
-    claimantName: "ณัฏฐ์ดนัย โสภณ",
-    issue: "ขอข้อมูลเบิกค่าทำงานล่วงเวลา",
-    issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-    subIssueType: "โครงการสาธารณูปโภคพื้นฐาน",
-    responsibleOfficer: "นายปิยภา ภูมิศา",
-    status: "กำลังดำเนินการ",
-    note: "จัดทำรายงานเพิ่มเติม",
-  },
-  {
-    id: 16,
-    receiveDate: "16 ก.พ. 2568",
-    agency: "สำนักงานเศรษฐกิจการคลัง",
-    claimantName: "กมลพัชร จิตติวงศ์",
-    issue: "สอบถามอัตราเงินเฟ้อ",
-    issueType: "นโยบายรัฐฯ ด้านสวัสดิการ",
-    subIssueType: "โครงการลงทะเบียนเพื่อสวัสดิการฯ",
-    responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "ยุติ",
-    note: "ตอบกลับทางโทรศัพท์",
-  },
-  {
-    id: 17,
-    receiveDate: "17 ก.พ. 2568",
-    agency: "สำนักงานบริหารหนี้สาธารณะ",
-    claimantName: "อภินันท์ สารสิน",
-    issue: "ขอทราบวงเงินกู้สาธารณะ",
-    issueType: "การแก้ไขปัญหาหนี้สิน",
-    subIssueType: "หนี้และสภาพหนี้ระบบ",
-    responsibleOfficer: "นายกานต์ วรากร",
-    status: "กำลังดำเนินการ",
-    note: "รอการพิจารณาจากผู้บริหาร",
-  },
-  {
-    id: 18,
-    receiveDate: "18 ก.พ. 2568",
-    agency: "ธนาคารแห่งประเทศไทย",
-    claimantName: "จิรายุ พงษ์ประทีป",
-    issue: "ขอรายละเอียดอัตราดอกเบี้ยเงินกู้",
-    issueType: "ภารกิจ",
-    subIssueType: "-",
-    responsibleOfficer: "นายปิยภา ภูมิศา",
-    status: "ยุติ",
-    note: "แจ้งผลทาง SMS",
-  },
-  {
-    id: 19,
-    receiveDate: "19 ก.พ. 2568",
-    agency: "กรมสรรพากร",
-    claimantName: "วิมลรัตน์ มโนรมย์",
-    issue: "ข้อเสนอแนะปรับปรุงแบบฟอร์มภาษี",
-    issueType: "ภารกิจ",
-    subIssueType: "ข้อคิดเห็น/ข้อเสนอแนะ/แจ้งขยายเวลา",
-    responsibleOfficer: "นางกานต์รวี วรานี",
-    status: "กำลังดำเนินการ",
-    note: "ส่งให้ทีมออกแบบพิจารณา",
-  },
-  {
-    id: 20,
-    receiveDate: "20 ก.พ. 2568",
-    agency: "กรมศุลกากร",
-    claimantName: "กมลวรรณ สวัสดิ์ชัย",
-    issue: "สอบถามข้อจำกัดการนำเข้า",
-    issueType: "นโยบายรัฐฯ เรื่องสาธารณูปโภค",
-    subIssueType: "โครงการสาธารณูปโภคพื้นฐาน",
-    responsibleOfficer: "นายปิยภา ภูมิศา",
-    status: "ยุติ",
-    note: "ปิดเรื่องเรียบร้อย",
-  },
-];
+    const outagencyRaw =
+      item.outagency ||
+      item.external_agency ||
+      item.outside_agency ||
+      item.externalDepartment?.name ||
+      item.outsideDepartment?.name ||
+      item.outside_department_name ||
+      item.incident_location ||
+      "-";
+    const outagency = clean(outagencyRaw);
+
+    const id = item.id || item.complaint_id;
+
+    const receiveDate =
+      (item.receiveDate && formatThaiDateFlexible(item.receiveDate)) !== "-"
+        ? formatThaiDateFlexible(item.receiveDate)
+        : formatThaiDateFlexible(item.created_at);
+
+    const agency = clean(displayOrDash(item.agency));
+
+    const claimantName =
+      item.complainant_name ||
+      item.complainant?.government?.fullName ||
+      item.complainant?.name ||
+      item.claimantName ||
+      "-";
+
+    const issue =
+      displayOrDash(item.subject) !== "-"
+        ? displayOrDash(item.subject)
+        : displayOrDash(item.issue ?? item.master_complaint?.subject);
+    const issueType = displayOrDash(item.issueType || item.complaint_type_name);
+    const subIssueType = displayOrDash(item.subIssueType);
+
+    const responsibleOfficer =
+      item.responsibleOfficer ??
+      item.assigned_officer?.name ??
+      item.assigned_to ??
+      "ไม่ได้มอบหมาย";
+
+    const statusEn = item.status || "-";
+    const statusTh = getThaiStatus(statusEn);
+
+    const complaintNumberSorn = displayOrDash(
+      item.complaint_number || item.master_complaint?.complaint_number
+    );
+
+    const complaintNumber = displayOrDash(
+      item.complaint_number || item.master_complaint?.complaint_number
+    );
+
+    const isMaster =
+      item.is_master !== undefined
+        ? item.is_master
+        : !!item.master_complaint?.is_master;
+
+    const docNum = documentNumberMap[id] || item.document_number || "";
+
+    return {
+      id,
+      receiveDate,
+      agency,
+      outagency,
+      claimantName,
+      issue,
+      issueType,
+      subIssueType,
+      responsibleOfficer,
+      status: statusTh,
+      statusEn: statusEn,
+      note: displayOrDash(item.note || item.assigned_remark),
+      complaintNumber,
+      isMaster,
+      complaintNumberSorn,
+      documentNumber: docNum,
+      created_at: item.created_at,
+    };
+  });
+};
+
+/* ---------- สกัด options ---------- */
+const toOptions = (arr) =>
+  Array.from(
+    new Set(
+      (arr || [])
+        .map((v) => (typeof v === "string" ? v.trim() : v))
+        .filter((v) => v && v !== "-")
+    )
+  ).map((v) => ({ value: v, label: v }));
+
+const extractFilterOptionsFromItems = (items) => {
+  const issueTypes = [];
+  const subIssueTypes = [];
+  const agencies = [];
+  const officers = [];
+  const statusesTh = [];
+
+  items.forEach((item) => {
+    if (item.issueType) issueTypes.push(item.issueType);
+    if (item.subIssueType) subIssueTypes.push(item.subIssueType);
+    const agencyName = item.agency;
+    if (agencyName) agencies.push(agencyName);
+    const officer = item.responsibleOfficer ?? item.assigned_officer?.name;
+    if (officer) officers.push(officer);
+    const statusTh = getThaiStatus(item.status);
+    if (statusTh && statusTh !== "-") statusesTh.push(statusTh);
+  });
+
+  return {
+    issueTypeOptions: toOptions(issueTypes),
+    subIssueTypeOptions: toOptions(subIssueTypes),
+    agencyOptions: toOptions(agencies),
+    responsibleOfficerOptions: toOptions(officers),
+    statusOptions: toOptions(statusesTh),
+  };
+};
 
 const AnonymousLetterRepository = () => {
-  const [allComplaints] = useState(mockComplaints);
-  const [filteredComplaints, setFilteredComplaints] = useState(mockComplaints);
-  const [apiSubTypeOptions, setApiSubTypeOptions] = useState(subIssueTypeOptions);
+  const [allComplaints, setAllComplaints] = useState([]);
+  const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [filterOptions, setFilterOptions] = useState({
+    issueTypeOptions: [],
+    subIssueTypeOptions: [],
+    agencyOptions: [],
+    responsibleOfficerOptions: [],
+    statusOptions: [],
+  });
+
   const [allApiSubTypes, setAllApiSubTypes] = useState([]);
   const [typeNameToId, setTypeNameToId] = useState({});
   const router = useRouter();
 
-  // ดึง sub-types จาก API
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await GetAllSubComplaintTypes();
-        if (res?.res_code === "0000" && Array.isArray(res?.res_data?.items)) {
-          const allSubs = res.res_data.items;
-          setAllApiSubTypes(allSubs);
-          setApiSubTypeOptions(
-            allSubs
-              .map((item) => ({ value: item.name, label: item.name }))
-              .sort((a, b) => a.label.localeCompare(b.label, "th"))
-          );
-        }
-        const typeRes = await GetAllSelectComplaintTypes();
-        if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data)) {
-          const map = {};
-          typeRes.res_data.forEach(t => { map[t.name] = t.id; });
-          setTypeNameToId(map);
-        }
-      } catch (e) {
-        console.error("Error fetching sub complaint types:", e);
-      }
-    })();
-  }, []);
+  /* ---------- ค้นหา/กรอง ---------- */
+  const handleSearch = (filters) => {
+    const norm = (s) =>
+      String(s ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+    const getVal = (v) =>
+      typeof v === "string" ? v : v?.value ?? v?.label ?? "";
 
-  // 3) ฟังก์ชันค้นหา
-  const handleSearch = ({
-    claimantName,
-    subject,
-    issueType,
-    subIssueType,
-    accusedName,
-    responsibleOfficer,
-    status,
-  }) => {
     const result = allComplaints.filter((item) => {
-      if (claimantName && !item.claimantName.includes(claimantName))
-        return false;
-      if (subject && !item.issue.includes(subject)) return false;
-      if (issueType && item.issueType !== issueType) return false;
-      if (subIssueType && item.subIssueType !== subIssueType) return false;
-      if (accusedName && item.agency !== accusedName) return false;
-      if (responsibleOfficer && item.responsibleOfficer !== responsibleOfficer)
-        return false;
-      if (status && item.status !== status) return false;
-      return true;
+      let ok = true;
+
+      if (filters.claimantName && filters.claimantName.trim() !== "") {
+        const q = filters.claimantName.toLowerCase();
+        ok = ok && (item.claimantName || "").toLowerCase().includes(q);
+      }
+
+      if (filters.subject && filters.subject.trim() !== "") {
+        const q = filters.subject.toLowerCase();
+        ok = ok && (item.issue || "").toLowerCase().includes(q);
+      }
+
+      if (filters.issueType && filters.issueType !== "") {
+        ok = ok && item.issueType === filters.issueType;
+      }
+
+      if (filters.subIssueType && filters.subIssueType !== "") {
+        ok = ok && item.subIssueType === filters.subIssueType;
+      }
+
+      if (getVal(filters.agency)) {
+        const q = norm(getVal(filters.agency));
+        ok =
+          ok &&
+          (norm(item.agency).includes(q) || norm(item.outagency).includes(q));
+      }
+
+      if (filters.responsibleOfficer && filters.responsibleOfficer !== "") {
+        ok = ok && item.responsibleOfficer === filters.responsibleOfficer;
+      }
+
+      if (filters.status && filters.status !== "") {
+        ok = ok && item.status === filters.status;
+      }
+
+      if (filters.complaintNumberSorn && filters.complaintNumberSorn.trim() !== "") {
+        const q = filters.complaintNumberSorn.toLowerCase();
+        ok = ok && (item.complaintNumberSorn || "").toLowerCase().includes(q);
+      }
+
+      if (filters.startDate || filters.endDate) {
+        if (!item.created_at) {
+          ok = false;
+        } else {
+          const itemDate = dayjs(item.created_at);
+          if (!itemDate.isValid()) {
+            ok = false;
+          } else {
+            if (filters.startDate) {
+              const start = dayjs(filters.startDate).startOf('day');
+              if (itemDate.isBefore(start)) ok = false;
+            }
+            if (filters.endDate) {
+              const end = dayjs(filters.endDate).endOf('day');
+              if (itemDate.isAfter(end)) ok = false;
+            }
+          }
+        }
+      }
+
+      return ok;
     });
+
     setFilteredComplaints(result);
   };
 
-  // เมื่อเปลี่ยน parent type -> กรอง sub-type options
+  const handleResetSearch = () => {
+    setFilteredComplaints(allComplaints);
+  };
+
   const handleFilterChange = (field, value) => {
     if (field === "issueType") {
       let filteredSubTypes;
@@ -355,9 +271,132 @@ const AnonymousLetterRepository = () => {
           .map((st) => ({ value: st.name, label: st.name }))
           .sort((a, b) => a.label.localeCompare(b.label, "th"));
       }
-      setApiSubTypeOptions(filteredSubTypes);
+      setFilterOptions((prev) => ({ ...prev, subIssueTypeOptions: filteredSubTypes }));
     }
   };
+
+  const handleRowClick = (item) => {
+    const englishStatus = item.statusEn || getEnglishStatus(item.status);
+    router.push(`/admin/box/new/${item.id}?status=${englishStatus}`);
+  };
+
+  /* ---------- โหลดข้อมูลจาก API ---------- */
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // เรียก GetComplaintsByPageTypeCard เพื่อดึงข้อมูลบัตรสนเทศ
+        const cardRes = await GetComplaintsByPageTypeCard({
+          pageType: "card",
+          skip: 0,
+          limit: 10000,
+        });
+
+        if (cardRes?.res_code === "0000" && Array.isArray(cardRes?.res_data?.items)) {
+          // API นี้ return items ที่แต่ละ item มี .complaint property
+          const complaints = cardRes.res_data.items
+            .map((entry) => entry?.complaint)
+            .filter(Boolean);
+
+          if (complaints.length > 0) {
+            // ดึง enhanced complaints เพื่อเอา document_number (เลข นร)
+            let documentNumberMap = {};
+            try {
+              const enhancedRes = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
+              if (enhancedRes?.res_data?.items) {
+                enhancedRes.res_data.items.forEach((c) => {
+                  const cId = c.id || c.complaint_id;
+                  const docNum = c.document_number || "";
+                  if (cId && docNum) {
+                    documentNumberMap[cId] = docNum;
+                  }
+                });
+              }
+            } catch (e) {
+              console.warn("[คลังบัตรสนเทศ-dept] Enhanced fetch failed:", e);
+            }
+
+            const transformedData = transformCardComplaintData(complaints, documentNumberMap);
+            setAllComplaints(transformedData);
+            setFilteredComplaints(transformedData);
+
+            // สกัด filter options
+            const opts = extractFilterOptionsFromItems(complaints);
+            const allStatusTh = Array.from(
+              new Set([
+                ...Object.values(statusMapEnToTh),
+                ...opts.statusOptions.map((o) => o.value),
+              ])
+            ).map((v) => ({ value: v, label: v }));
+
+            // ดึง sub-types จาก API
+            let subTypeOpts = opts.subIssueTypeOptions;
+            try {
+              const subRes = await GetAllSubComplaintTypes();
+              if (subRes?.res_code === "0000" && Array.isArray(subRes?.res_data?.items)) {
+                const allSubs = subRes.res_data.items;
+                setAllApiSubTypes(allSubs);
+                subTypeOpts = allSubs
+                  .map((item) => ({ value: item.name, label: item.name }))
+                  .sort((a, b) => a.label.localeCompare(b.label, "th"));
+              }
+              const typeRes = await GetAllSelectComplaintTypes();
+              if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data)) {
+                const map = {};
+                typeRes.res_data.forEach(t => { map[t.name] = t.id; });
+                setTypeNameToId(map);
+              }
+            } catch (e) {
+              console.error("Error fetching sub complaint types:", e);
+            }
+
+            setFilterOptions({
+              issueTypeOptions: opts.issueTypeOptions,
+              subIssueTypeOptions: subTypeOpts,
+              agencyOptions: opts.agencyOptions,
+              responsibleOfficerOptions: opts.responsibleOfficerOptions,
+              statusOptions: allStatusTh,
+            });
+
+            console.log(`[คลังบัตรสนเทศ-dept] โหลดสำเร็จ: ${complaints.length} รายการ`);
+          } else {
+            console.log("[คลังบัตรสนเทศ-dept] ไม่พบข้อมูลบัตรสนเทศ");
+            setAllComplaints([]);
+            setFilteredComplaints([]);
+          }
+        } else {
+          console.error("[คลังบัตรสนเทศ-dept] Unexpected response:", cardRes);
+          setAllComplaints([]);
+          setFilteredComplaints([]);
+        }
+      } catch (err) {
+        console.error("Error fetching card complaints:", err);
+        setAllComplaints([]);
+        setFilteredComplaints([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "200px",
+          fontSize: "18px",
+        }}
+      >
+        กำลังโหลดข้อมูล...
+      </div>
+    );
+  }
 
   return (
     <>
@@ -381,7 +420,9 @@ const AnonymousLetterRepository = () => {
         data={filteredComplaints}
         title="รับเข้าบัตรสนเท่ห์"
         navigateTo="/admin/box/new"
+        onRowClick={handleRowClick}
         onSearch={handleSearch}
+        onResetSearch={handleResetSearch}
         onFilterChange={handleFilterChange}
         filterFields={[
           { name: "claimantName", label: "ชื่อผู้ร้อง", type: "text" },
@@ -390,31 +431,46 @@ const AnonymousLetterRepository = () => {
             name: "issueType",
             label: "ประเภทเรื่อง",
             type: "select",
-            options: issueTypeOptions,
+            options: filterOptions.issueTypeOptions,
           },
           {
             name: "subIssueType",
             label: "ประเภทเรื่องย่อย",
             type: "select",
-            options: apiSubTypeOptions,
+            options: filterOptions.subIssueTypeOptions,
           },
           {
-            name: "accusedName",
+            name: "agency",
             label: "หน่วยงาน",
             type: "select",
-            options: agencyOptions,
+            options: filterOptions.agencyOptions,
           },
           {
             name: "responsibleOfficer",
             label: "เจ้าหน้าที่รับผิดชอบ",
             type: "select",
-            options: officerOptions,
+            options: filterOptions.responsibleOfficerOptions,
           },
           {
             name: "status",
             label: "สถานะเรื่อง",
             type: "select",
-            options: statusOptions,
+            options: filterOptions.statusOptions,
+          },
+          {
+            name: "complaintNumberSorn",
+            label: "เลข สรร.",
+            type: "text",
+          },
+          {
+            name: "startDate",
+            label: "ตั้งแต่วันที่",
+            type: "date",
+          },
+          {
+            name: "endDate",
+            label: "ถึงวันที่",
+            type: "date",
           },
         ]}
       />

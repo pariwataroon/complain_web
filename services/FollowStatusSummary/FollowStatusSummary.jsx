@@ -246,11 +246,38 @@ const FollowStatusSummary = ({ data = {} }) => {
   const sendInCnt = assignment.send_in_count ?? 2; // ตัวอย่าง
   const sendOutCnt = assignment.send_out_count ?? 3; // ตัวอย่าง
 
-  // สถานะไทย (ถ้าแม็ปไว้ใน complaint หรือดึงจาก status_history ล่าสุด)
+  // สถานะไทย — แปลจาก code เป็น label ไทย
+  const toThaiStatus = (code = "") => {
+    const s = String(code || "").toLowerCase();
+    switch (s) {
+      case "submitted": return "รับเรื่อง";
+      case "sent_to_external":
+      case "sent_to_agency":
+      case "forwarded": return "ส่งหน่วยงานที่เกี่ยวข้อง";
+      case "in_process":
+      case "in_progress": return "กำลังดำเนินการ";
+      case "tracking": return "ติดตามผล";
+      case "assigned": return "มอบหมายเจ้าหน้าที่";
+      case "reviewed": return "แจ้งผลการพิจารณา";
+      case "in_review": return "อยู่ระหว่างพิจารณา";
+      case "completed":
+      case "cancelled":
+      case "closed":
+      case "resolved":
+      case "done": return "ยุติเรื่องแล้ว";
+      default: return code || "-";
+    }
+  };
+
+  const latestStatusHistory = data?.status_history?.length
+    ? data.status_history[data.status_history.length - 1]
+    : null;
   const statusThai =
     complaint.status_thai ||
-    data?.status_history?.[0]?.status_thai ||
-    data?.status ||
+    latestStatusHistory?.status_label ||
+    latestStatusHistory?.status_thai ||
+    toThaiStatus(complaint.status) ||
+    toThaiStatus(data?.assignment_form?.status) ||
     "-";
 
   // SLA (ถ้าไม่มีใช้ 365 วันตามรูป)

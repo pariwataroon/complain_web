@@ -309,7 +309,8 @@ const StatusTrackingReport = () => {
   };
 
   const handleNavigateTo = (item) => {
-    router.push(`/admin/edit/opm1111/${item.id}`);
+    // FollowStatus จะ fetch ข้อมูลเต็มจาก GetComplaintByID เอง
+    router.push(`/admin/document/status-tracking-report/${item.id}`);
   };
 
   return (

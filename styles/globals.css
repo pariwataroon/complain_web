@@ -1,3 +1,92 @@
 .swal-high-zindex {
     z-index: 9999 !important;
 }
+
+/* ===== A4 Print Styles for Complaint Search & Report Pages ===== */
+@media print {
+    @page {
+        size: A4 landscape;
+        margin: 10mm;
+    }
+
+    /* ซ่อน element ที่ไม่ต้องการพิมพ์ */
+    .MuiIconButton-root,
+    .MuiPagination-root,
+    .MuiTablePagination-root,
+    button,
+    input,
+    select,
+    .search-filters,
+    .export-buttons,
+    nav,
+    .MuiAppBar-root,
+    .MuiDrawer-root,
+    .breadcrumb-container {
+        display: none !important;
+    }
+
+    /* ตารางพอดี A4 */
+    table {
+        width: 100% !important;
+        page-break-inside: auto;
+        border-collapse: collapse !important;
+    }
+
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    /* Container ไม่มี shadow/padding เวลาพิมพ์ */
+    .MuiContainer-root {
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+    }
+
+    /* Header bar สวยงามเวลาพิมพ์ */
+    [class*="headerBar"],
+    [class*="header-bar"] {
+        background-color: #1120A3 !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        padding: 8px 16px !important;
+        font-size: 16px !important;
+        font-weight: bold !important;
+    }
+
+    /* แถวตารางมีเส้นขอบ */
+    td, th {
+        border: 1px solid #ccc !important;
+        padding: 4px 8px !important;
+        font-size: 10px !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    thead th {
+        background-color: #1120A3 !important;
+        color: white !important;
+        font-weight: bold !important;
+    }
+
+    /* สลับสีแถว */
+    tbody tr:nth-child(even) {
+        background-color: #f5f7ff !important;
+    }
+
+    /* หลีกเลี่ยง break ระหว่าง element */
+    .print-keep-together {
+        page-break-inside: avoid;
+    }
+
+    .print-page-break-before {
+        page-break-before: always;
+    }
+}

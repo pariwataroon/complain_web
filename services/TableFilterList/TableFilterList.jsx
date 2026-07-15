@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/router";
 import {
   Box,
@@ -19,10 +19,11 @@ import styles from "./TableFilterList.module.scss";
 import InputText from "@services/InputText/InputText";
 import SelectField from "@services/SelectField/SelectField";
 import ExportButton from "@services/ExportButton/ExportButton";
-import { exportExcel } from "@utils/exportExcel";
 import { exportElementToPDF } from "@utils/exportPDF";
 import DateThaiPickerService from "@services/DateThaiPickerService/DateThaiPickerService";
+import { GetAllOutsideDepartments } from "@pages/api/outsideDepartments/outsideDepartments";
 import dayjs from "dayjs";
+import * as XLSX from "xlsx-js-style";
 
 const TableFilterList = ({
   groups = [],
@@ -35,12 +36,40 @@ const TableFilterList = ({
 }) => {
   const router = useRouter();
 
+  // State สำหรับ options หน่วยงานภายนอก (ดึงจาก API เหมือน TableListBox)
+  const [outsidedepartmentOptions, setOutsideDepartmentOptions] = useState([]);
+
+  useEffect(() => {
+    const fetchOutsideDepartments = async () => {
+      try {
+        const res = await GetAllOutsideDepartments();
+        const list = res?.res_data?.items || res?.res_data || res || [];
+        const mapped = (Array.isArray(list) ? list : []).map((d) => {
+          const name =
+            d?.name ||
+            d?.department_name ||
+            d?.title ||
+            d?.shortName ||
+            d?.code ||
+            "";
+          return name ? { value: name, label: name } : null;
+        }).filter(Boolean);
+        setOutsideDepartmentOptions(mapped);
+      } catch (err) {
+        console.error("Error fetching outside departments:", err);
+        setOutsideDepartmentOptions([]);
+      }
+    };
+    fetchOutsideDepartments();
+  }, []);
+
   const [filters, setFilters] = useState({
     claimantName: "",
     subject: "",
     issueType: "",
     respondentName: "",
     channel: "",
+    outagency: "",
     caseCode: "",
     startDate: null,
     endDate: null,
@@ -120,6 +149,7 @@ const TableFilterList = ({
       issueType: "",
       respondentName: "",
       channel: "",
+      outagency: "",
       caseCode: "",
       startDate: null,
       endDate: null,
@@ -178,24 +208,38 @@ const TableFilterList = ({
     "รหัสเรื่อง",
   ];
 
-  const mergedData = [];
+  const numCols = headers.length;
+  const wsData = [
+    [title],                          // แถวที่ 1: ชื่อรายงาน
+    [`หน่วยงาน กระทรวงการคลัง`],     // แถวที่ 2: หน่วยงาน
+    [`ข้อมูล ณ วันที่ ${today}`],       // แถวที่ 3: วันที่
+    [],                                // แถวว่าง
+  ];
+
+  const groupTitleRows = new Set(); // ติดตามแถวหัวข้อกลุ่มเพื่อ merge
+  let currentRow = 4; // เริ่มจากแถวที่ 5 (0-indexed = 4)
 
   groups.forEach((group, index) => {
     const sheetTitle = `ช่องทางการรับเรื่อง : ${group.title} (${group.data.length} รายการ)`;
 
     if (index !== 0) {
-      mergedData.push([]); // ✅ แถวว่างระหว่างกลุ่ม
+      wsData.push([]); // แถวว่างระหว่างกลุ่ม
+      currentRow++;
     }
 
-    mergedData.push([sheetTitle]);   // ✅ แถวหัวข้อกลุ่ม
-    mergedData.push(headers);        // ✅ แถวหัวตาราง
+    wsData.push([sheetTitle]);   // แถวหัวข้อกลุ่ม
+    groupTitleRows.add(currentRow);
+    currentRow++;
+
+    wsData.push(headers);        // แถวหัวตาราง
+    currentRow++;
 
     if (group.data.length > 0) {
       const rows = group.data.map((item, rowIdx) => [
         rowIdx + 1,
         item?.name || "-",
         item?.issueType || "-",
-        item?.subject || "-",
+        item?.subjectRaw || "-",
         item?.respondentName || "-",
         item?.docNo || "-",
         item?.docNo2 || "-",
@@ -203,28 +247,133 @@ const TableFilterList = ({
         item?.docNo4 || "-",
         item?.caseCode || "-",
       ]);
-      mergedData.push(...rows); // ✅ แถวข้อมูลจริง
+      wsData.push(...rows);
+      currentRow += rows.length;
     } else {
-      mergedData.push([
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-        "-",
-      ]);
+      wsData.push(["-", "-", "-", "-", "-", "-", "-", "-", "-", "-"]);
+      currentRow++;
     }
   });
 
-  exportExcel(mergedData, {
-    filename,
-    sheetName: "รายงานรวม",
-    exportDate: `วันที่ ${today}`,
+  // สร้าง worksheet ด้วย xlsx-js-style
+  const ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Merge cells หัวรายงาน
+  if (!ws['!merges']) ws['!merges'] = [];
+  ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: numCols - 1 } });
+  ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: numCols - 1 } });
+  ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: numCols - 1 } });
+
+  // Merge แถวหัวข้อกลุ่ม
+  groupTitleRows.forEach(rowIdx => {
+    ws['!merges'].push({ s: { r: rowIdx, c: 0 }, e: { r: rowIdx, c: numCols - 1 } });
   });
+
+  // ความกว้างคอลัมน์ — คำนวณพอดี A4 Landscape (297mm - margins ~20mm ทั้งสองข้าง = ~257mm ≈ 97 chars ที่ font 11pt)
+  // ใช้ scale factor จาก pixel width → char width (≈ 7.5 px/char ที่ font 11pt)
+  ws['!cols'] = [
+    { wch: 5 },   // ลำดับ
+    { wch: 18 },  // ชื่อผู้ร้อง
+    { wch: 14 },  // ประเภทเรื่อง
+    { wch: 25 },  // ชื่อเรื่อง
+    { wch: 18 },  // ชื่อผู้ถูกร้อง
+    { wch: 14 },  // เลขที่สป.กค
+    { wch: 14 },  // เลขที่สป.สร
+    { wch: 12 },  // เลขที่สตป.
+    { wch: 12 },  // เลขที่สรร
+    { wch: 14 },  // รหัสเรื่อง
+  ];
+
+  // จัดรูปแบบเซลล์ — สวยงาม พร้อมพิมพ์ A4
+  const borderStyle = {
+    top: { style: "thin", color: { rgb: "AAAAAA" } },
+    bottom: { style: "thin", color: { rgb: "AAAAAA" } },
+    left: { style: "thin", color: { rgb: "AAAAAA" } },
+    right: { style: "thin", color: { rgb: "AAAAAA" } },
+  };
+
+  // ระบุแถวที่เป็นหัวคอลัมน์ (เกิดหลังแถวหัวข้อกลุ่ม)
+  const headerRows = new Set();
+  let trackRow = 4;
+  groups.forEach((group, index) => {
+    if (index !== 0) trackRow++; // แถวว่าง
+    trackRow++; // แถวหัวข้อกลุ่ม
+    headerRows.add(trackRow); // แถวหัวคอลัมน์
+    trackRow++; // header row itself
+    trackRow += Math.max(group.data.length, 1); // data rows
+  });
+
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  let dataRowIndex = 0;
+
+  // คอลัมน์ที่ต้อง align center
+  const centerCols = new Set([0, 5, 6, 7, 8]); // ลำดับ, เลขสป.กค, สป.สร, สตป., สรร
+
+  for (let R = range.s.r; R <= range.e.r; ++R) {
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const addr = XLSX.utils.encode_cell({ r: R, c: C });
+      if (!ws[addr]) ws[addr] = { t: 's', v: '' };
+      if (!ws[addr].s) ws[addr].s = {};
+
+      if (R <= 2) {
+        // หัวรายงาน — พื้น gradient เหลือง
+        ws[addr].s.font = { name: "Cordia New", sz: 12, bold: true };
+        ws[addr].s.fill = { fgColor: { rgb: "FEFAEF" } };
+        ws[addr].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+      } else if (groupTitleRows.has(R)) {
+        // แถวหัวข้อกลุ่ม — ตัวหนา สีน้ำเงิน พื้นอ่อน
+        ws[addr].s.font = { name: "Cordia New", sz: 11, bold: true, color: { rgb: "1120A3" } };
+        ws[addr].s.alignment = { horizontal: "left", vertical: "center" };
+        dataRowIndex = 0;
+      } else if (headerRows.has(R)) {
+        // หัวคอลัมน์ — พื้นน้ำเงิน ตัวหนา ขาว
+        ws[addr].s.fill = { fgColor: { rgb: "1120A3" } };
+        ws[addr].s.font = { name: "Cordia New", sz: 11, bold: true, color: { rgb: "FFFFFF" } };
+        ws[addr].s.border = borderStyle;
+        ws[addr].s.alignment = { horizontal: "center", vertical: "center", wrapText: true };
+        dataRowIndex = 0;
+      } else if (ws[addr].v === "") {
+        // แถวว่าง — skip
+        continue;
+      } else {
+        // ข้อมูล — สลับสีแถว และ wrap text
+        const isOdd = dataRowIndex % 2 === 1;
+        ws[addr].s.fill = isOdd ? { fgColor: { rgb: "F5F7FF" } } : { fgColor: { rgb: "FFFFFF" } };
+        ws[addr].s.border = borderStyle;
+        ws[addr].s.font = { name: "Cordia New", sz: 10 };
+        ws[addr].s.alignment = {
+          horizontal: centerCols.has(C) ? "center" : "left",
+          vertical: "center",
+          wrapText: true,
+        };
+      }
+    }
+    // เพิ่ม dataRowIndex สำหรับแถวข้อมูล
+    if (!groupTitleRows.has(R) && !headerRows.has(R) && R > 3 && wsData[R] && wsData[R].length > 1) {
+      dataRowIndex++;
+    }
+  }
+
+  // Page Setup A4 Landscape พอดีหน้า
+  ws['!pageSetup'] = {
+    paperSize: 9,
+    orientation: "landscape",
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+  };
+  ws['!margins'] = {
+    left: 0.2,
+    right: 0.2,
+    top: 0.3,
+    bottom: 0.3,
+    header: 0.1,
+    footer: 0.1,
+  };
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "รายงานรวม");
+  XLSX.writeFile(wb, filename);
 };
 
 
@@ -268,6 +417,15 @@ const TableFilterList = ({
                 value={String(filters.channel || "")}
                 onChange={handleSelectChange("channel")}
                 name="channel"
+              />
+
+              <SelectField
+                label="หน่วยงานภายนอก"
+                inputLabel="เลือกหน่วยงาน"
+                options={outsidedepartmentOptions}
+                value={String(filters.outagency || "")}
+                onChange={handleSelectChange("outagency")}
+                name="outagency"
               />
 
               <InputText

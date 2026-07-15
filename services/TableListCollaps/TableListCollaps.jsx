@@ -31,6 +31,7 @@ const TableListCollaps = ({
   data = [],
   title = "",
   navigateTo = "",
+  handleNavigateTo,
   onSearch = () => {},
   filterFields = [],
 }) => {
@@ -619,7 +620,13 @@ const TableListCollaps = ({
               {pagedData.map((item, idx) => (
                 <React.Fragment key={item.id}>
                   <TableRow
-                    onClick={() => router.push(`${navigateTo}/${item.id}`)}
+                    onClick={() => {
+                      if (handleNavigateTo) {
+                        handleNavigateTo(item);
+                      } else if (navigateTo) {
+                        router.push(`${navigateTo}/${item.id}`);
+                      }
+                    }}
                     sx={{
                       cursor: "pointer",
                       "&:hover": { backgroundColor: "#f5f7ff" },

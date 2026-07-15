@@ -84,10 +84,10 @@ const DashboardComponents_Main = () => {
 
     const rawItems = reportResponse?.res_data?.items || [];
 
-    // 2. กรองข้อมูลซ้ำโดยใช้ id เป็นหลัก
-    const uniqueItems = rawItems.filter((item, index, self) =>
-      index === self.findIndex((t) => t.id === item.id)
-    );
+    // 2. กรองข้อมูลซ้ำโดยใช้ id เป็นหลัก (เก็บ item ล่าสุดสำหรับแต่ละ id)
+    const itemMap = new Map();
+    rawItems.forEach((item) => itemMap.set(item.id, item));
+    const uniqueItems = Array.from(itemMap.values());
 
     // 3. กรองเรื่องร้องเพิ่มเติมออก (filing_type = "additional")
     const mainComplaints = uniqueItems.filter(

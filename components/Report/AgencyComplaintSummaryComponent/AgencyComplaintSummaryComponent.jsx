@@ -186,14 +186,17 @@ const AgencyComplaintSummary = () => {
         filing_type: item.filing_type || item.complaint_filing_type || null,
       }));
 
-      // กรองข้อมูลซ้ำโดยใช้ id เป็นหลัก (เก็บ item แรกที่พบ)
+      // กรองข้อมูลซ้ำโดยใช้ id เป็นหลัก (เก็บ item ล่าสุดสำหรับแต่ละ id)
+      // เพื่อให้สถานะแสดงเป็นค่าล่าสุด ไม่ใช่ค่าแรกสุด
       // และกรองเรื่องร้องเพิ่มเติมออก (เฉพาะเรื่องร้องเรียนหลัก)
-      const uniqueItems = items.filter((item, index, self) => {
+      const itemMap = new Map();
+      items.forEach((item) => {
         // กรองเรื่องร้องเพิ่มเติมออก (filing_type = "additional")
-        if (item.filing_type === "additional") return false;
-        // กรองข้อมูลซ้ำโดยใช้ id เป็นหลัก
-        return index === self.findIndex((t) => t.id === item.id);
+        if (item.filing_type === "additional") return;
+        // เก็บ item ล่าสุดสำหรับแต่ละ id (ถ้าซ้ำจะ overwrite ด้วยข้อมูลล่าสุด)
+        itemMap.set(item.id, item);
       });
+      const uniqueItems = Array.from(itemMap.values());
 
       console.log("[AgencyComplaintSummary] Raw items:", items.length, "Unique items:", uniqueItems.length);
       setAllComplaints(uniqueItems);
