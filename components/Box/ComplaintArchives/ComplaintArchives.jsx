@@ -420,8 +420,11 @@ const ComplaintArchives = () => {
           });
         }
 
+        // 0) กรองเอาบัตรสนเทศออก (แสดงในคลังบัตรสนเทศแยกกัน)
+        const nonCardItems = items.filter(item => item.page_type !== "card");
+
         // 1) แปลงข้อมูลเพื่อแสดงผล และกรองเอาเฉพาะเรื่องร้องหลัก (ไม่แสดงเรื่องร้องเพิ่มเติม)
-        const transformed = transformComplaintData(items, documentNumberMap);
+        const transformed = transformComplaintData(nonCardItems, documentNumberMap);
         const masterComplaintsOnly = transformed.filter(item => item.isMaster);
         setAllComplaints(masterComplaintsOnly);
         setFilteredComplaints(masterComplaintsOnly);
