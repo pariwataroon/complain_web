@@ -1218,8 +1218,12 @@ def get_document_storage_by_channel(
         
         # สร้าง base query
         if normalized_page_type == "card":
+            # ✅ กรองรวมทั้ง page_type column (จากคัดกรอง) และ channel (จากช่องทางเดิม)
             query = db.query(Complaint).filter(
-                Complaint.complaint_channel_id.in_(channel_ids)
+                or_(
+                    Complaint.page_type == "card",
+                    Complaint.complaint_channel_id.in_(channel_ids)
+                )
             )
         else:
             query = db.query(Complaint).filter(
@@ -1784,30 +1788,30 @@ def get_document_storage_statistics(
             ).all()
         
         channel_ids = [channel.id for channel in target_channels]
-        
+
         if not channel_ids:
             return {"total": 0, "by_status": {}, "by_urgency": {}, "by_month": {}}
-        
+
+        # ✅ กรองรวม page_type column สำหรับ card dashboard
+        if page_type == "card":
+            page_filter = or_(Complaint.page_type == "card", Complaint.complaint_channel_id.in_(channel_ids))
+        else:
+            page_filter = Complaint.complaint_channel_id.in_(channel_ids)
+
         # สถิติรวม
-        total_complaints = db.query(Complaint).filter(
-            Complaint.complaint_channel_id.in_(channel_ids)
-        ).count()
-        
+        total_complaints = db.query(Complaint).filter(page_filter).count()
+
         # สถิติตามสถานะ
         status_stats = db.query(
             Complaint.status,
             func.count(Complaint.id).label('count')
-        ).filter(
-            Complaint.complaint_channel_id.in_(channel_ids)
-        ).group_by(Complaint.status).all()
-        
+        ).filter(page_filter).group_by(Complaint.status).all()
+
         # สถิติตามความเร่งด่วน
         urgency_stats = db.query(
             Complaint.urgency_level,
             func.count(Complaint.id).label('count')
-        ).filter(
-            Complaint.complaint_channel_id.in_(channel_ids)
-        ).group_by(Complaint.urgency_level).all()
+        ).filter(page_filter).group_by(Complaint.urgency_level).all()
         
         # สถิติรายเดือน (6 เดือนล่าสุด)
         from datetime import datetime, timedelta
@@ -1817,7 +1821,7 @@ def get_document_storage_statistics(
             func.date_trunc('month', Complaint.created_at).label('month'),
             func.count(Complaint.id).label('count')
         ).filter(
-            Complaint.complaint_channel_id.in_(channel_ids),
+            page_filter,
             Complaint.created_at >= six_months_ago
         ).group_by(func.date_trunc('month', Complaint.created_at)).all()
         

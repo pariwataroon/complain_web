@@ -1814,7 +1814,12 @@ def get_complaints_enhanced(
                 "document_number": complaint.document_number,
                 "document_date": complaint.document_date.isoformat() if complaint.document_date else None,
                 "complaint_channel_id": str(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
-                "complaint_channel_name": channel_map.get(complaint.complaint_channel_id) if complaint.complaint_channel_id else None
+                "complaint_channel_name": channel_map.get(complaint.complaint_channel_id) if complaint.complaint_channel_id else None,
+
+                # ✅ เพิ่มฟิลด์สำหรับคลังบัตรสนเทศ: ให้ frontend กรองได้
+                "complaint_filing_type": complaint.complaint_filing_type.value if complaint.complaint_filing_type else None,
+                "page_type": complaint.page_type or "website",
+                "group_work": complaint.group_work or False,
             }
             
             result.append(enhanced_item)

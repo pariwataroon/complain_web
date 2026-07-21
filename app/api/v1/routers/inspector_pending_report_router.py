@@ -17,6 +17,8 @@ def list_inspector_pending_reports(
     limit: int = Query(100, ge=1, le=1000),
     search: Optional[str] = Query(None, description="ค้นหา (ชื่อผู้ตรวจ, หน่วยงาน)",),
     year: Optional[int] = Query(None, description="ปี ค.ศ. สำหรับค้นหา (default: ปีปัจจุบัน)",),
+    date_from: Optional[str] = Query(None, description="วันที่เริ่มต้น (YYYY-MM-DD)",),
+    date_to: Optional[str] = Query(None, description="วันที่สิ้นสุด (YYYY-MM-DD)",),
     db: Session = Depends(get_db),
     current_user: dict = Depends(can_read("dashboard")),
 ):
@@ -27,6 +29,8 @@ def list_inspector_pending_reports(
             limit=limit,
             search=search,
             year=year,
+            date_from=date_from,
+            date_to=date_to,
         )
         return format_response("0000", result)
     except HTTPException:

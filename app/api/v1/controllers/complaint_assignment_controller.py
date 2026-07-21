@@ -147,6 +147,7 @@ def update_complaint_assignment_data(
             complaint.group_work = False
             complaint.complaint_filing_type = ComplaintFilingType.NEW
             complaint.parent_complaint_id = None
+            complaint.page_type = "website"  # ✅ คลังเรื่องราวร้องทุกข์
 
             if not new_status and complaint.status == ComplaintStatus.SUBMITTED:
                 new_status = ComplaintStatus.IN_PROCESS
@@ -162,6 +163,7 @@ def update_complaint_assignment_data(
             complaint.complaint_filing_type = ComplaintFilingType.ADDITIONAL
             complaint.additional_reference_number2 = None
             complaint.additional_reference_date2 = None
+            complaint.page_type = "website"  # ✅ คลังเรื่องราวร้องทุกข์
 
             ref1 = assignment_data.get("additional_reference_number1", "")
             if ref1:
@@ -181,6 +183,7 @@ def update_complaint_assignment_data(
             complaint.complaint_filing_type = ComplaintFilingType.ANONYMOUS
             complaint.additional_reference_number1 = None
             complaint.additional_reference_date1 = None
+            complaint.page_type = "card"  # ✅ คลังบัตรสนเทศ
 
             ref2 = assignment_data.get("additional_reference_number2", "")
             if ref2:
@@ -191,6 +194,11 @@ def update_complaint_assignment_data(
             if not new_status:
                 new_status = ComplaintStatus.IN_REVIEW
                 status_change_notes.append("รับเรื่องจากคณะทำงานบัตรสนเท่ห์")
+
+        # ✅ อัพเดท page_type: เมื่อเลือกบัตรสนเทศให้ย้ายไปคลังบัตรสนเทศ
+        if "page_type" in assignment_data and assignment_data["page_type"]:
+            complaint.page_type = assignment_data["page_type"]
+            changes.append(f"page_type → {assignment_data['page_type']}")
 
     # ✅ บันทึก assigned_officer_id และ assigned_date
         if "assigned_officer_id" in assignment_data and assignment_data["assigned_officer_id"]:
@@ -1475,12 +1483,24 @@ def get_complaints_by_page_type_with_assignment_form(
                 "my_assignments": True
             }
 
-        query = db.query(Complaint).filter(
-            and_(
-                Complaint.complaint_channel_id.in_(channel_ids),
-                Complaint.assigned_officer_id == current_user_id
+        # ✅ กรองรวมทั้ง page_type column (จากคัดกรอง) และ channel (จากช่องทางเดิม)
+        if normalized_page_type == "card":
+            query = db.query(Complaint).filter(
+                and_(
+                    or_(
+                        Complaint.page_type == "card",
+                        Complaint.complaint_channel_id.in_(channel_ids)
+                    ),
+                    Complaint.assigned_officer_id == current_user_id
+                )
             )
-        )
+        else:
+            query = db.query(Complaint).filter(
+                and_(
+                    Complaint.complaint_channel_id.in_(channel_ids),
+                    Complaint.assigned_officer_id == current_user_id
+                )
+            )
         
         # Apply filters (เหมือนเดิม)
         if status:

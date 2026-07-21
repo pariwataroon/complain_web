@@ -17,13 +17,23 @@ def get_inspector_pending_report(
     limit: int = 100,
     search: Optional[str] = None,
     year: Optional[int] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
 ) -> Dict:
     """
     เรื่องค้างการพิจารณา
 
     นับ:
-      - pending_count: ค้างพิจารณาระหว่างปีก่อนหน้า → ปีนี้ (ยังไม่ยุติ)
-      - inprogress_count: กำลังดำเนินการในปีนี้ (ยังไม่ยุติ)
+      - pending_count: ค้างพิจารณา (ยังไม่ยุติ)
+      - inprogress_count: กำลังดำเนินการ (ยังไม่ยุติ)
+
+    3 โหมด:
+      1. ไม่มี filter (year=None, ไม่มี date_from/date_to):
+         → ดึงเรื่องค้างทั้งหมด ไม่จำกัดปี
+      2. มี date_from/date_to:
+         → pending = ค้างก่อน date_from, inprogress = อยู่ระหว่าง date_from → date_to
+      3. มี year เท่านั้น:
+         → pending = ปีก่อนหน้า → ปีนี้, inprogress = ปีนี้ → ปีหน้า (logic เดิม)
 
     เงื่อนไขสำคัญ:
       - ใช้ช่วงปี (UTC naive) จาก COALESCE(reference_date, document_date, created_at)
@@ -32,13 +42,30 @@ def get_inspector_pending_report(
       - รวม keys (od_id, user_id) แล้วทำ NULL-safe join เพื่อให้กรณี od_id = NULL ไม่นับตก
       - MSSQL ต้องมี order_by ก่อน offset/limit
     """
-    if year is None:
-        year = datetime.utcnow().year
 
-    # ช่วงเวลา (UTC-naive)
-    start_this_year = datetime(year, 1, 1)
-    end_this_year = datetime(year + 1, 1, 1)
-    start_prev_year = datetime(year - 1, 1, 1)
+    # ── โหมด 2: มี date_from/date_to ──
+    if date_from and date_to:
+        start_prev = datetime.strptime(date_from, "%Y-%m-%d")
+        end_range = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+
+        start_prev_year = None          # pending: date < date_from (ไม่จำกัดล่าง)
+        pending_upper = start_prev      # pending นับถึง date_from (exclusive)
+        start_this_year = start_prev    # inprogress: date >= date_from
+        end_this_year = end_range       # inprogress: date <= date_to
+
+    # ── โหมด 3: มี year ──
+    elif year is not None:
+        start_prev_year = datetime(year - 1, 1, 1)
+        start_this_year = datetime(year, 1, 1)
+        end_this_year = datetime(year + 1, 1, 1)
+        pending_upper = end_this_year
+
+    # ── โหมด 1: ไม่มี filter → ดึงเรื่องค้างทั้งหมด ──
+    else:
+        start_prev_year = datetime(1900, 1, 1)
+        start_this_year = datetime(2090, 1, 1)   # ไกลมาก → inprogress ไม่มีข้อมูล
+        end_this_year = datetime(2091, 1, 1)
+        pending_upper = start_this_year
 
     date_expr = func.coalesce(
         OutgoingReport4.reference_date,
@@ -46,25 +73,30 @@ def get_inspector_pending_report(
         OutgoingReport4.created_at
     )
 
-    # ค้างพิจารณาระหว่างปีที่แล้ว → ปีนี้ (ยังไม่ยุติ)
+    # ค้างพิจารณา (ยังไม่ยุติ)
+    pending_filters = [
+        or_(
+            OutgoingReport4.report_type == "inspector",
+            OutgoingReport4.signature_authority_user_id.isnot(None),
+        ),
+        or_(
+            OutgoingReport4.consideration_result.is_(None),
+            ~OutgoingReport4.consideration_result.ilike("%ยุติ%"),
+        ),
+    ]
+    # ช่วงวันที่ pending: [start_prev_year, pending_upper)
+    if start_prev_year is not None:
+        pending_filters.append(date_expr >= start_prev_year)
+    if pending_upper is not None:
+        pending_filters.append(date_expr < pending_upper)
+
     pending_subq = (
         db.query(
             OutgoingReport4.outside_department_id.label("od_id"),
             OutgoingReport4.signature_authority_user_id.label("user_id"),
             func.count(OutgoingReport4.id).label("pending_count"),
         )
-        .filter(
-            or_(
-                OutgoingReport4.report_type == "inspector",
-                OutgoingReport4.signature_authority_user_id.isnot(None),
-            ),
-            date_expr >= start_prev_year,
-            date_expr < end_this_year,
-            or_(
-                OutgoingReport4.consideration_result.is_(None),
-                ~OutgoingReport4.consideration_result.ilike("%ยุติ%"),
-            ),
-        )
+        .filter(*pending_filters)
         .group_by(
             OutgoingReport4.outside_department_id,
             OutgoingReport4.signature_authority_user_id,
@@ -72,25 +104,30 @@ def get_inspector_pending_report(
         .subquery()
     )
 
-    # กำลังดำเนินการในปีนี้ (ยังไม่ยุติ)
+    # กำลังดำเนินการ (ยังไม่ยุติ)
+    inprogress_filters = [
+        or_(
+            OutgoingReport4.report_type == "inspector",
+            OutgoingReport4.signature_authority_user_id.isnot(None),
+        ),
+        or_(
+            OutgoingReport4.consideration_result.is_(None),
+            ~OutgoingReport4.consideration_result.ilike("%ยุติ%"),
+        ),
+    ]
+    # ช่วงวันที่ inprogress: [start_this_year, end_this_year)
+    if start_this_year is not None:
+        inprogress_filters.append(date_expr >= start_this_year)
+    if end_this_year is not None:
+        inprogress_filters.append(date_expr < end_this_year)
+
     inprogress_subq = (
         db.query(
             OutgoingReport4.outside_department_id.label("od_id"),
             OutgoingReport4.signature_authority_user_id.label("user_id"),
             func.count(OutgoingReport4.id).label("inprogress_count"),
         )
-        .filter(
-            or_(
-                OutgoingReport4.report_type == "inspector",
-                OutgoingReport4.signature_authority_user_id.isnot(None),
-            ),
-            date_expr >= start_this_year,
-            date_expr < end_this_year,
-            or_(
-                OutgoingReport4.consideration_result.is_(None),
-                ~OutgoingReport4.consideration_result.ilike("%ยุติ%"),
-            ),
-        )
+        .filter(*inprogress_filters)
         .group_by(
             OutgoingReport4.outside_department_id,
             OutgoingReport4.signature_authority_user_id,

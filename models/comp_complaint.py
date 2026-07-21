@@ -173,8 +173,12 @@ class Complaint(Base):
     agency_sender = Column(NVARCHAR(200), nullable=True, comment="หน่วยงานที่ส่งเรื่องมาถึง กค.")
     
     # ประเภทการร้องเรียน (เรื่องใหม่/เพิ่มเติม/จากคณะทำงานบัตรสนเท่ห์)
-    complaint_filing_type = Column(Enum(ComplaintFilingType), default=ComplaintFilingType.NEW, nullable=False, 
+    complaint_filing_type = Column(Enum(ComplaintFilingType), default=ComplaintFilingType.NEW, nullable=False,
         comment="ประเภทการร้องเรียน: new=เรื่องใหม่, additional=เรื่องเพิ่มเติม, anonymous=รับเรื่องจากคณะทำงานบัตรสนเท่ห์")
+
+    # ✅ page_type: สำหรับแยกข้อมูลระหว่างคลังเรื่องราวร้องทุกข์ (website) กับคลังบัตรสนเทศ (card)
+    page_type = Column(NVARCHAR(50), nullable=True, default="website",
+        comment="ประเภทหน้า: website=คลังเรื่องราวร้องทุกข์, card=คลังบัตรสนเทศ")
     
     # เลขที่อ้างอิงเพิ่มเติม
     additional_reference_number1 = Column(NVARCHAR(100), nullable=True, comment="เลขที่อ้างอิง(เลข สรร.สารบัญ) 1")  # แก้จาก สรจ. เป็น สรร.
