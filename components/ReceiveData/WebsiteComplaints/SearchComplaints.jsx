@@ -1661,6 +1661,8 @@ const handleSubmit = async () => {
         new_complaint: complaintFilingType === "new",
         add_more_complaint_to_ref: complaintFilingType === "additional",
         group_work: complaintFilingType === "committee",
+        // page_type: ส่ง "card" เฉพาะเมื่อเลือกบัตรสนเทศ (ไม่ส่งค่าอื่นเพื่อไม่กระทบ flow เดิม)
+        ...(complaintFilingType === "committee" ? { page_type: "card" } : {}),
         incidentDate: formatDateForAPI(
           step4Data.incidentDateTime || 
           defaultData?.assignment_form?.incidentDate ||

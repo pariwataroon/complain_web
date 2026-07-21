@@ -35,7 +35,10 @@ const handleManage = (sectionKey, id, router) => {
 
   switch (sectionKey) {
     case "RECEIVED":
-      router.push(`/admin/edit/website-complaints/${id}`);
+      router.push({
+        pathname: `/admin/edit/website-complaints/${id}`,
+        query: { fromBox: "1" },
+      });
       break;
     case "FORWARDED":
       router.push(`/admin/edit/forward-to-agency/${id}`);

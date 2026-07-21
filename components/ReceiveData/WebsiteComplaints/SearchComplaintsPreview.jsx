@@ -433,6 +433,8 @@ const handleSubmit = async () => {
       new_complaint: step3Data.complaint_filing_type === "new" || step3Data.isNewComplaint === true || !step3Data.complaint_filing_type,
       add_more_complaint_to_ref: step3Data.complaint_filing_type === "additional" || step3Data.isAdditionalComplaint === true,
       group_work: isGroupWork,
+      // page_type: ส่ง "card" เฉพาะเมื่อเลือกบัตรสนเทศ
+      ...(isGroupWork ? { page_type: "card" } : {}),
       registration_date:      formatDateForAPI(step4Data.officerReceivedDate || assignmentOriginal.registration_date),
       director_submission_date: formatDateForAPI(step4Data.directorSubmittedDate || assignmentOriginal.director_submission_date),
       incidentDate: formatDateForAPI(step4Data.incidentDateTime || assignmentOriginal.incidentDate),
