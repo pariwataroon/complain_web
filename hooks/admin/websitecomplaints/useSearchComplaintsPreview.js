@@ -133,12 +133,12 @@ const useSearchComplaintsPreview = () => {
         regulation_reference: step3Data.regulationReference || "",
       };
 
-      // เพิ่มข้อมูลเลขที่อ้างอิงเพิ่มเติมถ้ามี
-      if (step3Data.additionalReference1) {
+      // เพิ่มข้อมูลเลขที่อ้างอิงเพิ่มเติมถ้ามี (บัตรสนเทศไม่ส่ง ref1 เพื่อหลีกเลี่ยง self-reference error)
+      if (step3Data.additionalReference1 && step3Data.complaint_filing_type !== "committee" && step3Data.isCommitteeComplaint !== true) {
         preparedData.additional_reference_number1 =
           step3Data.additionalReference1;
       }
-      if (step3Data.additionalReferenceDate1) {
+      if (step3Data.additionalReferenceDate1 && step3Data.complaint_filing_type !== "committee" && step3Data.isCommitteeComplaint !== true) {
         preparedData.additional_reference_date1 =
           step3Data.additionalReferenceDate1;
       }

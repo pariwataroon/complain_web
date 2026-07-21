@@ -1580,8 +1580,11 @@ const handleSubmit = async () => {
         document_number: step3Data.documentNumber,
   document_date: formatDateForAPI(step3Data.documentDate || defaultData?.assignment_form?.document_date),
 
-        additional_reference_number1: step3Data.additionalReference1,
-        additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1 || defaultData?.assignment_form?.additional_reference_date1),
+        // Additional references (บัตรสนเทศไม่ส่ง ref1 เพื่อหลีกเลี่ยง self-reference error)
+        ...(complaintFilingType !== "committee" ? {
+          additional_reference_number1: step3Data.additionalReference1,
+          additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1 || defaultData?.assignment_form?.additional_reference_date1),
+        } : {}),
         additional_reference_number2: step3Data.additionalReference2,
         additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2 || defaultData?.assignment_form?.additional_reference_date2),
         // Filing type & flags
@@ -1651,9 +1654,11 @@ const handleSubmit = async () => {
         // Document
         document_number: step3Data.documentNumber || defaultData?.assignment_form?.document_number || "",
         document_date: formatDateForAPI(step3Data.documentDate || defaultData?.assignment_form?.document_date),
-        // Additional references
-        additional_reference_number1: step3Data.additionalReference1 || defaultData?.assignment_form?.additional_reference_number1 || "",
-        additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1 || defaultData?.assignment_form?.additional_reference_date1),
+        // Additional references (บัตรสนเทศไม่ส่ง ref1 เพื่อหลีกเลี่ยง self-reference error)
+        ...(complaintFilingType !== "committee" ? {
+          additional_reference_number1: step3Data.additionalReference1 || defaultData?.assignment_form?.additional_reference_number1 || "",
+          additional_reference_date1: formatDateForAPI(step3Data.additionalReferenceDate1 || defaultData?.assignment_form?.additional_reference_date1),
+        } : {}),
         additional_reference_number2: step3Data.additionalReference2 || defaultData?.assignment_form?.additional_reference_number2 || "",
         additional_reference_date2: formatDateForAPI(step3Data.additionalReferenceDate2 || defaultData?.assignment_form?.additional_reference_date2),
         // Filing type flags

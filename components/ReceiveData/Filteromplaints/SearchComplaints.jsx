@@ -1297,9 +1297,11 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       group_work: complaintFilingType === "committee",
       // ✅ page_type: ส่ง "card" เฉพาะเมื่อเลือกบัตรสนเทศ (ไม่ส่งค่าอื่นเพื่อไม่กระทบ flow เดิม)
       ...(complaintFilingType === "committee" ? { page_type: "card" } : {}),
-      // additional references
-      additional_reference_number1: step3PreData.additionalReference1 || "",
-      additional_reference_date1: formatDateForAPI(step3PreData.additionalReferenceDate1),
+      // additional references (บัตรสนเทศไม่ส่ง ref1 เพื่อหลีกเลี่ยง self-reference error ของ backend เก่า)
+      ...(complaintFilingType !== "committee" ? {
+        additional_reference_number1: step3PreData.additionalReference1 || "",
+        additional_reference_date1: formatDateForAPI(step3PreData.additionalReferenceDate1),
+      } : {}),
       additional_reference_number2: step3PreData.additionalReference2 || "",
       additional_reference_date2: formatDateForAPI(step3PreData.additionalReferenceDate2),
     };
@@ -1408,8 +1410,10 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       new_complaint: complaintFilingType === "new",
       add_more_complaint_to_ref: complaintFilingType === "additional",
       group_work: complaintFilingType === "committee",
-      additional_reference_number1: step3Data.additionalReference1 || "",
-      additional_reference_date1: step3Data.additionalReferenceDate1 || "",
+      ...(complaintFilingType !== "committee" ? {
+        additional_reference_number1: step3Data.additionalReference1 || "",
+        additional_reference_date1: step3Data.additionalReferenceDate1 || "",
+      } : {}),
       additional_reference_number2: step3Data.additionalReference2 || "",
       additional_reference_date2: step3Data.additionalReferenceDate2 || "",
     };

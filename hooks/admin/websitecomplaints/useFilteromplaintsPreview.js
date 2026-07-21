@@ -139,18 +139,20 @@ const useFilteromplaintsPreview = () => {
         step3Data.add_more_complaint_to_ref || false;
       preparedData.group_work = step3Data.group_work || false;
 
-      // เลขที่อ้างอิงเพิ่มเติม
+      // เลขที่อ้างอิงเพิ่มเติม (บัตรสนเทศไม่ส่ง ref1 เพื่อหลีกเลี่ยง self-reference error)
       if (
-        step3Data.additional_reference_number1 ||
-        step3Data.additionalReference1
+        (step3Data.additional_reference_number1 ||
+        step3Data.additionalReference1) &&
+        step3Data.complaintFilingType !== "committee"
       ) {
         preparedData.additional_reference_number1 =
           step3Data.additional_reference_number1 ||
           step3Data.additionalReference1;
       }
       if (
-        step3Data.additional_reference_date1 ||
-        step3Data.additionalReferenceDate1
+        (step3Data.additional_reference_date1 ||
+        step3Data.additionalReferenceDate1) &&
+        step3Data.complaintFilingType !== "committee"
       ) {
         preparedData.additional_reference_date1 =
           step3Data.additional_reference_date1 ||

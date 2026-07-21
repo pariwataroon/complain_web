@@ -165,9 +165,11 @@ export default function useComplaintForm() {
         // ✅ page_type: ส่ง "card" เฉพาะเมื่อเลือกบัตรสนเทศ (ไม่ส่งค่าอื่นเพื่อไม่กระทบ flow เดิม)
         ...(tab31Data.complaint_filing_type === "committee" ? { page_type: "card" } : {}),
         
-        // อ้างอิงเพิ่มเติม (สำหรับเรื่องเพิ่มเติมและคณะทำงาน)
-        additional_reference_number1: tab31Data.additionalReference1 || "",
-        additional_reference_date1: formatDateForAPI(tab31Data.additionalReferenceDate1),
+        // อ้างอิงเพิ่มเติม (บัตรสนเทศไม่ส่ง ref1 เพื่อหลีกเลี่ยง self-reference error)
+        ...(tab31Data.complaint_filing_type !== "committee" ? {
+          additional_reference_number1: tab31Data.additionalReference1 || "",
+          additional_reference_date1: formatDateForAPI(tab31Data.additionalReferenceDate1),
+        } : {}),
         additional_reference_number2: tab31Data.additionalReference2 || "",
         additional_reference_date2: formatDateForAPI(tab31Data.additionalReferenceDate2),
         
