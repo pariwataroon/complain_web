@@ -4,11 +4,12 @@ from datetime import datetime
 from sqlalchemy import func, or_, and_, select, case
 from sqlalchemy.orm import Session
 
-from models.outgoing_reports4 import OutgoingReport4
-from models.outside_departments import OutsideDepartment
+from models.outgoing_reports import OutgoingReport
+from models.departments import Department
 from models.user import User
 from models.signature_authorities import SignatureAuthority
 from models.group_signature_authorities import GroupSignatureAuthority
+from models.comp_complaint import Complaint, ComplaintStatus
 
 
 def get_inspector_pending_report(
@@ -21,137 +22,54 @@ def get_inspector_pending_report(
     date_to: Optional[str] = None,
 ) -> Dict:
     """
-    เรื่องค้างการพิจารณา
+    เรื่องค้างการพิจารณา — ใช้ OutgoingReport + Complaint.status เหมือน /reports/inspector
 
     นับ:
-      - pending_count: ค้างพิจารณา (ยังไม่ยุติ)
-      - inprogress_count: กำลังดำเนินการ (ยังไม่ยุติ)
+      - pending_count: ค้างพิจารณา (ยังไม่ยุติ) ตามช่วงวันที่ "ก่อน"
+      - inprogress_count: กำลังดำเนินการ (ยังไม่ยุติ) ตามช่วงวันที่ "ภายใน"
 
     3 โหมด:
       1. ไม่มี filter (year=None, ไม่มี date_from/date_to):
-         → ดึงเรื่องค้างทั้งหมด ไม่จำกัดปี
+         → ดึงเรื่องค้างทั้งหมด (ไม่จำกัดปี)
       2. มี date_from/date_to:
          → pending = ค้างก่อน date_from, inprogress = อยู่ระหว่าง date_from → date_to
       3. มี year เท่านั้น:
-         → pending = ปีก่อนหน้า → ปีนี้, inprogress = ปีนี้ → ปีหน้า (logic เดิม)
+         → pending = ปีก่อนหน้า → ปีนี้, inprogress = ปีนี้ → ปีหน้า
 
     เงื่อนไขสำคัญ:
-      - ใช้ช่วงปี (UTC naive) จาก COALESCE(reference_date, document_date, created_at)
-      - ยังไม่ยุติ = consideration_result IS NULL หรือ ไม่ ILIKE '%ยุติ%'
-      - ครอบคลุมงานผู้ตรวจด้วย or_(report_type == 'inspector', signature_authority_user_id IS NOT NULL)
-      - รวม keys (od_id, user_id) แล้วทำ NULL-safe join เพื่อให้กรณี od_id = NULL ไม่นับตก
+      - ใช้ OutgoingReport (เหมือน /reports/inspector) — ไม่ใช้ OutgoingReport4
+      - ยังไม่ยุติ = Complaint.status != 'completed' (รวม NULL)
+      - ดึงเฉพาะรายการที่มี signature_authority_user_id
       - MSSQL ต้องมี order_by ก่อน offset/limit
     """
 
-    # ── โหมด 2: มี date_from/date_to ──
+    # ── กำหนดช่วงวันที่ ──
     if date_from and date_to:
-        start_prev = datetime.strptime(date_from, "%Y-%m-%d")
-        end_range = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
-
-        start_prev_year = None          # pending: date < date_from (ไม่จำกัดล่าง)
-        pending_upper = start_prev      # pending นับถึง date_from (exclusive)
-        start_this_year = start_prev    # inprogress: date >= date_from
-        end_this_year = end_range       # inprogress: date <= date_to
-
-    # ── โหมด 3: มี year ──
+        # โหมด 2: มี date_from/date_to
+        pending_start = None                          # pending: ไม่จำกัดล่าง
+        pending_end = datetime.strptime(date_from, "%Y-%m-%d")
+        inprogress_start = pending_end                 # inprogress: >= date_from
+        inprogress_end = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
     elif year is not None:
-        start_prev_year = datetime(year - 1, 1, 1)
-        start_this_year = datetime(year, 1, 1)
-        end_this_year = datetime(year + 1, 1, 1)
-        pending_upper = end_this_year
-
-    # ── โหมด 1: ไม่มี filter → ดึงเรื่องค้างทั้งหมด ──
+        # โหมด 3: มี year
+        pending_start = datetime(year - 1, 1, 1)
+        pending_end = datetime(year, 1, 1)
+        inprogress_start = pending_end
+        inprogress_end = datetime(year + 1, 1, 1)
     else:
-        start_prev_year = datetime(1900, 1, 1)
-        start_this_year = datetime(2090, 1, 1)   # ไกลมาก → inprogress ไม่มีข้อมูล
-        end_this_year = datetime(2091, 1, 1)
-        pending_upper = start_this_year
+        # โหมด 1: ไม่มี filter → pending นับทั้งหมด, inprogress = 0
+        pending_start = None
+        pending_end = None
+        inprogress_start = datetime(2090, 1, 1)  # ช่วงไกลมาก → ไม่มีข้อมูล
+        inprogress_end = datetime(2091, 1, 1)
 
     date_expr = func.coalesce(
-        OutgoingReport4.reference_date,
-        OutgoingReport4.document_date,
-        OutgoingReport4.created_at
+        OutgoingReport.reference_date,
+        OutgoingReport.document_date,
+        OutgoingReport.created_at,
     )
 
-    # ค้างพิจารณา (ยังไม่ยุติ)
-    pending_filters = [
-        or_(
-            OutgoingReport4.report_type == "inspector",
-            OutgoingReport4.signature_authority_user_id.isnot(None),
-        ),
-        or_(
-            OutgoingReport4.consideration_result.is_(None),
-            ~OutgoingReport4.consideration_result.ilike("%ยุติ%"),
-        ),
-    ]
-    # ช่วงวันที่ pending: [start_prev_year, pending_upper)
-    if start_prev_year is not None:
-        pending_filters.append(date_expr >= start_prev_year)
-    if pending_upper is not None:
-        pending_filters.append(date_expr < pending_upper)
-
-    pending_subq = (
-        db.query(
-            OutgoingReport4.outside_department_id.label("od_id"),
-            OutgoingReport4.signature_authority_user_id.label("user_id"),
-            func.count(OutgoingReport4.id).label("pending_count"),
-        )
-        .filter(*pending_filters)
-        .group_by(
-            OutgoingReport4.outside_department_id,
-            OutgoingReport4.signature_authority_user_id,
-        )
-        .subquery()
-    )
-
-    # กำลังดำเนินการ (ยังไม่ยุติ)
-    inprogress_filters = [
-        or_(
-            OutgoingReport4.report_type == "inspector",
-            OutgoingReport4.signature_authority_user_id.isnot(None),
-        ),
-        or_(
-            OutgoingReport4.consideration_result.is_(None),
-            ~OutgoingReport4.consideration_result.ilike("%ยุติ%"),
-        ),
-    ]
-    # ช่วงวันที่ inprogress: [start_this_year, end_this_year)
-    if start_this_year is not None:
-        inprogress_filters.append(date_expr >= start_this_year)
-    if end_this_year is not None:
-        inprogress_filters.append(date_expr < end_this_year)
-
-    inprogress_subq = (
-        db.query(
-            OutgoingReport4.outside_department_id.label("od_id"),
-            OutgoingReport4.signature_authority_user_id.label("user_id"),
-            func.count(OutgoingReport4.id).label("inprogress_count"),
-        )
-        .filter(*inprogress_filters)
-        .group_by(
-            OutgoingReport4.outside_department_id,
-            OutgoingReport4.signature_authority_user_id,
-        )
-        .subquery()
-    )
-
-    # รวม keys (od_id, user_id) จากทั้งสองช่วงเวลา
-    keys_subq = (
-        select(pending_subq.c.od_id, pending_subq.c.user_id)
-        .union_all(select(inprogress_subq.c.od_id, inprogress_subq.c.user_id))
-        .subquery()
-    )
-    keys_distinct = (
-        db.query(keys_subq.c.od_id.label("od_id"), keys_subq.c.user_id.label("user_id"))
-        .group_by(keys_subq.c.od_id, keys_subq.c.user_id)
-        .subquery()
-    )
-
-    # ฟังก์ชันช่วยทำ NULL-safe equality: (a = b) OR (a IS NULL AND b IS NULL)
-    def null_safe_eq(a, b):
-        return or_(a == b, and_(a.is_(None), b.is_(None)))
-
-    # สร้าง subquery หา order ของกลุ่มผู้มีสิทธิ์เซ็นต่อผู้ใช้
+    # ── Subquery: หา order ของกลุ่มผู้มีสิทธิ์เซ็น ──
     sa_group_order_subq = (
         db.query(
             SignatureAuthority.user_id.label("user_id"),
@@ -179,10 +97,80 @@ def get_inspector_pending_report(
         .subquery()
     )
 
+    # ── Base filter: เฉพาะ inspector + ยังไม่ยุติ (เหมือน /reports/inspector) ──
+    base_filter = [
+        OutgoingReport.signature_authority_user_id.isnot(None),
+        or_(
+            Complaint.status.is_(None),
+            Complaint.status != ComplaintStatus.COMPLETED,
+        ),
+    ]
+
+    # ── Pending subquery: ค้างพิจารณาก่อนช่วง filter ──
+    pending_filter = list(base_filter)
+    if pending_start is not None:
+        pending_filter.append(date_expr >= pending_start)
+    if pending_end is not None:
+        pending_filter.append(date_expr < pending_end)
+
+    pending_subq = (
+        db.query(
+            OutgoingReport.department_id.label("dept_id"),
+            OutgoingReport.signature_authority_user_id.label("user_id"),
+            func.count(OutgoingReport.id).label("pending_count"),
+        )
+        .outerjoin(Complaint, OutgoingReport.complaint_id == Complaint.id)
+        .filter(*pending_filter)
+        .group_by(
+            OutgoingReport.department_id,
+            OutgoingReport.signature_authority_user_id,
+        )
+        .subquery()
+    )
+
+    # ── Inprogress subquery: อยู่ระหว่างดำเนินการในช่วง filter ──
+    inprogress_filter = list(base_filter)
+    if inprogress_start is not None:
+        inprogress_filter.append(date_expr >= inprogress_start)
+    if inprogress_end is not None:
+        inprogress_filter.append(date_expr < inprogress_end)
+
+    inprogress_subq = (
+        db.query(
+            OutgoingReport.department_id.label("dept_id"),
+            OutgoingReport.signature_authority_user_id.label("user_id"),
+            func.count(OutgoingReport.id).label("inprogress_count"),
+        )
+        .outerjoin(Complaint, OutgoingReport.complaint_id == Complaint.id)
+        .filter(*inprogress_filter)
+        .group_by(
+            OutgoingReport.department_id,
+            OutgoingReport.signature_authority_user_id,
+        )
+        .subquery()
+    )
+
+    # ── รวม keys (dept_id, user_id) จากทั้งสอง subquery ──
+    keys_subq = (
+        select(pending_subq.c.dept_id, pending_subq.c.user_id)
+        .union_all(select(inprogress_subq.c.dept_id, inprogress_subq.c.user_id))
+        .subquery()
+    )
+    keys_distinct = (
+        db.query(keys_subq.c.dept_id.label("dept_id"), keys_subq.c.user_id.label("user_id"))
+        .group_by(keys_subq.c.dept_id, keys_subq.c.user_id)
+        .subquery()
+    )
+
+    # ฟังก์ชันช่วย NULL-safe equality
+    def null_safe_eq(a, b):
+        return or_(a == b, and_(a.is_(None), b.is_(None)))
+
+    # ── Main query ──
     q = (
         db.query(
-            keys_distinct.c.od_id.label("outside_department_id"),
-            OutsideDepartment.name.label("outside_department_name"),
+            keys_distinct.c.dept_id.label("department_id"),
+            Department.name.label("department_name"),
             keys_distinct.c.user_id.label("signature_authority_user_id"),
             User.first_name,
             User.last_name,
@@ -191,29 +179,27 @@ def get_inspector_pending_report(
             func.coalesce(pending_subq.c.pending_count, 0).label("pending_count"),
             func.coalesce(inprogress_subq.c.inprogress_count, 0).label("inprogress_count"),
         )
-        # NULL-safe join กลับไปหาจำนวน
         .outerjoin(
             pending_subq,
             and_(
-                null_safe_eq(pending_subq.c.od_id, keys_distinct.c.od_id),
+                null_safe_eq(pending_subq.c.dept_id, keys_distinct.c.dept_id),
                 null_safe_eq(pending_subq.c.user_id, keys_distinct.c.user_id),
             ),
         )
         .outerjoin(
             inprogress_subq,
             and_(
-                null_safe_eq(inprogress_subq.c.od_id, keys_distinct.c.od_id),
+                null_safe_eq(inprogress_subq.c.dept_id, keys_distinct.c.dept_id),
                 null_safe_eq(inprogress_subq.c.user_id, keys_distinct.c.user_id),
             ),
         )
-        # lookup ชื่อหน่วยงาน/ผู้ตรวจ (ไม่บังคับต้องมี)
-        .outerjoin(OutsideDepartment, keys_distinct.c.od_id == OutsideDepartment.id)
+        .outerjoin(Department, keys_distinct.c.dept_id == Department.id)
         .outerjoin(User, keys_distinct.c.user_id == User.id)
         .outerjoin(sa_group_pick_subq, sa_group_pick_subq.c.user_id == keys_distinct.c.user_id)
         .order_by(
             case((sa_group_pick_subq.c.group_order_index.is_(None), 1), else_=0).asc(),
             sa_group_pick_subq.c.group_order_index.asc(),
-            OutsideDepartment.name.asc(),
+            Department.name.asc(),
             User.first_name.asc(),
             User.last_name.asc(),
         )
@@ -225,7 +211,7 @@ def get_inspector_pending_report(
             or_(
                 User.first_name.ilike(like),
                 User.last_name.ilike(like),
-                OutsideDepartment.name.ilike(like),
+                Department.name.ilike(like),
             )
         )
 
@@ -235,8 +221,8 @@ def get_inspector_pending_report(
     items = []
     for r in rows:
         items.append({
-            "outside_department_id": str(r.outside_department_id) if r.outside_department_id else None,
-            "outside_department_name": r.outside_department_name or "ไม่ระบุหน่วยงาน",
+            "department_id": str(r.department_id) if r.department_id else None,
+            "department_name": r.department_name or "ไม่ระบุหน่วยงาน",
             "signature_authority_user_id": str(r.signature_authority_user_id) if r.signature_authority_user_id else None,
             "signature_authority_user_name": (f"{r.first_name or ''} {r.last_name or ''}").strip() or "N/A",
             "signature_group_order_index": int(r.group_order_index) if r.group_order_index is not None else None,
