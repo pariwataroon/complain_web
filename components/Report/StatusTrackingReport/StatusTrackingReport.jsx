@@ -4,6 +4,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollaps from "@services/TableListCollaps/TableListCollaps";
 import { GetMyRelatedComplaints, GetDepartments } from "@pages/api/complaint/complaint";
 import { GetAllSignatureAuthorities } from "@pages/api/allselect/allselect";
+import { getPendingTasksReport } from "@pages/api/complaintreports/reports";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 import utc from "dayjs/plugin/utc";
@@ -241,12 +242,6 @@ const StatusTrackingReport = () => {
 
         setAllComplaints(mapped);
         setFilteredComplaints(mapped);
-
-        // สร้าง dropdown เจ้าหน้าที่จากข้อมูลที่โหลดอยู่แล้ว (เร็วทันที)
-        const uniqueOfficers = [
-          ...new Set(mapped.map((i) => i.responsibleOfficer).filter((x) => x && x !== "-" && x !== "ไม่ได้มอบหมาย")),
-        ].sort();
-        setResponsibleOfficerOptions(uniqueOfficers.map((x) => ({ value: x, label: x })));
       } catch (e) {
         console.error("Error fetching my-related complaints:", e);
         setAllComplaints([]);
@@ -276,6 +271,25 @@ const StatusTrackingReport = () => {
         });
       } catch (e) {
         console.error("Error fetching departments:", e);
+      }
+    })();
+  }, []);
+
+  // โหลด dropdown เจ้าหน้าที่ทุกคนจาก API pending-tasks (เหมือนหน้าติดตามงานค้าง)
+  useEffect(() => {
+    (async () => {
+      try {
+        const items = await getPendingTasksReport({ all_officers: true });
+        const uniqueOfficers = [
+          ...new Set(
+            items.map((item) => item.assigned_officer_name).filter(Boolean)
+          ),
+        ]
+          .filter((name) => name && name.trim() !== "" && name !== "-")
+          .sort();
+        setResponsibleOfficerOptions(uniqueOfficers.map((name) => ({ value: name, label: name })));
+      } catch (e) {
+        console.error("Error fetching officer list:", e);
       }
     })();
   }, []);

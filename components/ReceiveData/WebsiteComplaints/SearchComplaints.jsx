@@ -1703,15 +1703,22 @@ const handleSubmit = async () => {
     });
     // ✅ ส่ง step3 จากฟอร์มปัจจุบัน (ไม่ใช่ defaultData เก่า)
     const currentStep3Data = step3Methods.getValues();
-    await UpdateComplaint(defaultData.id, {
-      ...currentStep12,
-      step3: {
-        general: {
-          ...currentStep3Data,
-          attachment: existingAttachments,
+    // UpdateComplaint (step1+2+3): มี try/catch เป็นของตัวเอง เพื่อไม่ให้ block UpdateAssignmentCompleteByAdmin
+    try {
+      await UpdateComplaint(defaultData.id, {
+        ...currentStep12,
+        step3: {
+          general: {
+            ...currentStep3Data,
+            attachment: existingAttachments,
+          }
         }
-      }
-    });
+      });
+      console.log("✅ UpdateComplaint success (step1-3)");
+    } catch (stepErr) {
+      console.error("⚠️ UpdateComplaint failed (step1-3), continuing to assignment update:", stepErr);
+      // ไม่ return — ให้ไปต่อบันทึก assignment (step4/filing type/page_type) ต่อ
+    }
 
     const res = await UpdateAssignmentCompleteByAdmin(
       defaultData.id,
