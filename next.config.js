@@ -1,10 +1,3 @@
-const withTM = require("next-transpile-modules")([
-  "@mui/material",
-  "@mui/system",
-  "@mui/icons-material",
-  "@mui/x-date-pickers",
-]);
-
 const isDev = process.env.NEXT_PUBLIC_ENV_MODE === "development";
 const isStaticExport = process.env.BUILD_MODE === "static";
 
@@ -14,6 +7,14 @@ const getEnv = (key) => {
 
 const baseConfig = {
   trailingSlash: true,
+
+  // Built-in replacement for next-transpile-modules (Next.js 13.1+)
+  transpilePackages: [
+    "@mui/material",
+    "@mui/system",
+    "@mui/icons-material",
+    "@mui/x-date-pickers",
+  ],
 
   images: {
     unoptimized: true,
@@ -91,10 +92,4 @@ const ssrConfig = {
 const nextConfig = isStaticExport ? staticConfig : ssrConfig;
 
 
-module.exports = withTM(nextConfig);
-
-// module.exports = {
-//   eslint: {
-//     ignoreDuringBuilds: true,
-//   },
-// };
+module.exports = nextConfig;
