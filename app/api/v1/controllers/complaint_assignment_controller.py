@@ -488,7 +488,8 @@ def update_complaint_assignment_data(
                 changes.append(f"ระดับความเร่งด่วน: {old_value} → {complaint.urgency_level}")
 
         # ✅ บันทึก additional_reference_number1-2 และ additional_reference_date1-2 (ตามเงื่อนไข)
-        if "additional_reference_number1" in assignment_data:
+        # ข้าม additional_reference_number1 เมื่อเป็นบัตรสนเทศ (group_work) เพราะบัตรใช้ ref2 เท่านั้น
+        if "additional_reference_number1" in assignment_data and not complaint_type_flags.get("group_work"):
             old_value = complaint.additional_reference_number1
             new_reference_number = assignment_data["additional_reference_number1"]
             
@@ -531,7 +532,8 @@ def update_complaint_assignment_data(
             elif new_reference_number != old_value:
                 changes.append(f"เลขอ้างอิงเพิ่มเติม 1: {old_value or 'ไม่มี'} → {new_reference_number or 'ไม่มี'}")
 
-        if "additional_reference_date1" in assignment_data and assignment_data["additional_reference_date1"]:
+        # ข้าม additional_reference_date1 เมื่อเป็นบัตรสนเทศ (group_work)
+        if "additional_reference_date1" in assignment_data and assignment_data["additional_reference_date1"] and not complaint_type_flags.get("group_work"):
             try:
                 old_date = complaint.additional_reference_date1
                 complaint.additional_reference_date1 = datetime.fromisoformat(assignment_data["additional_reference_date1"].replace('Z', '+00:00'))
