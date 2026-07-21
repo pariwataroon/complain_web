@@ -1295,6 +1295,8 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       new_complaint: complaintFilingType === "new",
       add_more_complaint_to_ref: complaintFilingType === "additional",
       group_work: complaintFilingType === "committee",
+      // ✅ page_type: ส่ง "card" เฉพาะเมื่อเลือกบัตรสนเทศ (ไม่ส่งค่าอื่นเพื่อไม่กระทบ flow เดิม)
+      ...(complaintFilingType === "committee" ? { page_type: "card" } : {}),
       // additional references
       additional_reference_number1: step3PreData.additionalReference1 || "",
       additional_reference_date1: formatDateForAPI(step3PreData.additionalReferenceDate1),
@@ -1302,9 +1304,14 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
       additional_reference_date2: formatDateForAPI(step3PreData.additionalReferenceDate2),
     };
     try {
-      await UpdateAssignmentCompleteByAdmin(defaultData.id, assignmentPayload);
+      const assignRes = await UpdateAssignmentCompleteByAdmin(defaultData.id, assignmentPayload);
+      console.log("[คัดกรอง] UpdateAssignmentCompleteByAdmin response:", assignRes?.res_code);
     } catch (assignmentErr) {
-      console.error("Warning: assignment update failed (filing type may not be saved):", assignmentErr);
+      console.error("❌ [คัดกรอง] Assignment update failed (filing type/page_type NOT saved):", assignmentErr);
+      alertWarning(
+        "บันทึกบางส่วนไม่สำเร็จ",
+        "ข้อมูลประเภทการยื่นเรื่อง (บัตรสนเทศ) อาจไม่ถูกบันทึก กรุณาตรวจสอบอีกครั้ง"
+      );
     }
 
     // 4) อัปโหลดไฟล์ใหม่ (ถ้ามี)

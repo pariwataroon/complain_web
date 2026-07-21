@@ -4,6 +4,7 @@ import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListCollaps from "@services/TableListCollaps/TableListCollaps";
 import { GetMyRelatedComplaints, GetDepartments } from "@pages/api/complaint/complaint";
 import { GetAllSignatureAuthorities } from "@pages/api/allselect/allselect";
+import { getPendingTasksReport } from "@pages/api/complaintreports/reports";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 import utc from "dayjs/plugin/utc";
@@ -195,16 +196,28 @@ const StatusTrackingReport = () => {
           const latest = it?.latest ?? {};
           const history = Array.isArray(it?.history) ? it.history : [];
 
-          // หน่วยงาน
+          // หน่วยงาน - ดึงจาก latest.sent หรือ history (ไม่ใช้ assigned_to)
           let deptName = "-";
-          if (c.assigned_to) deptName = c.assigned_to;
-          else if (latest?.sent?.department_name) deptName = latest.sent.department_name;
-          else {
+          if (latest?.sent?.department_name) {
+            deptName = latest.sent.department_name;
+          } else {
             const sentHistory = history.find(
               (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
             );
             if (sentHistory?.department_name) deptName = sentHistory.department_name;
+            else {
+              // fallback: หา department_name จาก history entry ใดก็ได้
+              const anyDept = history.find((h) => h.department_name);
+              if (anyDept) deptName = anyDept.department_name;
+            }
           }
+
+          // เจ้าหน้าที่ผู้รับผิดชอบ - ใช้ fallback chain หลายชั้น
+          const officerName =
+            c.assigned_officer?.name ||
+            c.assigned_officer_name ||
+            c.assigned_to ||
+            "";
 
           // สถานะ: ถ้า outgoing ปิด → ถือว่า completed, ไม่งั้นใช้ raw status แล้วแปลง label
           const raw = String(c.status || "").toLowerCase();
@@ -216,7 +229,7 @@ const StatusTrackingReport = () => {
             id: c.id ?? `temp_${idx + 1}`,
             claimantName: c.subject ?? "-",
             department: deptName,
-            responsibleOfficer: c.assigned_to || "-",
+            responsibleOfficer: officerName || "ไม่ได้มอบหมาย",
             receiptNumber: c.complaint_number ?? "-",
             referenceNumber: getReferenceNumber(it),
             workingDays: diffDaysFrom(c.created_at),
@@ -229,11 +242,6 @@ const StatusTrackingReport = () => {
 
         setAllComplaints(mapped);
         setFilteredComplaints(mapped);
-
-        const uniqueOfficers = [
-          ...new Set(mapped.map((i) => i.responsibleOfficer).filter((x) => x && x !== "-")),
-        ].sort();
-        setResponsibleOfficerOptions(uniqueOfficers.map((x) => ({ value: x, label: x })));
       } catch (e) {
         console.error("Error fetching my-related complaints:", e);
         setAllComplaints([]);
@@ -263,6 +271,25 @@ const StatusTrackingReport = () => {
         });
       } catch (e) {
         console.error("Error fetching departments:", e);
+      }
+    })();
+  }, []);
+
+  // โหลด dropdown เจ้าหน้าที่จาก API pending-tasks (เหมือนหน้าติดตามงานค้าง)
+  useEffect(() => {
+    (async () => {
+      try {
+        const items = await getPendingTasksReport({ all_officers: true });
+        const uniqueOfficers = [
+          ...new Set(
+            items.map((item) => item.assigned_officer_name).filter(Boolean)
+          ),
+        ]
+          .filter((name) => name && name.trim() !== "" && name !== "-")
+          .sort();
+        setResponsibleOfficerOptions(uniqueOfficers.map((name) => ({ value: name, label: name })));
+      } catch (e) {
+        console.error("Error fetching officer list:", e);
       }
     })();
   }, []);

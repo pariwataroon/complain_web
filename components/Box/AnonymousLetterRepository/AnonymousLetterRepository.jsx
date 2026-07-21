@@ -419,25 +419,25 @@ const AnonymousLetterRepository = () => {
         // ── 1) ลอง getDocumentStorageForCard ก่อน (เดิม) ──
         const res = await getDocumentStorageForCard({ skip: 0, limit: 10000 });
         let items = res?.res_data?.items ?? [];
+        console.log(`[คลังบัตรสนเทศ] Tier 1 (document-storage?page_type=card): ${items.length} รายการ`);
 
         // ── 2) ถ้าว่าง → fallback ไป GetComplaintsByPageTypeCard ──
         let usedFallbackApi = false;
         if (items.length === 0) {
-          console.log("[คลังบัตรสนเทศ] document-storage ว่าง ลอง fallback → by-page-type...");
+          console.log("[คลังบัตรสนเทศ] Tier 1 ว่าง ลอง fallback → Tier 2 (by-page-type)...");
           try {
             const cardRes = await GetComplaintsByPageTypeCard({
               pageType: "card",
               skip: 0,
               limit: 10000,
             });
+            console.log("[คลังบัตรสนเทศ] Tier 2 response:", cardRes?.res_code, "items:", cardRes?.res_data?.items?.length);
             if (cardRes?.res_code === "0000" && Array.isArray(cardRes?.res_data?.items)) {
-              // API นี้ return items ที่แต่ละ item มี .complaint property
               const complaints = cardRes.res_data.items
                 .map((entry) => entry?.complaint)
                 .filter(Boolean);
 
               if (complaints.length > 0) {
-                // ดึง enhanced complaints เพื่อเอา document_number (เลข นร)
                 let documentNumberMap = {};
                 try {
                   const enhancedRes = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
@@ -458,7 +458,6 @@ const AnonymousLetterRepository = () => {
                 setAllComplaints(transformedCardData);
                 setFilteredComplaints(transformedCardData);
 
-                // สกัด filter options จากข้อมูลจริง
                 const opts = extractFilterOptionsFromItems(complaints);
                 const allStatusTh = Array.from(
                   new Set([
@@ -467,7 +466,6 @@ const AnonymousLetterRepository = () => {
                   ])
                 ).map((v) => ({ value: v, label: v }));
 
-                // ดึง sub-types จาก API
                 let subTypeOpts = opts.subIssueTypeOptions;
                 try {
                   const subRes = await GetAllSubComplaintTypes();
@@ -497,7 +495,7 @@ const AnonymousLetterRepository = () => {
                 });
 
                 usedFallbackApi = true;
-                console.log(`[คลังบัตรสนเทศ] Fallback สำเร็จ: ${complaints.length} รายการ`);
+                console.log(`[คลังบัตรสนเทศ] Fallback สำเร็จ: ${complaints.length} รายการ (by-page-type)`);
               }
             }
           } catch (e) {
@@ -505,7 +503,103 @@ const AnonymousLetterRepository = () => {
           }
         }
 
-        // ── 3) ถ้าไม่ได้ใช้ fallback → ใช้ข้อมูลเดิมจาก document-storage ──
+        // ── 3) ถ้ายังว่าง → fallback ดึงข้อมูลทั้งหมดจาก Enhanced กรอง filing_type ──
+        if (!usedFallbackApi) {
+          console.log("[คลังบัตรสนเทศ] Tier 2 ยังว่าง ลอง fallback → Tier 3 (enhanced + client filter)...");
+          try {
+            const enhancedRes = await GetEnhancedComplaints({ skip: 0, limit: 10000 });
+            if (enhancedRes?.res_code === "0000" && Array.isArray(enhancedRes?.res_data?.items)) {
+              const allComplaintsData = enhancedRes.res_data.items;
+              console.log(`[คลังบัตรสนเทศ] Tier 3: ดึงข้อมูลทั้งหมด ${allComplaintsData.length} รายการ`);
+
+              // กรองเฉพาะ complaints ที่เป็นบัตรสนเทศ
+              // เช็คหลาย field เพื่อครอบคลุมทุก case ที่ backend อาจเก็บข้อมูลแตกต่างกัน
+              const cardComplaints = allComplaintsData.filter((c) => {
+                // 1) complaint_filing_type ตรงๆ บน complaint
+                const ft = c.complaint_filing_type;
+                if (ft === "anonymous") return true;
+
+                // 2) assignment.complaint_filing_type ใน nested object
+                const aft = c.assignment?.complaint_filing_type;
+                if (aft === "anonymous") return true;
+
+                // 3) page_type = "card" (สนับสนุน fix ใหม่ที่ส่ง page_type ไปด้วย)
+                if (c.page_type === "card") return true;
+                const apt = c.assignment?.page_type;
+                if (apt === "card") return true;
+
+                // 4) group_work flag (บางระบบใช้ตอนสร้าง)
+                if (c.group_work === true || c.group_work === "true") return true;
+
+                // 5) assignment_form.complaint_filing_type (nested อีกชั้น)
+                const afft = c.assignment_form?.complaint_filing_type;
+                if (afft === "anonymous") return true;
+
+                return false;
+              });
+
+              if (cardComplaints.length > 0) {
+                console.log(`[คลังบัตรสนเทศ] Fallback สำเร็จ: พบ ${cardComplaints.length} รายการจาก ${allComplaintsData.length} รายการทั้งหมด (กรอง filing_type=anonymous)`);
+
+                // สกัด document number map
+                const documentNumberMap = {};
+                allComplaintsData.forEach((c) => {
+                  const cId = c.id || c.complaint_id;
+                  const docNum = c.document_number || "";
+                  if (cId && docNum) documentNumberMap[cId] = docNum;
+                });
+
+                const transformedCardData = transformCardComplaintData(cardComplaints, documentNumberMap);
+                setAllComplaints(transformedCardData);
+                setFilteredComplaints(transformedCardData);
+
+                const opts = extractFilterOptionsFromItems(cardComplaints);
+                const allStatusTh = Array.from(
+                  new Set([
+                    ...Object.values(statusMapEnToTh),
+                    ...opts.statusOptions.map((o) => o.value),
+                  ])
+                ).map((v) => ({ value: v, label: v }));
+
+                let subTypeOpts = opts.subIssueTypeOptions;
+                try {
+                  const subRes = await GetAllSubComplaintTypes();
+                  if (subRes?.res_code === "0000" && Array.isArray(subRes?.res_data?.items)) {
+                    const allSubs = subRes.res_data.items;
+                    setAllApiSubTypes(allSubs);
+                    subTypeOpts = allSubs
+                      .map((item) => ({ value: item.name, label: item.name }))
+                      .sort((a, b) => a.label.localeCompare(b.label, "th"));
+                  }
+                  const typeRes = await GetAllSelectComplaintTypes();
+                  if (typeRes?.res_code === "0000" && Array.isArray(typeRes?.res_data)) {
+                    const map = {};
+                    typeRes.res_data.forEach(t => { map[t.name] = t.id; });
+                    setTypeNameToId(map);
+                  }
+                } catch (e) {
+                  console.error("Error fetching sub complaint types:", e);
+                }
+
+                setFilterOptions({
+                  issueTypeOptions: opts.issueTypeOptions,
+                  subIssueTypeOptions: subTypeOpts,
+                  agencyOptions: opts.agencyOptions,
+                  responsibleOfficerOptions: opts.responsibleOfficerOptions,
+                  statusOptions: allStatusTh,
+                });
+
+                usedFallbackApi = true;
+              } else {
+                console.log(`[คลังบัตรสนเทศ] ดึงข้อมูลทั้งหมด ${allComplaintsData.length} รายการ แต่ไม่พบ filing_type=anonymous`);
+              }
+            }
+          } catch (e) {
+            console.error("[คลังบัตรสนเทศ] Enhanced fallback error:", e);
+          }
+        }
+
+        // ── 4) ถ้าไม่ได้ใช้ fallback → ใช้ข้อมูลเดิมจาก document-storage ──
         if (!usedFallbackApi) {
           const transformedData = transformComplaintData(items);
           setAllComplaints(transformedData);

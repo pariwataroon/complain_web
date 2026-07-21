@@ -112,19 +112,69 @@ const buildSummaryRows = (inspectors, reportItems) => {
   });
 };
 
-const transformPendingData = (items, positions) => {
-  return items.map((item, idx) => {
-    const userName = item.signature_authority_user_name || "";
-    const userId = item.signature_authority_user_id;
-    const position = positions.get(userId) || "";
-    const displayName = position ? `${position}(${userName})` : userName;
+const transformPendingData = (items, positions, inspectors) => {
+  // รวมตัวเลขตาม inspector จาก API response
+  const byInspector = new Map();
+  for (const it of items || []) {
+    const uid = it.signature_authority_user_id;
+    if (!uid) continue;
+    if (!byInspector.has(uid)) {
+      byInspector.set(uid, {
+        pendingBetween: 0,
+        inProcessFY2568: 0,
+      });
+    }
+    const agg = byInspector.get(uid);
+    agg.pendingBetween += Number(it.pending_count || 0);
+    agg.inProcessFY2568 += Number(it.inprogress_count || 0);
+  }
+
+  // รวมรายชื่อผู้ตรวจจากสิทธิ์ + จากรายงาน
+  const inspectorMap = new Map(inspectors.map((i) => [i.id, i]));
+  for (const uid of byInspector.keys()) {
+    if (!inspectorMap.has(uid)) {
+      const repOne = items.find((it) => it.signature_authority_user_id === uid);
+      inspectorMap.set(uid, {
+        id: uid,
+        name: repOne?.signature_authority_user_name || "(ไม่พบในสิทธิ์)",
+        position: positions.get(uid) || "",
+      });
+    }
+  }
+
+  // เรียงลำดับเหมือน buildSummaryRows (ตามตำแหน่ง)
+  const POSITION_RANK = [
+    "หัวหน้าผู้ตรวจราชการกระทรวงการคลัง",
+    "ผู้ตรวจราชการกระทรวงการคลัง",
+    "ผู้อำนวยการสำนักตรวจสอบและประเมินผล",
+    "รักษาราชการแทน ผอ.สตป",
+  ];
+  const positionRank = (p) => {
+    if (!p) return POSITION_RANK.length;
+    const idx = POSITION_RANK.findIndex((r) => p.includes(r));
+    return idx === -1 ? POSITION_RANK.length : idx;
+  };
+  const sorted = Array.from(inspectorMap.values()).sort((a, b) => {
+    const ra = positionRank(a.position);
+    const rb = positionRank(b.position);
+    if (ra !== rb) return ra - rb;
+    return 0;
+  });
+
+  return sorted.map((ins, idx) => {
+    const agg = byInspector.get(ins.id);
+    const pending = agg?.pendingBetween ?? 0;
+    const inProcess = agg?.inProcessFY2568 ?? 0;
+    const displayName = ins.position
+      ? `${ins.position}(${ins.name})`
+      : ins.name;
 
     return {
       id: idx + 1,
       claimantName: displayName || "-",
-      pendingBetween: item.pending_count ?? 0,
-      inProcessFY2568: item.inprogress_count ?? 0,
-      total: (item.pending_count || 0) + (item.inprogress_count || 0),
+      pendingBetween: pending,
+      inProcessFY2568: inProcess,
+      total: pending + inProcess,
       receiveDate: "-",
     };
   });
@@ -185,9 +235,9 @@ const ResultsComplaintsComponents = () => {
       const summaryItems = summaryRes?.res_data?.items ?? summaryRes?.items ?? [];
       setFilteredSummary(buildSummaryRows(inspectors, summaryItems));
 
-      // Tab 2: pending — แปลงข้อมูลเลย
+      // Tab 2: pending — แปลงข้อมูล + รวม inspector ทุกคน (แม้มี 0 pending)
       const pendingItems = pendingRes?.res_data?.items ?? pendingRes?.items ?? [];
-      setFilteredPending(transformPendingData(pendingItems, positionsRef.current));
+      setFilteredPending(transformPendingData(pendingItems, positionsRef.current, inspectors));
     } catch (e) {
       console.error("Error fetching data:", e);
       setFilteredSummary([]);

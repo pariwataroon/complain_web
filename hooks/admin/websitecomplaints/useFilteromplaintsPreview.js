@@ -125,6 +125,10 @@ const useFilteromplaintsPreview = () => {
         };
         preparedData.complaint_filing_type =
           complaintFilingMap[step3Data.complaintFilingType] || "new";
+        // ✅ page_type: ส่ง "card" เฉพาะเมื่อเลือกบัตรสนเทศ (ไม่ส่งค่าอื่นเพื่อไม่กระทบ flow เดิม)
+        if (step3Data.complaintFilingType === "committee") {
+          preparedData.page_type = "card";
+        }
       } else {
         preparedData.complaint_filing_type = "new"; // default
       }

@@ -162,6 +162,8 @@ export default function useComplaintForm() {
         new_complaint: (tab31Data.complaint_filing_type || "new") === "new",
         add_more_complaint_to_ref: (tab31Data.complaint_filing_type || "new") === "additional",
         group_work: (tab31Data.complaint_filing_type || "new") === "committee",
+        // ✅ page_type: ส่ง "card" เฉพาะเมื่อเลือกบัตรสนเทศ (ไม่ส่งค่าอื่นเพื่อไม่กระทบ flow เดิม)
+        ...(tab31Data.complaint_filing_type === "committee" ? { page_type: "card" } : {}),
         
         // อ้างอิงเพิ่มเติม (สำหรับเรื่องเพิ่มเติมและคณะทำงาน)
         additional_reference_number1: tab31Data.additionalReference1 || "",
