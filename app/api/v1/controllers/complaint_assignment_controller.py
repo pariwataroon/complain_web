@@ -795,6 +795,8 @@ def get_assignment_form_data(db: Session, complaint_id: UUID) -> Dict:
             "new_complaint": complaint.new_complaint,
             "add_more_complaint_to_ref": complaint.add_more_complaint_to_ref,
             "group_work": complaint.group_work,
+            "page_type": complaint.page_type or "website",
+            "complaint_filing_type": complaint.complaint_filing_type.value if complaint.complaint_filing_type else "new",
             
             # Legal Reference
             "regulation_reference": complaint.regulation_reference,
@@ -1075,9 +1077,15 @@ def add_additional_complaint_reference(
             return {"success": False, "message": f"เลขอ้างอิง {reference_complaint.complaint_number} ถูกใช้แล้ว"}
         
         # บันทึกลง additional_reference_number
+        # ✅ บัตรสนเทศใช้ ref2 เท่านั้น — ข้าม ref1
         current_time = datetime.now()
-        
-        if not complaint.additional_reference_number1:
+
+        if complaint.group_work and not complaint.additional_reference_number2:
+            # บัตรสนเทศ: ใส่เลขอ้างอิงลง ref2 โดยตรง
+            complaint.additional_reference_number2 = reference_complaint.complaint_number
+            complaint.additional_reference_date2 = current_time
+            reference_field = "additional_reference_number2"
+        elif not complaint.additional_reference_number1:
             complaint.additional_reference_number1 = reference_complaint.complaint_number
             complaint.additional_reference_date1 = current_time
             reference_field = "additional_reference_number1"
@@ -1679,7 +1687,7 @@ def get_complaints_by_page_type_with_assignment_form(
                 "confirmation_status_text": received_date_info["confirmation_status_text"],
                 
                 # Page Type & Assignment Info
-                "page_type": page_type,
+                "page_type": complaint.page_type or "website",
                 "is_my_assignment": True,
                 
                 # 🔥 เพิ่ม metadata สำหรับ UI
