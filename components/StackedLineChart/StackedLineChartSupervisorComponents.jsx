@@ -1,17 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/router";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListFollowing from "@services/TableListFollowing/TableListFollowing";
-import { GetComplaintsbyPageTypeAssignmentForm } from "@pages/api/stackedLineChart/stackedLineChart";
-import {
-  formatComplaintReceiveDate,
-  formatComplainantName,
-  formatComplaintNumber,
-  formatAgencyName,
-  formatComplaintType,
-  formatComplaintSubject,
-  formatConfirmationStatus
-} from "@utils/Formats";
+import { GetMyRelatedComplaints } from "@pages/api/complaint/complaint";
 
 const breadcrumbItems = [
   {
@@ -26,161 +16,155 @@ const breadcrumbItems = [
   },
 ];
 
+const STATUS_LABELS = [
+  "รับเรื่อง",
+  "ส่งหน่วยงานที่เกี่ยวข้อง",
+  "กำลังดำเนินการ",
+  "ติดตามผล",
+  "มอบหมายเจ้าหน้าที่",
+  "แจ้งผลการพิจารณา",
+  "อยู่ระหว่างพิจารณา",
+  "ยุติเรื่องแล้ว",
+];
+
+const CLOSED_WORDS = ["ยุติเรื่อง", "ยุติเรื่องได้", "ปิดเรื่อง", "ปิดงาน"];
+
+const toThaiLabel = (code = "") => {
+  const s = String(code || "").toLowerCase();
+  switch (s) {
+    case "submitted": return "รับเรื่อง";
+    case "sent_to_external":
+    case "sent_to_agency":
+    case "forwarded": return "ส่งหน่วยงานที่เกี่ยวข้อง";
+    case "in_process":
+    case "in_progress": return "กำลังดำเนินการ";
+    case "tracking": return "ติดตามผล";
+    case "assigned": return "มอบหมายเจ้าหน้าที่";
+    case "reviewed": return "แจ้งผลการพิจารณา";
+    case "in_review": return "อยู่ระหว่างพิจารณา";
+    case "completed":
+    case "cancelled":
+    case "closed":
+    case "resolved":
+    case "done": return "ยุติเรื่องแล้ว";
+    default: return code || "-";
+  }
+};
+
+const closedByOutgoing = (history = []) =>
+  history.some(
+    (h) =>
+      (h?.type === "outgoing_report" || h?.status === "outgoing_report") &&
+      (h?.ext?.is_closed_by_consideration === true ||
+        CLOSED_WORDS.includes(String(h?.ext?.consideration_result || "")))
+  );
+
+const diffDaysFrom = (startISO) => {
+  try { return Math.max(0, Math.ceil((new Date() - new Date(startISO)) / 86400000)); } catch { return 0; }
+};
+
 const StackedLineChartSupervisorComponents = () => {
   const [allComplaints, setAllComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
   const [statusOptions, setStatusOptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const router = useRouter();
 
-  // ฟังก์ชันแปลงข้อมูล API เป็นข้อมูลสำหรับตาราง
-  const transformComplaintData = (apiData) => {
-    if (!apiData?.items) return [];
+  const transformComplaintData = (items) => {
+    return items.map((it, idx) => {
+      const c = it?.complaint ?? {};
+      const latest = it?.latest ?? {};
+      const history = Array.isArray(it?.history) ? it.history : [];
 
-    return apiData.items.map((item, index) => {
-      const complaint = item.complaint;
-      const claimantName = formatComplainantName(
-        complaint.complainant,
-        complaint.claimant_name
-      );
+      const claimantName = c.subject || "-";
 
-      const agencyName = formatAgencyName(complaint.assigned_to);
-      const complaintNumber = formatComplaintNumber(complaint.complaint_number);
-      const complaintType = formatComplaintType(complaint.complaint_type);
-      const complaintSubject = formatComplaintSubject(complaint.subject, 80);
-      const receiveDate = formatComplaintReceiveDate(complaint.received_date_display);
-      const status = formatConfirmationStatus(
-        complaint.confirmation_status || complaint.status,
-        complaint.confirmation_status_text
-      );
+      let deptName = "-";
+      if (latest?.sent?.department_name) {
+        deptName = latest.sent.department_name;
+      } else {
+        const sentHistory = history.find(
+          (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
+        );
+        if (sentHistory?.department_name) deptName = sentHistory.department_name;
+        else {
+          const anyDept = history.find((h) => h.department_name);
+          if (anyDept) deptName = anyDept.department_name;
+        }
+      }
 
-      const transformedItem = {
-        id: complaint.id,
+      const raw = String(c.status || "").toLowerCase();
+      const isClosed = closedByOutgoing(history);
+      const finalCode = isClosed ? "completed" : raw;
+      const statusLabel = toThaiLabel(finalCode);
+
+      return {
+        id: c.id ?? `temp_${idx + 1}`,
         claimantName,
-        agency: agencyName,
-        ssoNo: complaintNumber,
-        issue: complaintSubject,
-        issueType: complaintType,
-        receiveDate,
-        status,
-        originalStatus: complaint.confirmation_status || complaint.status,
-        rawData: complaint
+        agency: deptName,
+        ssoNo: c.complaint_number ?? "-",
+        issue: c.subject || "-",
+        issueType: c.complaint_type || "-",
+        receiveDate: c.created_at
+          ? new Date(c.created_at).toLocaleDateString("th-TH", {
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            })
+          : "-",
+        status: statusLabel,
+        workingDays: diffDaysFrom(c.created_at),
+        rawData: it,
       };
-      return transformedItem;
     });
   };
 
-  const generateStatusOptions = (apiData) => {
-    const legend = apiData?.legend?.confirmation_status;
+  const fetchComplaints = async () => {
+    setLoading(true);
+    setError(null);
 
-    if (legend) {
-      const options = Object.entries(legend).map(([key, value]) => ({
-        value: value,
-        label: value
-      }));
+    try {
+      const res = await GetMyRelatedComplaints({ skip: 0, limit: 10000 });
+      const items = res?.res_data?.items ?? [];
 
-      const result = [
-        ...options
-      ];
+      const transformedData = transformComplaintData(items);
+      const generatedStatusOptions = STATUS_LABELS.map((l) => ({ value: l, label: l }));
 
-
-      return result;
+      setAllComplaints(transformedData);
+      setFilteredComplaints(transformedData);
+      setStatusOptions(generatedStatusOptions);
+    } catch (err) {
+      setError(err.message || "ไม่สามารถดึงข้อมูลได้");
+      setAllComplaints([]);
+      setFilteredComplaints([]);
+      setStatusOptions([]);
+    } finally {
+      setLoading(false);
     }
-
-    // fallback: สร้างจากข้อมูลที่มีในตาราง
-    const actualStatuses = [...new Set(
-      apiData?.items?.map(item =>
-        formatConfirmationStatus(
-          item.complaint.confirmation_status || item.complaint.status,
-          item.complaint.confirmation_status_text
-        )
-      ).filter(Boolean)
-    )];
-
-    const options = actualStatuses.map(status => ({
-      value: status,
-      label: status
-    }));
-
-    return [
-      ...options
-    ];
   };
 
-  // ดึงข้อมูลจาก API
   useEffect(() => {
-    const fetchComplaints = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-
-        const response = await GetComplaintsbyPageTypeAssignmentForm({
-          page: 1,
-          page_size: 100,
-          page_type: "website",
-        });
-
-        if (response?.res_code === "0000") {
-          const apiData = response.res_data;
-          const transformedData = transformComplaintData(apiData);
-          const generatedStatusOptions = generateStatusOptions(apiData);
-          setAllComplaints(transformedData);
-          setFilteredComplaints(transformedData);
-          setStatusOptions(generatedStatusOptions);
-
-        } else {
-          throw new Error(response?.res_message || "ไม่สามารถดึงข้อมูลได้");
-        }
-      } catch (error) {
-       
-        setError(error.message);
-        setAllComplaints([]);
-        setFilteredComplaints([]);
-        setStatusOptions([{ value: "", label: "— ทุกสถานะ —" }]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchComplaints();
   }, []);
 
-  // ฟังก์ชันค้นหาที่ปรับปรุงแล้ว
   const handleSearch = ({ claimantName, agency, ssoNo, status }) => {
-    
     const result = allComplaints.filter((item) => {
       if (claimantName && claimantName.trim() !== "") {
         const searchTerm = claimantName.toLowerCase().trim();
-        if (!item.claimantName.toLowerCase().includes(searchTerm)) {
-          return false;
-        }
+        if (!item.claimantName?.toLowerCase().includes(searchTerm)) return false;
       }
-
       if (agency && agency.trim() !== "") {
         const searchTerm = agency.toLowerCase().trim();
-        if (!item.agency.toLowerCase().includes(searchTerm)) {
-          return false;
-        }
+        if (!item.agency?.toLowerCase().includes(searchTerm)) return false;
       }
-
       if (ssoNo && ssoNo.trim() !== "") {
         const searchTerm = ssoNo.toLowerCase().trim();
-        if (!item.ssoNo.toLowerCase().includes(searchTerm)) {
-          return false;
-        }
+        if (!item.ssoNo?.toLowerCase().includes(searchTerm)) return false;
       }
-
       if (status && status !== "") {
-        if (item.status !== status) {
-          return false;
-        }
+        if (item.status !== status) return false;
       }
-
       return true;
     });
-
     setFilteredComplaints(result);
   };
 
@@ -239,9 +223,6 @@ const StackedLineChartSupervisorComponents = () => {
           <div style={{ fontSize: '14px', marginBottom: '10px', maxWidth: '400px' }}>
             {error}
           </div>
-          <div style={{ fontSize: '12px', color: '#666', marginBottom: '20px' }}>
-            User: vampirebeam | Time: 2025-06-16 14:34:45
-          </div>
           <button
             style={{
               padding: '10px 20px',
@@ -252,6 +233,7 @@ const StackedLineChartSupervisorComponents = () => {
               cursor: 'pointer',
               fontSize: '14px'
             }}
+            onClick={fetchComplaints}
           >
             ลองใหม่
           </button>

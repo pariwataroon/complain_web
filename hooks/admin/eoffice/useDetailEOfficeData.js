@@ -87,7 +87,7 @@ const useDetailEOfficeData = ({ caseDetail, attachments, operatings }) => {
     }
 
     // step1: ผู้ร้อง — EOffice ใช้ complainant.name (ชื่อ-นามสกุล เต็ม)
-    const complainantName = complainant.name || caseDetail.from_org || "";
+    const complainantName = complainant.org || caseDetail.from_org || "";
     const step1 = {
       general: {
         general: {

@@ -296,15 +296,16 @@ const GetComplaintsByPageType = async ({
 };
 
 const GetComplaintsByPageTypeCard = async ({
-  pageType = "card",  // Set the default to "card"
+  pageType = "card",
   skip = 0,
   limit = 10000,
+  myAssignmentsOnly = true,
 }) => {
   try {
     const response = await axiosInstance.get(
       `/complaints-assignment/by-page-type`,
       {
-        params: { page_type: pageType, skip, limit, },
+        params: { page_type: pageType, skip, limit, my_assignments_only: myAssignmentsOnly },
       }
     );
     return response?.data;

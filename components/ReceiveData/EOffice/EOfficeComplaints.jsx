@@ -24,10 +24,12 @@ const statusTypeOptions = [
 // ── Map EOffice item → table row ──
 const mapItem = (item) => ({
   case_id: item.id,
+  ops_doc_no: item.opsDocNo || "-",
+  ops_received_date: item.opsReceivedDate || "-",
   case_code: item.content_no || `${item.content_year}/${item.id}` || `${item.id}`,
   book_no: item.book_no || item.content_no || "-",
   book_date: item.book_date || "-",
-  complainant_name: item.owner_name || item.from_org || "-",
+  complainant_name: item.from_org || "-",
   subject: item.subject || item.title || item.content_title || item.description || "-",
   type_name: item.folder_id === 271 ? "หนังสือเข้า" : item.folder_id === 272 ? "หนังสือออก" : "-",
   status: item.finish_flag === 1 ? "C" : "P",

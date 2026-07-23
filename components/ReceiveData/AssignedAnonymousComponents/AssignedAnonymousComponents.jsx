@@ -115,10 +115,25 @@ const AssignedAnonymousComponents = () => {
   useEffect(() => {
     const fetchComplaints = async () => {
       try {
+        // เช็คว่าเป็น admin ไหม — admin เห็นทั้งหมด, เจ้าหน้าที่เห็นของตัวเอง
+        let isAdmin = false;
+        try {
+          const infoCookie = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('info='));
+          if (infoCookie) {
+            const info = JSON.parse(decodeURIComponent(infoCookie.split('=')[1]));
+            isAdmin = Array.isArray(info.roles) && info.roles.includes('admin');
+          }
+        } catch (e) {
+          console.warn('[AssignedAnonymous] Cannot parse role from cookie:', e);
+        }
+
         const response = await GetComplaintsByPageTypeCard({
           pageType: "card",
           skip: 0,
           limit: 10000,
+          myAssignmentsOnly: !isAdmin,
         });
 
         if (response?.res_code === "0000" && Array.isArray(response?.res_data?.items)) {
