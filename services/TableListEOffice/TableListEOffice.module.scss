@@ -166,11 +166,12 @@
 .tableWrapper thead th {
   font-weight: 700 !important;
   color: #1e3a8a !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   letter-spacing: 0.2px;
   border-bottom: 2px solid #c7d2fe !important;
-  padding: 14px 12px !important;
+  padding: 10px 6px !important;
   white-space: nowrap;
+  text-align: center;
 }
 
 .tableWrapper tbody tr {
@@ -186,9 +187,9 @@
 }
 
 .tableWrapper tbody td {
-  font-size: 13.5px !important;
+  font-size: 13px !important;
   color: #374151 !important;
-  padding: 12px 12px !important;
+  padding: 8px 6px !important;
   border-bottom: 1px solid #f0f2f8 !important;
 }
 

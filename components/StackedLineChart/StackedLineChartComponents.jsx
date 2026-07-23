@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListFollowing from "@services/TableListFollowing/TableListFollowing";
-import { GetMyRelatedComplaints } from "@pages/api/complaint/complaint";
-import { formatComplainantName } from "@utils/Formats";
+import { GetMyRelatedComplaints, GetComplaintByID } from "@pages/api/complaint/complaint";
 
 const breadcrumbItems = [
   {
@@ -17,51 +16,25 @@ const breadcrumbItems = [
   },
 ];
 
-const STATUS_LABELS = [
-  "รับเรื่อง",
-  "ส่งหน่วยงานที่เกี่ยวข้อง",
-  "กำลังดำเนินการ",
-  "ติดตามผล",
-  "มอบหมายเจ้าหน้าที่",
-  "แจ้งผลการพิจารณา",
-  "อยู่ระหว่างพิจารณา",
-  "ยุติเรื่องแล้ว",
-];
-
-const CLOSED_WORDS = ["ยุติเรื่อง", "ยุติเรื่องได้", "ปิดเรื่อง", "ปิดงาน"];
-
-const toThaiLabel = (code = "") => {
-  const s = String(code || "").toLowerCase();
-  switch (s) {
-    case "submitted": return "รับเรื่อง";
-    case "sent_to_external":
-    case "sent_to_agency":
-    case "forwarded": return "ส่งหน่วยงานที่เกี่ยวข้อง";
-    case "in_process":
-    case "in_progress": return "กำลังดำเนินการ";
-    case "tracking": return "ติดตามผล";
-    case "assigned": return "มอบหมายเจ้าหน้าที่";
-    case "reviewed": return "แจ้งผลการพิจารณา";
-    case "in_review": return "อยู่ระหว่างพิจารณา";
-    case "completed":
-    case "cancelled":
-    case "closed":
-    case "resolved":
-    case "done": return "ยุติเรื่องแล้ว";
-    default: return code || "-";
-  }
+/** ดึงชื่อผู้ร้องจาก step1.general ของ GetComplaintByID */
+const extractComplainantName = (raw) => {
+  const general = raw?.step1?.general;
+  if (!general || typeof general !== "object") return null;
+  return general.fullName ?? general.full_name ?? general.name ?? null;
 };
 
-const closedByOutgoing = (history = []) =>
-  history.some(
-    (h) =>
-      (h?.type === "outgoing_report" || h?.status === "outgoing_report") &&
-      (h?.ext?.is_closed_by_consideration === true ||
-        CLOSED_WORDS.includes(String(h?.ext?.consideration_result || "")))
-  );
-
-const diffDaysFrom = (startISO) => {
-  try { return Math.max(0, Math.ceil((new Date() - new Date(startISO)) / 86400000)); } catch { return 0; }
+/** แปลงวันที่ ISO → ภาษาไทย */
+const formatDate = (iso) => {
+  if (!iso) return "-";
+  try {
+    return new Date(iso).toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+  } catch {
+    return "-";
+  }
 };
 
 const StackedLineChartComponents = () => {
@@ -71,67 +44,69 @@ const StackedLineChartComponents = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const transformComplaintData = (items) => {
-    return items.map((it, idx) => {
-      const c = it?.complaint ?? {};
-      const latest = it?.latest ?? {};
-      const history = Array.isArray(it?.history) ? it.history : [];
-
-      // ชื่อผู้ร้อง — ใช้ complainant object หรือ claimant_name string
-      const claimantName = formatComplainantName(c.complainant, c.claimant_name || c.complainant_name);
-
-      // หน่วยงาน
-      let deptName = "-";
-      if (latest?.sent?.department_name) {
-        deptName = latest.sent.department_name;
-      } else {
-        const sentHistory = history.find(
-          (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
-        );
-        if (sentHistory?.department_name) deptName = sentHistory.department_name;
-        else {
-          const anyDept = history.find((h) => h.department_name);
-          if (anyDept) deptName = anyDept.department_name;
-        }
-      }
-
-      // สถานะ
-      const raw = String(c.status || "").toLowerCase();
-      const isClosed = closedByOutgoing(history);
-      const finalCode = isClosed ? "completed" : raw;
-      const statusLabel = toThaiLabel(finalCode);
-
-      return {
-        id: c.id ?? `temp_${idx + 1}`,
-        claimantName,
-        agency: deptName,
-        ssoNo: c.complaint_number ?? "-",
-        issue: c.subject || "-",
-        issueType: c.complaint_type || "-",
-        receiveDate: c.created_at
-          ? new Date(c.created_at).toLocaleDateString("th-TH", {
-              year: "numeric",
-              month: "2-digit",
-              day: "2-digit",
-            })
-          : "-",
-        status: statusLabel,
-        workingDays: diffDaysFrom(c.created_at),
-        rawData: it,
-      };
-    });
-  };
-
   const fetchComplaints = async () => {
     setLoading(true);
     setError(null);
 
     try {
+      // 1) ดึงรายการทั้งหมดจาก my-related
       const res = await GetMyRelatedComplaints({ skip: 0, limit: 10000 });
       const items = res?.res_data?.items ?? [];
 
-      const transformedData = transformComplaintData(items);
-      const generatedStatusOptions = STATUS_LABELS.map((l) => ({ value: l, label: l }));
+      // 2) ดึงชื่อผู้ร้องจาก GetComplaintByID แบบ parallel (ข้อมูลน้อย ไม่เป็นห่วง)
+      const detailPromises = items.map(async (it) => {
+        const id = it?.complaint?.id;
+        if (!id) return null;
+        try {
+          const detail = await GetComplaintByID(id);
+          return { id, name: extractComplainantName(detail?.res_data ?? detail?.data ?? detail) };
+        } catch {
+          return { id, name: null };
+        }
+      });
+      const details = await Promise.all(detailPromises);
+      const nameMap = new Map(details.filter(Boolean).map((d) => [d.id, d.name]));
+
+      // 3) รวบรวม status ที่แท้จริงจาก API สำหรับ dropdown
+      const actualStatuses = [...new Set(
+        items.map((it) => it?.complaint?.status_label).filter(Boolean)
+      )];
+      const generatedStatusOptions = actualStatuses.map((s) => ({ value: s, label: s }));
+
+      // 4) map ข้อมูลเข้าตาราง
+      const transformedData = items.map((it, idx) => {
+        const c = it?.complaint ?? {};
+        const latest = it?.latest ?? {};
+        const history = Array.isArray(it?.history) ? it.history : [];
+
+        // ชื่อผู้ร้อง — จาก GetComplaintByID ถ้ามี ไม่งั้นใช้ subject
+        const complainantName = nameMap.get(c.id) || c.subject || "-";
+
+        // หน่วยงาน — จาก latest.sent หรือ assigned_to
+        let deptName = "-";
+        if (latest?.sent?.department_name) {
+          deptName = latest.sent.department_name;
+        } else if (c.assigned_to) {
+          deptName = c.assigned_to;
+        } else {
+          const sentHistory = history.find(
+            (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
+          );
+          if (sentHistory?.department_name) deptName = sentHistory.department_name;
+        }
+
+        return {
+          id: c.id ?? `temp_${idx + 1}`,
+          claimantName: complainantName,
+          agency: deptName,
+          ssoNo: c.complaint_number ?? "-",
+          issue: c.subject || "-",
+          issueType: c.complaint_type || "-",
+          receiveDate: formatDate(c.created_at),
+          status: c.status_label || c.status || "-",
+          rawData: it,
+        };
+      });
 
       setAllComplaints(transformedData);
       setFilteredComplaints(transformedData);
