@@ -771,7 +771,7 @@ def get_document_storage_detail(db: Session, complaint_id: UUID) -> Dict:
             complaint_subtype_name = getattr(cst, "name", "") if cst else ""
 
         if getattr(complaint, "group_work", False):
-            complaint_category = "รับเรื่องจากคณะบัตรสนเท่ห์"
+            complaint_category = "รับเรื่องจากคณะบัตรสนเทศ"
         elif getattr(complaint, "add_more_complaint_to_ref", False):
             complaint_category = "เรื่องร้องเรียนเพิ่มเติม"
         else:
@@ -1171,12 +1171,12 @@ def get_document_storage_by_channel(
                 )
             ).all()
         elif normalized_page_type == "card":
-            # ช่องทางบัตรสนเท่ห์
+            # ช่องทางบัตรสนเทศ
             target_channels = db.query(ComplaintChannel).filter(
                 ComplaintChannel.is_active == True,
                 or_(
-                    ComplaintChannel.name.contains("บัตรสนเท่ห์"),
-                    ComplaintChannel.description.contains("บัตรสนเท่ห์")
+                    ComplaintChannel.name.contains("บัตรสนเทศ"),
+                    ComplaintChannel.description.contains("บัตรสนเทศ")
                 )
             ).all()
         else:
@@ -1188,7 +1188,8 @@ def get_document_storage_by_channel(
         # ดึง channel IDs
         channel_ids = [channel.id for channel in target_channels]
 
-        if not channel_ids:
+        # ⚠️ ไม่ early return เมื่อ channel_ids ว่างและเป็น card — เพราะยังมี page_type == "card" filter เป็น fallback
+        if not channel_ids and normalized_page_type != "card":
             # ดึง departments แม้ว่าจะไม่มี channels
             departments_list = db.query(Department).filter(
                 Department.is_active == True
@@ -1547,7 +1548,7 @@ def get_document_storage_by_channel(
             # ประเภทการร้องเรียน
             complaint_category = "เรื่องร้องเรียนใหม่"  # default
             if complaint.group_work:
-                complaint_category = "รับเรื่องจากคณะบัตรสนเท่ห์"
+                complaint_category = "รับเรื่องจากคณะบัตรสนเทศ"
             elif complaint.add_more_complaint_to_ref:
                 complaint_category = "เรื่องร้องเรียนเพิ่มเติม"
             elif complaint.new_complaint:
@@ -1778,8 +1779,8 @@ def get_document_storage_statistics(
             target_channels = db.query(ComplaintChannel).filter(
                 ComplaintChannel.is_active == True,
                 or_(
-                    ComplaintChannel.name.contains("บัตรสนเท่ห์"),
-                    ComplaintChannel.description.contains("บัตรสนเท่ห์")
+                    ComplaintChannel.name.contains("บัตรสนเทศ"),
+                    ComplaintChannel.description.contains("บัตรสนเทศ")
                 )
             ).all()
         else:
@@ -1789,7 +1790,7 @@ def get_document_storage_statistics(
         
         channel_ids = [channel.id for channel in target_channels]
 
-        if not channel_ids:
+        if not channel_ids and page_type != "card":
             return {"total": 0, "by_status": {}, "by_urgency": {}, "by_month": {}}
 
         # ✅ กรองรวม page_type column สำหรับ card dashboard

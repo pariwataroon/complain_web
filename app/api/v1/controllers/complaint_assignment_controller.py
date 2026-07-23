@@ -1465,8 +1465,8 @@ def get_complaints_by_page_type_with_assignment_form(
             target_channels = db.query(ComplaintChannel).filter(
                 ComplaintChannel.is_active == True,
                 or_(
-                    ComplaintChannel.name.contains("บัตรสนเท่ห์"),
-                    ComplaintChannel.description.contains("บัตรสนเท่ห์"),
+                    ComplaintChannel.name.contains("บัตรสนเทศ"),
+                    ComplaintChannel.description.contains("บัตรสนเทศ"),
                     ComplaintChannel.name.contains("การ์ด")
                 )
             ).all()
@@ -1478,7 +1478,8 @@ def get_complaints_by_page_type_with_assignment_form(
         # ดึง channel IDs
         channel_ids = [channel.id for channel in target_channels]
         
-        if not channel_ids:
+        # ⚠️ ไม่ early return เมื่อ channel_ids ว่างและเป็น card — เพราะยังมี page_type == \"card\" filter เป็น fallback
+        if not channel_ids and normalized_page_type != "card":
             return {
                 "items": [],
                 "total": 0,
