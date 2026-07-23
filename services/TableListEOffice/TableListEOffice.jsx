@@ -37,16 +37,16 @@ import styles from "./TableListEOffice.module.scss";
 
 // ── คอลัมน์ของตาราง ──
 const columns = [
-  { name: "ops_doc_no", label: "เลขที่ สป.กค.", width: 100, priority: 2 },
-  { name: "ops_received_date", label: "วันที่", width: 100, priority: 2 },
-  { name: "book_no", label: "เลขที่หนังสือ", width: 100, priority: 2 },
-  { name: "book_date", label: "วันที่หนังสือ", width: 100, priority: 2 },
-  { name: "complainant_name", label: "ชื่อผู้ร้อง", width: 120, priority: 2 },
-  { name: "type_name", label: "ประเภทเรื่อง", width: 90, priority: 3 },
-  { name: "subject", label: "ชื่อเรื่อง", width: undefined, priority: 4 },
-  { name: "priority", label: "ความเร่งด่วน", width: 80, priority: 4 },
-  { name: "date_received", label: "วันที่รับเรื่อง", width: 100, priority: 3 },
-  { name: "status_name", label: "สถานะ", width: 90, priority: 2 },
+  { name: "ops_doc_no", label: "เลขที่ สป.กค.", width: 130, priority: 2 },
+  { name: "ops_received_date", label: "วันที่", width: 130, priority: 2 },
+  { name: "book_no", label: "เลขที่หนังสือ", width: 130, priority: 2 },
+  { name: "book_date", label: "วันที่หนังสือ", width: 140, priority: 2 },
+  { name: "complainant_name", label: "ชื่อผู้ร้อง", width: 180, priority: 2 },
+  { name: "type_name", label: "ประเภทเรื่อง", width: 120, priority: 3 },
+  { name: "subject", label: "ชื่อเรื่อง", width: 300, priority: 4 },
+  { name: "priority", label: "ความเร่งด่วน", width: 100, priority: 4 },
+  { name: "date_received", label: "วันที่รับเรื่อง", width: 130, priority: 3 },
+  { name: "status_name", label: "สถานะ", width: 120, priority: 2 },
 ];
 
 const TableListEOffice = ({
@@ -337,7 +337,6 @@ const TableListEOffice = ({
                           key={col.name}
                           sx={{
                             ...(col.width ? { width: col.width } : {}),
-                            ...(col.name === "subject" ? { width: "auto" } : {}),
                           }}
                         >
                           {col.label}

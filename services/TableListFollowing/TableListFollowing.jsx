@@ -259,7 +259,7 @@ const handleExportExcel = () => {
       }}
         >
           <InputText
-          label="ชื่อผู้ร้อง"
+          label="ชื่อเรื่อง"
           value={filters.claimantName}
           onChange={handleChange("claimantName")}
           placeholder="ค้นหาชื่อผู้ร้อง"
@@ -371,7 +371,7 @@ const handleExportExcel = () => {
                   textOverflow: "ellipsis",
                 }}
               >
-                ชื่อสกุลผู้ร้อง
+                ชื่อเรื่อง
               </TableCell>
               <TableCell
                 sx={{

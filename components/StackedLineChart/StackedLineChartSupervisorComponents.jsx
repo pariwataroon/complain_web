@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListFollowing from "@services/TableListFollowing/TableListFollowing";
-import { GetMyRelatedComplaints, GetComplaintByID } from "@pages/api/complaint/complaint";
+import { GetMyRelatedComplaints } from "@pages/api/complaint/complaint";
 
 const breadcrumbItems = [
   {
@@ -15,13 +15,6 @@ const breadcrumbItems = [
     ),
   },
 ];
-
-/** ดึงชื่อผู้ร้องจาก step1.general ของ GetComplaintByID */
-const extractComplainantName = (raw) => {
-  const general = raw?.step1?.general;
-  if (!general || typeof general !== "object") return null;
-  return general.fullName ?? general.full_name ?? general.name ?? null;
-};
 
 /** แปลงวันที่ ISO → ภาษาไทย */
 const formatDate = (iso) => {
@@ -49,38 +42,20 @@ const StackedLineChartSupervisorComponents = () => {
     setError(null);
 
     try {
-      // 1) ดึงรายการทั้งหมดจาก my-related
       const res = await GetMyRelatedComplaints({ skip: 0, limit: 10000 });
       const items = res?.res_data?.items ?? [];
 
-      // 2) ดึงชื่อผู้ร้องจาก GetComplaintByID แบบ parallel
-      const detailPromises = items.map(async (it) => {
-        const id = it?.complaint?.id;
-        if (!id) return null;
-        try {
-          const detail = await GetComplaintByID(id);
-          return { id, name: extractComplainantName(detail?.res_data ?? detail?.data ?? detail) };
-        } catch {
-          return { id, name: null };
-        }
-      });
-      const details = await Promise.all(detailPromises);
-      const nameMap = new Map(details.filter(Boolean).map((d) => [d.id, d.name]));
-
-      // 3) รวบรวม status ที่แท้จริงจาก API
       const actualStatuses = [...new Set(
         items.map((it) => it?.complaint?.status_label).filter(Boolean)
       )];
       const generatedStatusOptions = actualStatuses.map((s) => ({ value: s, label: s }));
 
-      // 4) map ข้อมูลเข้าตาราง
       const transformedData = items.map((it, idx) => {
         const c = it?.complaint ?? {};
         const latest = it?.latest ?? {};
         const history = Array.isArray(it?.history) ? it.history : [];
 
-        // ชื่อผู้ร้อง — จาก GetComplaintByID ถ้ามี ไม่งั้นใช้ subject
-        const complainantName = nameMap.get(c.id) || c.subject || "-";
+        const complainantName = c.subject || "-";
 
         // หน่วยงาน
         let deptName = "-";
