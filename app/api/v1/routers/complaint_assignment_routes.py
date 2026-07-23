@@ -277,6 +277,7 @@ async def get_complaints_by_page_type(
     urgency: Optional[str] = Query(None, description="ความเร่งด่วน"),
     search: Optional[str] = Query(None, description="คำค้นหา"),
     complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
+    my_assignments_only: bool = Query(True, description="เฉพาะงานของตัวเอง (admin ส่ง false เพื่อดูทั้งหมด)"),
     current_user: str = Depends(can_read("dashboard")),
     db: Session = Depends(get_db)
 ):
@@ -298,7 +299,8 @@ async def get_complaints_by_page_type(
             location=location,
             urgency=urgency,
             search=search,
-            complainant_name=complainant_name
+            complainant_name=complainant_name,
+            my_assignments_only=my_assignments_only
         )
         
         if "error" in result:

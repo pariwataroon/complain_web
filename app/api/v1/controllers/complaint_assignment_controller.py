@@ -1440,9 +1440,10 @@ def get_complaints_by_page_type_with_assignment_form(
     location: Optional[str] = None,
     urgency: Optional[str] = None,
     search: Optional[str] = None,
-    complainant_name: Optional[str] = None
+    complainant_name: Optional[str] = None,
+    my_assignments_only: bool = True
 ) -> Dict:
-    """ดึงข้อมูลเรื่องร้องเรียนแบ่งตาม page_type ในรูปแบบ assignment form - เฉพาะงานที่ได้รับมอบหมาย"""
+    """ดึงข้อมูลเรื่องร้องเรียนแบ่งตาม page_type ในรูปแบบ assignment form - เฉพาะงานที่ได้รับมอบหมาย (admin สามารถดูทั้งหมดได้)"""
     try:
         from models.comp_complaint_types import ComplaintChannel, ComplaintSubType
         from sqlalchemy import and_, or_, func
@@ -1490,26 +1491,26 @@ def get_complaints_by_page_type_with_assignment_form(
                 },
                 "channels": [],
                 "page_type": effective_page_type,
-                "my_assignments": True
+                "my_assignments": my_assignments_only
             }
 
         # ✅ กรองรวมทั้ง page_type column (จากคัดกรอง) และ channel (จากช่องทางเดิม)
         if normalized_page_type == "card":
+            card_filter = and_(
+                or_(
+                    Complaint.page_type == "card",
+                    Complaint.complaint_channel_id.in_(channel_ids)
+                ),
+            )
             query = db.query(Complaint).filter(
-                and_(
-                    or_(
-                        Complaint.page_type == "card",
-                        Complaint.complaint_channel_id.in_(channel_ids)
-                    ),
-                    Complaint.assigned_officer_id == current_user_id
-                )
+                and_(card_filter, Complaint.assigned_officer_id == current_user_id)
+                if my_assignments_only else card_filter
             )
         else:
+            website_filter = Complaint.complaint_channel_id.in_(channel_ids)
             query = db.query(Complaint).filter(
-                and_(
-                    Complaint.complaint_channel_id.in_(channel_ids),
-                    Complaint.assigned_officer_id == current_user_id
-                )
+                and_(website_filter, Complaint.assigned_officer_id == current_user_id)
+                if my_assignments_only else website_filter
             )
         
         # Apply filters (เหมือนเดิม)
@@ -1721,7 +1722,7 @@ def get_complaints_by_page_type_with_assignment_form(
                 } for channel in target_channels
             ],
         "page_type": effective_page_type,
-            "my_assignments": True,
+            "my_assignments": my_assignments_only,
             "assigned_user_id": str(current_user_id),
             
             # 🔥 เพิ่ม legend สำหรับการแสดงผล
@@ -1750,7 +1751,7 @@ def get_complaints_by_page_type_with_assignment_form(
             },
             "channels": [],
             "page_type": page_type,
-            "my_assignments": True,
+            "my_assignments": my_assignments_only,
             "assigned_user_id": str(current_user_id),
             "error": str(e)
         }
