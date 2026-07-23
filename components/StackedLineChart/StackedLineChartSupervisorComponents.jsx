@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListFollowing from "@services/TableListFollowing/TableListFollowing";
 import { GetMyRelatedComplaints } from "@pages/api/complaint/complaint";
+import { formatComplainantName } from "@utils/Formats";
 
 const breadcrumbItems = [
   {
@@ -76,7 +77,7 @@ const StackedLineChartSupervisorComponents = () => {
       const latest = it?.latest ?? {};
       const history = Array.isArray(it?.history) ? it.history : [];
 
-      const claimantName = c.subject || "-";
+      const claimantName = formatComplainantName(c.complainant, c.claimant_name || c.complainant_name);
 
       let deptName = "-";
       if (latest?.sent?.department_name) {

@@ -1,11 +1,11 @@
 {
   "env": {
-    "ANTHROPIC_AUTH_TOKEN": "tp-sr2aijtywhtg2cpz9ecktjy1uogrmsz06jk6962j37f8no1o",
-    "ANTHROPIC_API_KEY": "tp-sr2aijtywhtg2cpz9ecktjy1uogrmsz06jk6962j37f8no1o",
-    "ANTHROPIC_BASE_URL": "https://token-plan-sgp.xiaomimimo.com/anthropic",
-    "ANTHROPIC_DEFAULT_OPUS_MODEL": "mimo-v2.5-pro",
-    "ANTHROPIC_DEFAULT_SONNET_MODEL": "mimo-v2.5-pro",
-    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "mimo-v2.5-pro",
+    "ANTHROPIC_AUTH_TOKEN": "f2b7371cc08d43d09bb7ea8d05a1ddd7.FgTE0Y66L8hgp2sZ",
+    "ANTHROPIC_API_KEY": "f2b7371cc08d43d09bb7ea8d05a1ddd7.FgTE0Y66L8hgp2sZ",
+    "ANTHROPIC_BASE_URL": "https://api.z.ai/api/anthropic",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "GLM-5-turbo",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "GLM-5-turbo",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "GLM-5-turbo",
     "API_TIMEOUT_MS": "300000"
   },
   "permissions": {
