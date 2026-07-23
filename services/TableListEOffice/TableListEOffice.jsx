@@ -37,6 +37,8 @@ import styles from "./TableListEOffice.module.scss";
 
 // ── คอลัมน์ของตาราง ──
 const columns = [
+  { name: "ops_doc_no", label: "เลขที่ สป.กค.", width: 120, priority: 2 },
+  { name: "ops_received_date", label: "วันที่", width: 140, priority: 2 },
   { name: "book_no", label: "เลขที่หนังสือ", width: 120, priority: 2 },
   { name: "book_date", label: "วันที่หนังสือ", width: 140, priority: 2 },
   { name: "complainant_name", label: "ชื่อผู้ร้อง", width: 160, priority: 2 },
@@ -391,7 +393,7 @@ const TableListEOffice = ({
                                 >
                                   {item[col.name] || "-"}
                                 </span>
-                              ) : col.name === "book_date" || col.name === "date_received" ? (
+                              ) : col.name === "book_date" || col.name === "date_received" || col.name === "ops_received_date" ? (
                                 <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
                                   {formatThaiOfficialDate(item[col.name]) || "-"}
                                 </Typography>
