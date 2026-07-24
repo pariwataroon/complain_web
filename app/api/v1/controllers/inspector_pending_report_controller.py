@@ -57,11 +57,12 @@ def get_inspector_pending_report(
         inprogress_start = pending_end
         inprogress_end = datetime(year + 1, 1, 1)
     else:
-        # โหมด 1: ไม่มี filter → pending นับทั้งหมด, inprogress = 0
-        pending_start = None
-        pending_end = None
-        inprogress_start = datetime(2090, 1, 1)  # ช่วงไกลมาก → ไม่มีข้อมูล
-        inprogress_end = datetime(2091, 1, 1)
+        # โหมด 1: ไม่มี filter
+        # ช่อง 1 (ค้างจากปีก่อน) = 0, ช่อง 2 (อยู่ระหว่างดำเนินการปีปัจจุบัน) = ทั้งหมด
+        pending_start = datetime(2090, 1, 1)   # ช่วงไกลมาก → ช่อง 1 = 0
+        pending_end = datetime(2091, 1, 1)
+        inprogress_start = None               # ไม่จำกัด → ช่อง 2 = ทั้งหมด
+        inprogress_end = None
 
     date_expr = func.coalesce(
         OutgoingReport.reference_date,

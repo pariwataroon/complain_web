@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from uuid import UUID
 from typing import List, Dict, Any, Optional
 import logging
@@ -1894,6 +1894,7 @@ def get_complaints(
     subject: Optional[str] = None,   # เพิ่ม subject filter
     document_number: Optional[str] = None,  # เพิ่ม document_number filter
     reference_number: Optional[str] = None,  # เพิ่ม reference_number filter
+    reference_number_exact: Optional[str] = None,  # เพิ่ม exact match filter สำหรับตรวจซ้ำเลข สป.กค.
     reference_number2: Optional[str] = None,  # เพิ่ม reference_number2 filter
     reference_number3: Optional[str] = None,  # เพิ่ม reference_number3 filter
     reference_number4: Optional[str] = None,  # เพิ่ม reference_number4 filter
@@ -1951,6 +1952,10 @@ def get_complaints(
             )
         else:
             query = query.filter(Complaint.reference_number.ilike(f"%{reference_number}%"))
+
+    # Exact match filter สำหรับตรวจซ้ำเลข สป.กค.
+    if reference_number_exact:
+        query = query.filter(func.lower(Complaint.reference_number) == reference_number_exact.lower().strip())
 
     if reference_number2:
         if reference_number2.lower() in ["not_null", "has_value", "exists"]:

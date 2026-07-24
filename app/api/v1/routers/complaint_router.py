@@ -253,6 +253,7 @@ async def read_complaints(
     subject: Optional[str] = None,   # เพิ่ม subject filter สำหรับค้นหา "นร"
     document_number: Optional[str] = None,   # เพิ่ม document_number filter
     reference_number: Optional[str] = None,   # เพิ่ม reference_number filter
+    reference_number_exact: Optional[str] = None,  # เพิ่ม exact match filter สำหรับตรวจซ้ำเลข สป.กค.
     reference_number2: Optional[str] = None,  # เพิ่ม reference_number2 filter
     reference_number3: Optional[str] = None,  # เพิ่ม reference_number3 filter
     reference_number4: Optional[str] = None,  # เพิ่ม reference_number4 filter
@@ -276,6 +277,7 @@ async def read_complaints(
         subject=subject,   # ส่ง subject filter ไป controller
         document_number=document_number,   # ส่ง document_number filter ไป controller
         reference_number=reference_number,   # ส่ง reference_number filter ไป controller
+        reference_number_exact=reference_number_exact,  # ส่ง exact match filter ไป controller
         reference_number2=reference_number2, # ส่ง reference_number2 filter ไป controller
         reference_number3=reference_number3, # ส่ง reference_number3 filter ไป controller
         reference_number4=reference_number4,  # ส่ง reference_number4 filter ไป controller

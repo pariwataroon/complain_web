@@ -1150,30 +1150,19 @@ def get_user_related_complaints_with_tracking(
             if cd:
                 cd_dict = _json.loads(cd) if isinstance(cd, str) else cd
                 if isinstance(cd_dict, dict):
-                    name_parts = []
-                    if cd_dict.get('title'):
-                        name_parts.append(cd_dict['title'])
-                    if cd_dict.get('first_name'):
-                        name_parts.append(cd_dict['first_name'])
-                    if cd_dict.get('last_name'):
-                        name_parts.append(cd_dict['last_name'])
-                    if not name_parts:
-                        if cd_dict.get('name'):
-                            name_parts.append(cd_dict['name'])
-                        elif cd_dict.get('full_name'):
-                            name_parts.append(cd_dict['full_name'])
-                        elif cd_dict.get('complainant_name'):
-                            name_parts.append(cd_dict['complainant_name'])
-                    complainant_name = ' '.join(name_parts).strip() or None
+                    if cd_dict.get('name'):
+                        complainant_name = cd_dict['name']
+                    else:
+                        first = cd_dict.get('firstName', '') or cd_dict.get('first_name', '')
+                        last = cd_dict.get('lastName', '') or cd_dict.get('last_name', '')
+                        complainant_name = f"{first} {last}".strip() or None
                     if not complainant_name:
-                        complainant_name = cd_dict.get('company_name') or cd_dict.get('organization_name') or None
+                        complainant_name = cd_dict.get('companyName') or cd_dict.get('company_name') or cd_dict.get('organization_name') or None
         except Exception:
             complainant_name = None
 
-        # ดึงชื่อหน่วยงาน: จาก assigned_to ก่อน ถ้าไม่มีจาก outgoing report แรก
+        # department_name from complaint table
         department_name = getattr(c, 'assigned_to', None)
-        if not department_name and outgoing_list:
-            department_name = _dept_name(outgoing_list[0])
 
         items.append({
             "complaint": {

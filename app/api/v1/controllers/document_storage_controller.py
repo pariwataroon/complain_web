@@ -1317,7 +1317,12 @@ def get_document_storage_by_channel(
                 )
             )
             if not is_admin:
-                query = query.filter(Complaint.confirm_assigned_status == True)
+                query = query.filter(
+                    or_(
+                        Complaint.confirm_assigned_status == True,
+                        Complaint.confirm_assigned_status.is_(None)
+                    )
+                )
         
         # Apply filters
         if status:
