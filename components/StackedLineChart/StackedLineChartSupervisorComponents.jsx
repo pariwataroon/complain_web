@@ -55,19 +55,21 @@ const StackedLineChartSupervisorComponents = () => {
         const latest = it?.latest ?? {};
         const history = Array.isArray(it?.history) ? it.history : [];
 
-        const complainantName = c.subject || "-";
+        const complainantName = c.complainant_name || c.reference_number || c.complaint_number || "-";
 
-        // หน่วยงาน
-        let deptName = "-";
-        if (latest?.sent?.department_name) {
-          deptName = latest.sent.department_name;
-        } else if (c.assigned_to) {
-          deptName = c.assigned_to;
-        } else {
-          const sentHistory = history.find(
-            (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
-          );
-          if (sentHistory?.department_name) deptName = sentHistory.department_name;
+        // หน่วยงาน — ใช้ department_name จาก backend ก่อน ถ้าไม่มีค่อย fallback
+        let deptName = c.department_name || "-";
+        if (!deptName || deptName === "-") {
+          if (latest?.sent?.department_name) {
+            deptName = latest.sent.department_name;
+          } else if (c.assigned_to) {
+            deptName = c.assigned_to;
+          } else {
+            const sentHistory = history.find(
+              (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
+            );
+            if (sentHistory?.department_name) deptName = sentHistory.department_name;
+          }
         }
 
         return {

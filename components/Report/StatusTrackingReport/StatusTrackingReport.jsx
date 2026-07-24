@@ -196,19 +196,20 @@ const StatusTrackingReport = () => {
           const latest = it?.latest ?? {};
           const history = Array.isArray(it?.history) ? it.history : [];
 
-          // หน่วยงาน - ดึงจาก latest.sent หรือ history (ไม่ใช้ assigned_to)
-          let deptName = "-";
-          if (latest?.sent?.department_name) {
-            deptName = latest.sent.department_name;
-          } else {
-            const sentHistory = history.find(
-              (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
-            );
-            if (sentHistory?.department_name) deptName = sentHistory.department_name;
-            else {
-              // fallback: หา department_name จาก history entry ใดก็ได้
-              const anyDept = history.find((h) => h.department_name);
-              if (anyDept) deptName = anyDept.department_name;
+          // หน่วยงาน - ใช้ department_name จาก backend ก่อน ถ้าไม่มีค่อย fallback ไป history
+          let deptName = c.department_name || "-";
+          if (!deptName || deptName === "-") {
+            if (latest?.sent?.department_name) {
+              deptName = latest.sent.department_name;
+            } else {
+              const sentHistory = history.find(
+                (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
+              );
+              if (sentHistory?.department_name) deptName = sentHistory.department_name;
+              else {
+                const anyDept = history.find((h) => h.department_name);
+                if (anyDept) deptName = anyDept.department_name;
+              }
             }
           }
 
@@ -227,7 +228,7 @@ const StatusTrackingReport = () => {
 
           return {
             id: c.id ?? `temp_${idx + 1}`,
-            claimantName: c.subject ?? "-",
+            claimantName: c.complainant_name || c.subject || "-",
             department: deptName,
             responsibleOfficer: officerName || "ไม่ได้มอบหมาย",
             receiptNumber: c.complaint_number ?? "-",

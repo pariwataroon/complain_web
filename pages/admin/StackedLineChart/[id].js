@@ -1,14 +1,13 @@
 import AdminLayout from "@components/GeneralUsageMenu/layouts/AdminLayout";
-import SearchComplaints from "@components/StackedLineChart/SearchComplaints";
+import FollowComp from "@components/Box/ComplaintArchives/FollowComp/FollowComp";
 
 const SearchID = () => {
   return (
     <div>
-      <SearchComplaints />
+      <FollowComp />
     </div>
   );
 };
 
 SearchID.getLayout = (page) => <AdminLayout>{page}</AdminLayout>;
-
 export default SearchID;
