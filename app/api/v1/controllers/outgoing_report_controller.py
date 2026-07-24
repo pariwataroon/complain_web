@@ -1142,6 +1142,39 @@ def get_user_related_complaints_with_tracking(
             return x.get("at") or x.get("reference_date") or x.get("created_at") or ""
         timeline.sort(key=_ts, reverse=True)
 
+        # ดึงชื่อผู้ร้องเรียนจาก complainant_data JSON
+        complainant_name = None
+        try:
+            import json as _json
+            cd = getattr(c, 'complainant_data', None)
+            if cd:
+                cd_dict = _json.loads(cd) if isinstance(cd, str) else cd
+                if isinstance(cd_dict, dict):
+                    name_parts = []
+                    if cd_dict.get('title'):
+                        name_parts.append(cd_dict['title'])
+                    if cd_dict.get('first_name'):
+                        name_parts.append(cd_dict['first_name'])
+                    if cd_dict.get('last_name'):
+                        name_parts.append(cd_dict['last_name'])
+                    if not name_parts:
+                        if cd_dict.get('name'):
+                            name_parts.append(cd_dict['name'])
+                        elif cd_dict.get('full_name'):
+                            name_parts.append(cd_dict['full_name'])
+                        elif cd_dict.get('complainant_name'):
+                            name_parts.append(cd_dict['complainant_name'])
+                    complainant_name = ' '.join(name_parts).strip() or None
+                    if not complainant_name:
+                        complainant_name = cd_dict.get('company_name') or cd_dict.get('organization_name') or None
+        except Exception:
+            complainant_name = None
+
+        # ดึงชื่อหน่วยงาน: จาก assigned_to ก่อน ถ้าไม่มีจาก outgoing report แรก
+        department_name = getattr(c, 'assigned_to', None)
+        if not department_name and outgoing_list:
+            department_name = _dept_name(outgoing_list[0])
+
         items.append({
             "complaint": {
                 "id": _safe_str(getattr(c, "id", None)),
@@ -1157,6 +1190,8 @@ def get_user_related_complaints_with_tracking(
                 "assigned_to": getattr(c, "assigned_to", None),
                 "assigned_officer_full_name": _get_officer_full_name(getattr(c, "assigned_officer", None)),
                 "assigned_date": _iso(getattr(c, "assigned_date", None)),
+                "complainant_name": complainant_name,
+                "department_name": department_name,
             },
             "counts": {
                 "outgoing_reports": len(outgoing_list),
