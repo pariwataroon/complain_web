@@ -1160,9 +1160,16 @@ def get_user_related_complaints_with_tracking(
                         complainant_name = cd_dict.get('companyName') or cd_dict.get('company_name') or cd_dict.get('organization_name') or None
         except Exception:
             complainant_name = None
-
-        # department_name from complaint table
-        department_name = getattr(c, 'assigned_to', None)
+        # department_name: from OutgoingReport.department_id -> Department.name
+        department_name = None
+        if outgoing_list:
+            or_dept_id = getattr(outgoing_list[0], "department_id", None)
+            if or_dept_id:
+                dept_obj = db.query(Department).filter(Department.id == or_dept_id, Department.is_active == True).first()
+                if dept_obj:
+                    department_name = getattr(dept_obj, "name", None)
+        if not department_name:
+            department_name = getattr(c, "assigned_to", None)
 
         items.append({
             "complaint": {

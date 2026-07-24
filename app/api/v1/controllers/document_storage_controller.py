@@ -1409,13 +1409,18 @@ def get_document_storage_by_channel(
                     "is_master": False
                 })
 
-        # 3) Batch load siblings
+        # 3) Batch load siblings (แบ่ง chunk เพื่อไม่เกิน SQL Server parameter limit)
         siblings_map: Dict[str, List] = {}
         if parent_ids_for_siblings:
-            sibling_rows = db.query(Complaint).filter(
-                Complaint.parent_complaint_id.in_(parent_ids_for_siblings),
-                ~Complaint.id.in_(complaint_ids)
-            ).order_by(Complaint.complaint_number).all()
+            CHUNK_SIZE = 900  # SQL Server limit ~2100 params, ใช้ 900 ปลอดภัย
+            sibling_rows = []
+            for i in range(0, len(complaint_ids), CHUNK_SIZE):
+                chunk = complaint_ids[i:i + CHUNK_SIZE]
+                rows = db.query(Complaint).filter(
+                    Complaint.parent_complaint_id.in_(parent_ids_for_siblings),
+                    ~Complaint.id.in_(chunk)
+                ).order_by(Complaint.complaint_number).all()
+                sibling_rows.extend(rows)
             for sib in sibling_rows:
                 key = str(sib.parent_complaint_id)
                 siblings_map.setdefault(key, []).append({
@@ -1426,11 +1431,16 @@ def get_document_storage_by_channel(
                     "is_master": False
                 })
 
-        # 4) Batch-load OutgoingReport -> Department
-        outgoing_report_rows = db.query(OutgoingReport).filter(
-            OutgoingReport.complaint_id.in_(complaint_ids),
-            OutgoingReport.is_active == True
-        ).all()
+        # 4) Batch-load OutgoingReport -> Department (แบ่ง chunk เพื่อไม่เกิน SQL Server parameter limit)
+        outgoing_report_rows = []
+        CHUNK_SIZE = 900
+        for i in range(0, len(complaint_ids), CHUNK_SIZE):
+            chunk = complaint_ids[i:i + CHUNK_SIZE]
+            rows = db.query(OutgoingReport).filter(
+                OutgoingReport.complaint_id.in_(chunk),
+                OutgoingReport.is_active == True
+            ).all()
+            outgoing_report_rows.extend(rows)
 
         dept_ids_for_outgoing = [r.department_id for r in outgoing_report_rows if r.department_id]
         dept_by_id: Dict = {}
