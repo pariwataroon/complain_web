@@ -1160,9 +1160,24 @@ def get_user_related_complaints_with_tracking(
                         complainant_name = cd_dict.get('companyName') or cd_dict.get('company_name') or cd_dict.get('organization_name') or None
         except Exception:
             complainant_name = None
-        # department_name: from OutgoingReport.department_id -> Department.name
+        # dept: agency_sender->OD, then OR.dept_id->Dept, then assigned_to
         department_name = None
-        if outgoing_list:
+        try:
+            from models.outside_departments import OutsideDepartment
+            raw_agency = (getattr(c, "agency_sender", None) or "").strip()
+            if raw_agency:
+                try:
+                    od = db.query(OutsideDepartment).filter(
+                        OutsideDepartment.id == UUID(raw_agency),
+                        OutsideDepartment.is_active == True
+                    ).first()
+                    if od and getattr(od, "name", None):
+                        department_name = od.name
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        if not department_name and outgoing_list:
             or_dept_id = getattr(outgoing_list[0], "department_id", None)
             if or_dept_id:
                 dept_obj = db.query(Department).filter(Department.id == or_dept_id, Department.is_active == True).first()
