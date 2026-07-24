@@ -42,6 +42,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import ClearIcon from "@mui/icons-material/Clear";
 import IconButton from "@mui/material/IconButton";
 import { alertSuccess, alertError, alertWarning } from "@utils/Alerts";
+import checkDuplicateReferenceNumber from "@utils/checkDuplicateReferenceNumber";
 import InputFile from "@services/InputFile/InputFile";
 
 const breadcrumbItems = [
@@ -1417,6 +1418,20 @@ const handleSubmit = async () => {
       true
     );
     return;
+  }
+
+  // ✅ ตรวจสอบเลข สป.กค. ซ้ำก่อนบันทึก
+  const step3Vals = step3Methods.getValues();
+  const refNum1Web = step3Vals.referenceNumber1 || "";
+  if (refNum1Web.trim()) {
+    const { isDuplicate, errorMessage } = await checkDuplicateReferenceNumber(
+      refNum1Web,
+      defaultData?.id
+    );
+    if (isDuplicate) {
+      alertError("เลข สป.กค. ซ้ำ", errorMessage);
+      return;
+    }
   }
 
   // ✅ ดึงค่าจากทุก Step

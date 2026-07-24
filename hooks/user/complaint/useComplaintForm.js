@@ -7,6 +7,7 @@ import {
   closeAlert,
   showConfirm,
 } from "@utils/Alerts";
+import checkDuplicateReferenceNumber from "@utils/checkDuplicateReferenceNumber";
 import {
   Addcomplaints,
   UploadAttachments,
@@ -119,11 +120,25 @@ export default function useComplaintForm() {
       
       showLoading("กำลังอัพเดทข้อมูลเพิ่มเติม...");
 
+      // ✅ ตรวจสอบเลข สป.กค. ซ้ำก่อนบันทึก
+      const refNum1Public = tab31Data.referenceNumber1 || "";
+      if (refNum1Public.trim()) {
+        const { isDuplicate, errorMessage } = await checkDuplicateReferenceNumber(
+          refNum1Public,
+          complaint_id
+        );
+        if (isDuplicate) {
+          closeAlert();
+          alertError("เลข สป.กค. ซ้ำ", errorMessage);
+          throw new Error("เลข สป.กค. ซ้ำในระบบ");
+        }
+      }
+
       // Format วันที่ก่อน
       const formattedOfficerDate = formatDateForAPI(tab31Data.officerReceivedDate);
       const formattedDirectorDate = formatDateForAPI(tab31Data.directorSubmittedDate);
       const formattedIncidentDate = formatDateForAPI(tab31Data.incidentDateTime);
-      
+
       const payload = {
         // ข้อมูลประเภทและช่องทาง
         complaint_type_id: tab31Data.complaintTypeId || null,

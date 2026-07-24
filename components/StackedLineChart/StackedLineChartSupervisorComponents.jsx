@@ -55,7 +55,7 @@ const StackedLineChartSupervisorComponents = () => {
         const latest = it?.latest ?? {};
         const history = Array.isArray(it?.history) ? it.history : [];
 
-        const complainantName = c.complainant_name || c.reference_number || c.complaint_number || "-";
+        const complainantName = c.complainant_name || "-";
 
         // หน่วยงาน — ใช้ department_name จาก backend ก่อน ถ้าไม่มีค่อย fallback
         let deptName = c.department_name || "-";

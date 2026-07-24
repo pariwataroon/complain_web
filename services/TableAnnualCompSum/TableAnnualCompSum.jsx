@@ -69,6 +69,14 @@ const TableAnnualCompSum = ({
   const isTablet = useMediaQuery(theme.breakpoints.down("md"));
   const isExtraSmall = useMediaQuery("(max-width:640px)"); // ขนาดต่ำกว่า 640px
 
+  // คำนวณปีงบประมาณอัตโนมัติ (เริ่ม 1 ต.ค. — ต.ค.-ธ.ค.ใช้ปีปัจจุบัน, ม.ค.-ก.ย.ใช้ปีก่อนหน้า)
+  const currentFiscalYear = (() => {
+    const now = new Date();
+    const month = now.getMonth(); // 0=ม.ค. … 9=ต.ค.
+    const year = now.getFullYear();
+    return (month >= 9 ? year : year - 1) + 543;
+  })();
+
   const initialFilters = filterFields.reduce(
     (acc, f) => ({ ...acc, [f.name]: "" }),
     {}
@@ -800,7 +808,7 @@ const handleExportExcel = () => {
           </>
         ) : (
           <>
-            ตั้งแต่วันที่ 1 ตุลาคม 2567 ถึงวันที่ {new Date().toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })}
+            ตั้งแต่วันที่ 1 ตุลาคม {currentFiscalYear} ถึงวันที่ {new Date().toLocaleDateString("th-TH", { year: 'numeric', month: 'long', day: 'numeric' })}
           </>
         )}
       </Box>

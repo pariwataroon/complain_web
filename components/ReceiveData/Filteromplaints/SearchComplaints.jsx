@@ -36,6 +36,7 @@ import { getDepartments } from "@pages/api/department/department";
 import { GetAllOutsideDepartments } from "@pages/api/allselect/allselect";
 import { FormProvider, useForm } from "react-hook-form";
 import { alertError, alertSuccess, alertWarning } from "@utils/Alerts";
+import checkDuplicateReferenceNumber from "@utils/checkDuplicateReferenceNumber";
 import styles from "./TabNav.module.scss";
 import SearchComplaintsPreview from "@components/ReceiveData/Filteromplaints/SearchComplaintsPreview";
 import SearchIcon from "@mui/icons-material/Search";
@@ -1203,6 +1204,20 @@ const handleDeleteExistingAttachment = useCallback(async (att) => {
   if (!defaultData?.id) {
     alertError("ข้อผิดพลาด", "ไม่พบ ID ของเรื่องร้องเรียน");
     return;
+  }
+
+  // ✅ ตรวจสอบเลข สป.กค. ซ้ำก่อนบันทึก
+  const step3PreCheck = step3Methods.getValues();
+  const refNum1ToCheck = step3PreCheck.referenceNumber1 || step3PreCheck.reference_number1 || "";
+  if (refNum1ToCheck.trim()) {
+    const { isDuplicate, errorMessage } = await checkDuplicateReferenceNumber(
+      refNum1ToCheck,
+      defaultData.id
+    );
+    if (isDuplicate) {
+      alertError("เลข สป.กค. ซ้ำ", errorMessage);
+      return;
+    }
   }
 
   setSaving(true);

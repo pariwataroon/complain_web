@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UpdateAssignmentCompleteByAdmin } from "@pages/api/complaint/complaint";
 import { alertSuccess, alertError } from "@utils/Alerts";
+import checkDuplicateReferenceNumber from "@utils/checkDuplicateReferenceNumber";
 
 const useSearchComplaintsPreview = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -175,6 +176,19 @@ const useSearchComplaintsPreview = () => {
 
       console.log("[DEBUG] Selected form urgencyLevel:", step3Data.urgencyLevel);
       console.log("[DEBUG] Payload urgency_level:", preparedData.urgency_level);
+
+      // ✅ ตรวจสอบเลข สป.กค. ซ้ำก่อนบันทึก
+      const refNum1SearchPrev = step3Data.referenceNumber1 || "";
+      if (refNum1SearchPrev.trim()) {
+        const { isDuplicate, errorMessage } = await checkDuplicateReferenceNumber(
+          refNum1SearchPrev,
+          complaint_id
+        );
+        if (isDuplicate) {
+          alertError("เลข สป.กค. ซ้ำ", errorMessage);
+          throw new Error("เลข สป.กค. ซ้ำในระบบ");
+        }
+      }
 
       // เรียก API
       const response = await UpdateAssignmentCompleteByAdmin(

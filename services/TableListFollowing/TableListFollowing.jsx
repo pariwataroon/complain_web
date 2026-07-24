@@ -210,7 +210,7 @@ const handleExportExcel = () => {
   const exportData = pagedData.map((item, idx) => ({
     ลำดับ: page * rowsPerPage + idx + 1,
     "ชื่อผู้ร้อง": item.claimantName || "-",
-    "หน่วยงานที่เกี่ยวข้อง": item.agency || "-",
+    "หน่วยงาน": item.agency || "-",
     "เลขสรร.": item.ssoNo || "-",
     "เรื่อง": item.issue || "-",
     "ประเภทเรื่อง": item.issueType || "-",
@@ -259,10 +259,10 @@ const handleExportExcel = () => {
       }}
         >
           <InputText
-          label="เลขที่อ้างอิง"
+          label="ชื่อผู้ร้อง"
           value={filters.claimantName}
           onChange={handleChange("claimantName")}
-          placeholder="ค้นหาชื่อเรื่อง"
+          placeholder="ค้นหาชื่อผู้ร้อง"
           sx={{ minWidth: { xs: "100%", sm: "180px" }, marginBottom: { xs: "8px", sm: 0 } }} // Full width on small screens, 180px on larger screens
           />
           <InputText
@@ -371,7 +371,7 @@ const handleExportExcel = () => {
                   textOverflow: "ellipsis",
                 }}
               >
-                เลขที่อ้างอิง
+                ชื่อผู้ร้อง
               </TableCell>
               <TableCell
                 sx={{
@@ -387,7 +387,7 @@ const handleExportExcel = () => {
                   textOverflow: "ellipsis",
                 }}
               >
-                หน่วยงานที่เกี่ยวข้อง
+                หน่วยงาน
               </TableCell>
               <TableCell
                 sx={{

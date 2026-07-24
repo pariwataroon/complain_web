@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { UpdateAssignmentCompleteByAdmin } from "@pages/api/complaint/complaint";
 import { alertSuccess, alertError } from "@utils/Alerts";
+import checkDuplicateReferenceNumber from "@utils/checkDuplicateReferenceNumber";
 
 const useFilteromplaintsPreview = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -222,6 +223,19 @@ const useFilteromplaintsPreview = () => {
 
       // Debug ช่วยตรวจสอบ payload ก่อนส่ง
       // console.log("Prepared assignment payload:", preparedData);
+
+      // ✅ ตรวจสอบเลข สป.กค. ซ้ำก่อนบันทึก
+      const refNum1Preview = step3Data.referenceNumber1 || preparedData.reference_number || "";
+      if (refNum1Preview.trim()) {
+        const { isDuplicate, errorMessage } = await checkDuplicateReferenceNumber(
+          refNum1Preview,
+          complaint_id
+        );
+        if (isDuplicate) {
+          alertError("เลข สป.กค. ซ้ำ", errorMessage);
+          throw new Error("เลข สป.กค. ซ้ำในระบบ");
+        }
+      }
 
       // ตรวจสอบข้อมูลจำเป็น
       if (!preparedData.assigned_officer_id) {
