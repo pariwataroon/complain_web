@@ -135,6 +135,9 @@ const PendingWorkfollowupComponents = () => {
         document_number: item.document_number || "-",
         document_date: item.document_date || null,
         internal_register_date: item.internal_register_date || null,
+        // วันที่จาก OutgoingReport5 (สำหรับ ผลการพิจารณาจากหน่วยงาน)
+        or5_document_date: item.or5_document_date || null,
+        or5_present_to_director_date: item.or5_present_to_director_date || null,
         status: STATUS_LABELS[(item.status || "").toLowerCase()] || item.status || "-",
         status_original: item.status,
         days_in_progress: item.days_in_progress || 0,
@@ -541,21 +544,42 @@ const PendingWorkfollowupComponents = () => {
         : "-",
       referenceNumber: item.parent_complaint_number || item.reference_number || "-",
       proposeDate: (() => {
-        // สำหรับ status = "tracking" (ยังรอผลจากหน่วยงาน = งานยังไม่เสร็จ) ให้แสดง "-"
-        // เพราะ director_submission_date เป็นวันที่จากขั้นตอนก่อนหน้า ไม่ใช่วันที่เกี่ยวกับผลจากหน่วยงาน
+        // Type 3 (tracking/reviewed = ผลการพิจารณาจากหน่วยงาน):
+        //   ใช้ OR5 present_to_director_date ก่อน (วันที่เสนองานจากแบบฟอร์ม ผลการพิจารณา)
+        //   fallback เป็น director_submission_date จาก Complaint
+        // Type 1/2: ใช้ director_submission_date จาก Complaint เหมือนเดิม
         const st = (item.status_original || "").toString().toLowerCase();
-        if (st === "tracking") return "-";
-        return item.director_submission_date
-          ? new Date(item.director_submission_date).toLocaleDateString("th-TH")
-          : "-";
+        const isDeptDecision = st === "tracking" || st === "reviewed";
+        const or5Date = item.or5_present_to_director_date;
+        const dirDate = item.director_submission_date;
+        const dateVal = isDeptDecision ? (or5Date || dirDate) : dirDate;
+        if (!dateVal) return "-";
+        const d = new Date(dateVal);
+        return isNaN(d.getTime()) ? "-" : d.toLocaleDateString("th-TH");
       })(),
       complaint: item.subject || "-",
-      receiveDate: item.assigned_date
-        ? new Date(item.assigned_date).toLocaleDateString("th-TH")
-        : "-",
-      receiveDateObj: item.assigned_date
-        ? new Date(item.assigned_date)
-        : undefined,
+      // Type 3 (tracking/reviewed): ใช้ OR5 document_date ก่อน (วันที่รับงานจากแบบฟอร์ม ผลการพิจารณา)
+      // Type 1/2: ใช้ assigned_date จาก Complaint เหมือนเดิม
+      receiveDate: (() => {
+        const st = (item.status_original || "").toString().toLowerCase();
+        const isDeptDecision = st === "tracking" || st === "reviewed";
+        const assigned = item.assigned_date;
+        const or5DocDate = item.or5_document_date;
+        const dateVal = isDeptDecision ? (or5DocDate || assigned) : assigned;
+        if (!dateVal) return "-";
+        const d = new Date(dateVal);
+        return isNaN(d.getTime()) ? "-" : d.toLocaleDateString("th-TH");
+      })(),
+      receiveDateObj: (() => {
+        const st = (item.status_original || "").toString().toLowerCase();
+        const isDeptDecision = st === "tracking" || st === "reviewed";
+        const assigned = item.assigned_date;
+        const or5DocDate = item.or5_document_date;
+        const dateVal = isDeptDecision ? (or5DocDate || assigned) : assigned;
+        if (!dateVal) return undefined;
+        const d = new Date(dateVal);
+        return isNaN(d.getTime()) ? undefined : d;
+      })(),
       agency: item._rawAgency || item.outside_department_name || item.department_name || "-",
       letterNumber: item.document_number || "-",
       // วันที่หนังสือล่าสุด: ใช้ internal_register_date ก่อน, fallback เป็น document_date
