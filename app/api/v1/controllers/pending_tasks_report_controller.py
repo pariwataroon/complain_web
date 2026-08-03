@@ -234,6 +234,7 @@ def get_pending_tasks_report(
     complaint_ids = [r.id for r in page_rows]
     dept_map = {}       # complaint_id -> department_name (ภายใน)
     outside_map = {}    # complaint_id -> outside_department_name (ภายนอก)
+    or5_date_map = {}   # complaint_id -> {"document_date": ..., "present_to_director_date": ...}
 
     def chunk_list(lst, size):
         for i in range(0, len(lst), size):
@@ -329,6 +330,35 @@ def get_pending_tasks_report(
             for row in db.query(latest_out).filter(latest_out.c.rn == 1).all():
                 outside_map[str(row.cid)] = row.dept_name
 
+            # --- วันที่รับงาน/เสนองาน จาก OutgoingReport5 ล่าสุด ---
+            or5_dates_q = (
+                db.query(
+                    OutgoingReport5.complaint_id.label("cid"),
+                    OutgoingReport5.document_date.label("document_date"),
+                    OutgoingReport5.present_to_director_date.label("present_to_director_date"),
+                    OutgoingReport5.created_at.label("created_at"),
+                )
+                .filter(OutgoingReport5.complaint_id.in_(chunk), OutgoingReport5.is_active == True)
+            )
+            or5_dates_subq = or5_dates_q.subquery()
+            or5_dates_rn = (
+                db.query(
+                    or5_dates_subq.c.cid,
+                    or5_dates_subq.c.document_date,
+                    or5_dates_subq.c.present_to_director_date,
+                    func.row_number().over(
+                        partition_by=or5_dates_subq.c.cid,
+                        order_by=or5_dates_subq.c.created_at.desc()
+                    ).label("rn"),
+                )
+            ).subquery()
+
+            for row in db.query(or5_dates_rn).filter(or5_dates_rn.c.rn == 1).all():
+                or5_date_map[str(row.cid)] = {
+                    "document_date": row.document_date,
+                    "present_to_director_date": row.present_to_director_date,
+                }
+
     # --- Fallback: agency_sender -> OutsideDepartment ---
     agency_dept_map = {}
     missing_dept_ids = []
@@ -367,6 +397,9 @@ def get_pending_tasks_report(
         if not dept_name and r.agency_sender:
             dept_name = agency_dept_map.get(str(r.agency_sender))
 
+        # วันที่จาก OutgoingReport5 ล่าสุด (สำหรับ ผลการพิจารณาจากหน่วยงาน)
+        or5_dates = or5_date_map.get(cid, {})
+
         items.append(
             {
                 "id": cid,
@@ -380,6 +413,8 @@ def get_pending_tasks_report(
                 "department_name": dept_name,
                 "outside_department_name": outside_map.get(cid),
                 "document_number": r.document_number,
+                "or5_document_date": or5_dates.get("document_date"),  # วันที่รับงาน จาก OutgoingReport5
+                "or5_present_to_director_date": or5_dates.get("present_to_director_date"),  # วันที่เสนองาน จาก OutgoingReport5
                 "status": r.status.value if hasattr(r.status, "value") else r.status,
                 "days_in_progress": days_in_progress,
                 "assigned_officer_name": officers.get(str(r.assigned_officer_id)) if r.assigned_officer_id else None,
