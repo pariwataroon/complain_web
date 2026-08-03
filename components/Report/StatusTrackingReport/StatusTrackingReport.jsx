@@ -213,8 +213,9 @@ const StatusTrackingReport = () => {
             }
           }
 
-          // เจ้าหน้าที่ผู้รับผิดชอบ - ใช้ fallback chain หลายชั้น
+          // เจ้าหน้าที่ผู้รับผิดชอบ - ใช้ assigned_officer_full_name จาก backend ก่อน (มีคำนำหน้านาม)
           const officerName =
+            c.assigned_officer_full_name ||
             c.assigned_officer?.name ||
             c.assigned_officer_name ||
             c.assigned_to ||
@@ -228,7 +229,7 @@ const StatusTrackingReport = () => {
 
           return {
             id: c.id ?? `temp_${idx + 1}`,
-            claimantName: c.complainant_name || c.subject || "-",
+            claimantName: c.subject || c.complainant_name || "-",
             department: deptName,
             responsibleOfficer: officerName || "ไม่ได้มอบหมาย",
             receiptNumber: c.complaint_number ?? "-",

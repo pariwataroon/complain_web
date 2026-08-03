@@ -332,11 +332,12 @@ const GetComplaintsByPageTypeCard = async ({
   }
 };
 
-const GetMyRelatedComplaints = async ({ skip = 0, limit = 10000, date_from = "", date_to = "" } = {}) => {
+const GetMyRelatedComplaints = async ({ skip = 0, limit = 10000, date_from = "", date_to = "", include_created = false } = {}) => {
   try {
     const params = { skip, limit };
     if (date_from) params.date_from = date_from;
     if (date_to) params.date_to = date_to;
+    if (include_created !== undefined) params.include_created = include_created;
 
     const response = await axiosInstance.get("/complaints/my-related", {
       params,
