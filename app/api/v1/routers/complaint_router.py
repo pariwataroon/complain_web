@@ -531,6 +531,7 @@ async def read_my_related_complaints(
     complainant_name: Optional[str] = Query(None, description="ชื่อผู้ร้องเรียน"),
     date_from: Optional[str] = Query(None, description="วันที่เริ่มต้น (YYYY-MM-DD)"),
     date_to: Optional[str] = Query(None, description="วันที่สิ้นสุด (YYYY-MM-DD)"),
+    include_created: bool = Query(True, description="รวมเรื่องที่ตัวเองสร้างด้วย (true=รวม, false=เฉพาะที่มอบหมายให้)"),
     db: Session = Depends(get_db),
     current_user: str = Depends(can_read("dashboard"))  # เลือกสิทธิ์แบบเดียวกับ /by-page-type
 ):
@@ -564,7 +565,8 @@ async def read_my_related_complaints(
             search=search,
             complainant_name=complainant_name,
             date_from=parsed_date_from,
-            date_to=parsed_date_to
+            date_to=parsed_date_to,
+            include_created=include_created
         )
 
         if "error" in result:

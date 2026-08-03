@@ -902,7 +902,8 @@ def get_user_related_complaints_with_tracking(
     search: Optional[str] = None,
     complainant_name: Optional[str] = None,
     date_from: Optional[datetime] = None,
-    date_to: Optional[datetime] = None
+    date_to: Optional[datetime] = None,
+    include_created: bool = True
 ) -> Dict[str, Any]:
     """
     รวม 'งานที่ผู้ใช้เกี่ยวข้อง' พร้อม timeline + pagination
@@ -946,12 +947,19 @@ def get_user_related_complaints_with_tracking(
     q = db.query(Complaint).options(
         joinedload(Complaint.status_history),
         joinedload(Complaint.assigned_officer).joinedload(User.title)
-    ).filter(
-        or_(
-            Complaint.assigned_officer_id == current_user_id,
-            Complaint.created_by == current_user_id
-        )
     )
+
+    if include_created:
+        q = q.filter(
+            or_(
+                Complaint.assigned_officer_id == current_user_id,
+                Complaint.created_by == current_user_id
+            )
+        )
+    else:
+        q = q.filter(
+            Complaint.assigned_officer_id == current_user_id
+        )
 
     if status:
         try:
@@ -1200,6 +1208,7 @@ def get_user_related_complaints_with_tracking(
                 "assigned_officer_id": _safe_str(getattr(c, "assigned_officer_id", None)),
                 "assigned_to": getattr(c, "assigned_to", None),
                 "assigned_officer_full_name": _get_officer_full_name(getattr(c, "assigned_officer", None)),
+                "assigned_officer_name": _get_officer_full_name(getattr(c, "assigned_officer", None)),
                 "assigned_date": _iso(getattr(c, "assigned_date", None)),
                 "complainant_name": complainant_name,
                 "department_name": department_name,
