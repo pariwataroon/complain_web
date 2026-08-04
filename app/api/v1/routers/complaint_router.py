@@ -8,6 +8,7 @@ from datetime import datetime
 
 from app.api.middleware.jwt_verify import verify_token
 from app.api.middleware.permission_middleware import can_update, can_delete, can_read
+from config.database import get_db
 from app.api.v1.controllers.complaint_controller import (
     get_complaints, 
     get_complaints_enhanced,
@@ -542,6 +543,22 @@ async def read_my_related_complaints(
     try:
         current_user_id = UUID(current_user)
 
+        # เช็คว่าเป็น admin หรือไม่ (ถ้า admin จะเห็นข้อมูลทั้งหมด)
+        is_admin = False
+        try:
+            from models.user_role import UserRole
+            from models.role import Role
+            admin_role = db.query(Role).filter(Role.name == "admin", Role.is_active == True).first()
+            if admin_role:
+                has_admin = db.query(UserRole).filter(
+                    UserRole.user_id == current_user_id,
+                    UserRole.role_id == admin_role.id
+                ).first()
+                if has_admin:
+                    is_admin = True
+        except Exception:
+            pass
+
         # Parse date strings to datetime
         from datetime import datetime
         parsed_date_from = None
@@ -566,7 +583,8 @@ async def read_my_related_complaints(
             complainant_name=complainant_name,
             date_from=parsed_date_from,
             date_to=parsed_date_to,
-            include_created=include_created
+            include_created=include_created,
+            is_admin=is_admin
         )
 
         if "error" in result:

@@ -903,7 +903,8 @@ def get_user_related_complaints_with_tracking(
     complainant_name: Optional[str] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
-    include_created: bool = True
+    include_created: bool = True,
+    is_admin: bool = False
 ) -> Dict[str, Any]:
     """
     รวม 'งานที่ผู้ใช้เกี่ยวข้อง' พร้อม timeline + pagination
@@ -949,7 +950,10 @@ def get_user_related_complaints_with_tracking(
         joinedload(Complaint.assigned_officer).joinedload(User.title)
     )
 
-    if include_created:
+    if is_admin:
+        # admin เห็นข้อมูลทั้งหมด ไม่ต้อง filter
+        pass
+    elif include_created:
         q = q.filter(
             or_(
                 Complaint.assigned_officer_id == current_user_id,
