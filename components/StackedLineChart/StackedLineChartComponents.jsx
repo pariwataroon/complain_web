@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import BreadcrumbsService from "@services/BreadCrumbs/breadcrumbs";
 import TableListFollowing from "@services/TableListFollowing/TableListFollowing";
-import { GetMyRelatedComplaints } from "@pages/api/complaint/complaint";
+import { GetMyRelatedComplaints, GetDepartments } from "@pages/api/complaint/complaint";
 
 const breadcrumbItems = [
   {
@@ -37,12 +37,26 @@ const StackedLineChartComponents = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Master data หน่วยงาน: Map<id, name>
+  const deptMapRef = useRef(new Map());
+
   const fetchComplaints = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const res = await GetMyRelatedComplaints({ skip: 0, limit: 10000 });
+      // โหลด master data หน่วยงานพร้อมกัน
+      const [res, depRes] = await Promise.all([
+        GetMyRelatedComplaints({ skip: 0, limit: 10000 }),
+        GetDepartments().catch(() => null),
+      ]);
+
+      // สร้าง Map department_id → name
+      const depList = depRes?.res_data ?? [];
+      depList.forEach((d) => {
+        if (d.id && d.name) deptMapRef.current.set(String(d.id), d.name);
+      });
+
       const items = res?.res_data?.items ?? [];
 
       const actualStatuses = [...new Set(
@@ -52,23 +66,12 @@ const StackedLineChartComponents = () => {
 
       const transformedData = items.map((it, idx) => {
         const c = it?.complaint ?? {};
-        const latest = it?.latest ?? {};
-        const history = Array.isArray(it?.history) ? it.history : [];
 
         const complainantName = c.complainant_name || "-";
 
-        // หน่วยงาน — ใช้ department_name จาก backend ก่อน ถ้าไม่มีค่อย fallback
-        let deptName = c.department_name || "-";
-        if (!deptName || deptName === "-") {
-          if (latest?.sent?.department_name) {
-            deptName = latest.sent.department_name;
-          } else {
-            const sentHistory = history.find(
-              (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
-            );
-            if (sentHistory?.department_name) deptName = sentHistory.department_name;
-          }
-        }
+        // หน่วยงาน — ใช้ department_id หาชื่อจาก master data
+        const deptId = c.department?.id || c.department_id;
+        const deptName = (deptId && deptMapRef.current.get(String(deptId))) || "-";
 
         return {
           id: c.id ?? `temp_${idx + 1}`,
