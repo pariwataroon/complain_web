@@ -62,8 +62,6 @@ const StackedLineChartComponents = () => {
         if (!deptName || deptName === "-") {
           if (latest?.sent?.department_name) {
             deptName = latest.sent.department_name;
-          } else if (c.assigned_to) {
-            deptName = c.assigned_to;
           } else {
             const sentHistory = history.find(
               (h) => h.type === "status_history" && String(h.status).toLowerCase() === "sent_to_agency"
