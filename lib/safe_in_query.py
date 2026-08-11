@@ -182,15 +182,15 @@ def patch_in_method():
             else:
                 flat.append(v)
 
-        # ถ้าไม่เกิน limit ใช้วิธีเดิม
+        # ถ้าไม่เกิน limit ส่งเป็น list เดียวเหมือนเดิม
         if len(flat) <= DEFAULT_CHUNK_SIZE:
-            return original_in(self, *values)
+            return original_in(self, flat)
 
-        # เกิน limit → ใช้ or_ + chunks
+        # เกิน limit → แบ่ง chunk ส่งแต่ละ chunk เป็น list เดียว
         chunks = []
         for i in range(0, len(flat), DEFAULT_CHUNK_SIZE):
             chunk = flat[i:i + DEFAULT_CHUNK_SIZE]
-            chunks.append(original_in(self, *chunk))
+            chunks.append(original_in(self, chunk))
         return or_(*chunks)
 
     InstrumentedAttribute.in_ = patched_in
