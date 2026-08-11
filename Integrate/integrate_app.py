@@ -6,6 +6,10 @@ from globals.exception_handler import setup_exception_handlers
 from lib.logger import get_logger, HourlyRotatingFileHandler
 from .database_init import init_database
 from config.dotenv import PROJECT_NAME, ENVIRONMENT, SWAGGER_USERNAME, SWAGGER_PASSWORD
+from lib.safe_in_query import patch_in_method
+
+# Auto-chunk .in_() ทั้ง project — ป้องกัน SQL Server parameter limit 2100
+patch_in_method()
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 

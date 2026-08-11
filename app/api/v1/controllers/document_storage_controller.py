@@ -471,13 +471,22 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
     if not complaint_ids:
         return {}
     
-    # ดึงข้อมูล complaints ทั้งหมดที่เกี่ยวข้อง
-    all_complaints = db.query(Complaint).filter(
-        or_(
-            Complaint.id.in_(complaint_ids),
-            Complaint.parent_complaint_id.in_(complaint_ids)
-        )
-    ).all()
+    # ดึงข้อมูล complaints ทั้งหมดที่เกี่ยวข้อง (แบ่ง chunk เพื่อไม่เกิน SQL Server parameter limit)
+    CHUNK_SIZE = 900  # SQL Server limit ~2100 params
+    all_complaints = []
+    seen_ids = set()
+    for i in range(0, len(complaint_ids), CHUNK_SIZE):
+        chunk = complaint_ids[i:i + CHUNK_SIZE]
+        rows = db.query(Complaint).filter(
+            or_(
+                Complaint.id.in_(chunk),
+                Complaint.parent_complaint_id.in_(chunk)
+            )
+        ).all()
+        for r in rows:
+            if r.id not in seen_ids:
+                seen_ids.add(r.id)
+                all_complaints.append(r)
     
     # สร้าง lookup dictionaries
     complaints_by_id = {c.id: c for c in all_complaints}
@@ -518,16 +527,21 @@ def get_bulk_related_complaints(db: Session, complaint_ids: List[UUID]) -> Dict[
         ).all()
         complaint_channels = {cc.id: cc for cc in channels_query}
         
-        # ดึงหน่วยงานที่มี outgoing_report ส่งออก
-        outgoing_query = db.query(OutgoingReport, Department).join(
-            Department, OutgoingReport.department_id == Department.id
-        ).filter(
-            OutgoingReport.complaint_id.in_(all_complaint_ids),
-            OutgoingReport.is_active == True
-        ).all()
-        
+        # ดึงหน่วยงานที่มี outgoing_report ส่งออก (แบ่ง chunk)
+        outgoing_all_rows = []
+        CHUNK_SIZE = 900
+        for i in range(0, len(all_complaint_ids), CHUNK_SIZE):
+            chunk = all_complaint_ids[i:i + CHUNK_SIZE]
+            rows = db.query(OutgoingReport, Department).join(
+                Department, OutgoingReport.department_id == Department.id
+            ).filter(
+                OutgoingReport.complaint_id.in_(chunk),
+                OutgoingReport.is_active == True
+            ).all()
+            outgoing_all_rows.extend(rows)
+
         # จัดกลุ่มตาม complaint_id
-        for outgoing_report, department in outgoing_query:
+        for outgoing_report, department in outgoing_all_rows:
             if outgoing_report.complaint_id not in outgoing_departments:
                 outgoing_departments[outgoing_report.complaint_id] = []
             outgoing_departments[outgoing_report.complaint_id].append({
@@ -1387,7 +1401,12 @@ def get_document_storage_by_channel(
 
         grandparents_by_id: Dict = {}
         if grandparent_ids:
-            gp_rows = db.query(Complaint).filter(Complaint.id.in_(grandparent_ids)).all()
+            gp_list = list(grandparent_ids)
+            gp_rows = []
+            CHUNK_SIZE = 900
+            for i in range(0, len(gp_list), CHUNK_SIZE):
+                chunk = gp_list[i:i + CHUNK_SIZE]
+                gp_rows.extend(db.query(Complaint).filter(Complaint.id.in_(chunk)).all())
             grandparents_by_id = {gp.id: gp for gp in gp_rows}
 
         # 2) Batch load children (for master complaints)
@@ -1396,9 +1415,13 @@ def get_document_storage_by_channel(
 
         children_map: Dict[str, List] = {}
         if master_ids:
-            child_rows = db.query(Complaint).filter(
-                Complaint.parent_complaint_id.in_(master_ids)
-            ).order_by(Complaint.complaint_number).all()
+            child_rows = []
+            CHUNK_SIZE = 900
+            for i in range(0, len(master_ids), CHUNK_SIZE):
+                chunk = master_ids[i:i + CHUNK_SIZE]
+                child_rows.extend(db.query(Complaint).filter(
+                    Complaint.parent_complaint_id.in_(chunk)
+                ).order_by(Complaint.complaint_number).all())
             for child in child_rows:
                 key = str(child.parent_complaint_id)
                 children_map.setdefault(key, []).append({
@@ -1412,15 +1435,17 @@ def get_document_storage_by_channel(
         # 3) Batch load siblings (แบ่ง chunk เพื่อไม่เกิน SQL Server parameter limit)
         siblings_map: Dict[str, List] = {}
         if parent_ids_for_siblings:
-            CHUNK_SIZE = 900  # SQL Server limit ~2100 params, ใช้ 900 ปลอดภัย
+            CHUNK_SIZE = 450  # SQL Server limit ~2100 params, เนื่องจากใช้ 2 IN clauses ใน query เดียว จึงลดลง
             sibling_rows = []
-            for i in range(0, len(complaint_ids), CHUNK_SIZE):
-                chunk = complaint_ids[i:i + CHUNK_SIZE]
-                rows = db.query(Complaint).filter(
-                    Complaint.parent_complaint_id.in_(parent_ids_for_siblings),
-                    ~Complaint.id.in_(chunk)
-                ).order_by(Complaint.complaint_number).all()
-                sibling_rows.extend(rows)
+            for i in range(0, len(parent_ids_for_siblings), CHUNK_SIZE):
+                pid_chunk = parent_ids_for_siblings[i:i + CHUNK_SIZE]
+                for j in range(0, len(complaint_ids), CHUNK_SIZE):
+                    cid_chunk = complaint_ids[j:j + CHUNK_SIZE]
+                    rows = db.query(Complaint).filter(
+                        Complaint.parent_complaint_id.in_(pid_chunk),
+                        ~Complaint.id.in_(cid_chunk)
+                    ).order_by(Complaint.complaint_number).all()
+                    sibling_rows.extend(rows)
             for sib in sibling_rows:
                 key = str(sib.parent_complaint_id)
                 siblings_map.setdefault(key, []).append({
