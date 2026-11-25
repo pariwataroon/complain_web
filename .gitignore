@@ -11,3 +11,5 @@ worker_heartbeat.json
 */integration/visual_reports/*
 */integration/test_reports/*
 */integration/client_reports/*
+
+.next_old/
