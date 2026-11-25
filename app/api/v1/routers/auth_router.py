@@ -21,7 +21,7 @@ router = APIRouter(
 )
 
 @router.post("/login", response_model=format_data.FormatResponseModel)
-async def login(request: Request, user: schemas.UserLogin, db: Session = Depends(get_db)):
+def login(request: Request, user: schemas.UserLogin, db: Session = Depends(get_db)): #async
     try:
         result = auth_controller.authenticate_user(db, user.citizen_id, user.password)
         db_user, error_type = result

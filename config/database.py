@@ -27,7 +27,7 @@ try:
         poolclass=QueuePool,
         pool_size=20,
         max_overflow=30,
-        pool_pre_ping=False,
+        pool_pre_ping=True,
         pool_recycle=7200,
         pool_timeout=30,
         echo=False,

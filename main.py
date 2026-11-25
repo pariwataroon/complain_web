@@ -67,7 +67,7 @@ async def startup_event():
     # เริ่ม cache cleanup task
     await cache.start_cleanup_manually()
     # เริ่ม counter update service
-    await counter_service.start_background_update()
+    # await counter_service.start_background_update()
 
 @app.on_event("shutdown")
 async def shutdown_event():

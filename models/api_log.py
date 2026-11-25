@@ -13,7 +13,7 @@ class ApiLog(Base):
     id = Column(UNIQUEIDENTIFIER, primary_key=True, default=uuid.uuid4)
     request_id = Column(NVARCHAR(100), index=True)
     method = Column(NVARCHAR(10))
-    path = Column(NVARCHAR(255))
+    path = Column(NVARCHAR(255), index=True)
     # เปลี่ยนจาก Text เป็น NVARCHAR(max)
     query_params = Column(NVARCHAR('max'), nullable=True)  
     client_ip = Column(NVARCHAR(50))
@@ -24,8 +24,8 @@ class ApiLog(Base):
     request_headers = Column(NVARCHAR('max'), nullable=True)
     
     # User tracking when authenticated
-    user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), nullable=True)
+    user_id = Column(UNIQUEIDENTIFIER, ForeignKey("comp_users.id"), index=True, nullable=True)
     # ใช้ string reference แทนการ import เพื่อหลีกเลี่ยง circular import
     user = relationship("User", back_populates="api_logs", lazy="select")
     
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=func.now(), index=True)

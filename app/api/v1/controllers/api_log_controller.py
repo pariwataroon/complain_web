@@ -270,7 +270,7 @@ def get_user_counter_from_chatbot_logs(db: Session, use_cache: bool = True) -> D
         
         # เก็บใน cache เป็นเวลา 60 วินาที
         if use_cache:
-            cache.set(cache_key, result, ttl_seconds=60)
+            cache.set(cache_key, result, ttl_seconds=600)
         
         return result
         

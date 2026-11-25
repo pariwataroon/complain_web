@@ -99,9 +99,11 @@ async def get_map_json_endpoint(
     """
     ส่งออกข้อมูลแผนที่ทั้งก้อน (เหมือน map.json)
     - ถ้า only_year=true จะส่งเฉพาะปี พ.ศ. ที่คำนวณจาก year เท่านั้น
+    result = get_full_map_json_from_db(db, json_path, year=year, only_year=only_year)
     """
     try:
-        result = get_full_map_json_from_db(db, json_path, year=year, only_year=only_year)
+        
+        result = get_full_map_json_from_db(db, None, year=year, only_year=only_year)
         return format_response("0000", result)
     except Exception as e:
         import traceback; traceback.print_exc()
